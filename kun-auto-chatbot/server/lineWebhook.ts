@@ -7,6 +7,7 @@ import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigge
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
+import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 
 // ============ PHONE NUMBER DETECTION ============
 
@@ -366,8 +367,7 @@ async function processLineEvent(
     }
   }
 
-  // ============ REGULAR MESSAGE → LLM RESPONSE ============
-  console.log("[LINE] Regular message, calling LLM...");
+  // ============ REGULAR MESSAGE → RESPONSE ============
 
   const allHistory = await db.getMessagesByConversation(convId, 100);
   const history = allHistory.slice(-10);
@@ -380,55 +380,64 @@ async function processLineEvent(
   const historyForDetection = history.map(m => ({ role: m.role, content: m.content }));
   const detection = detectVehicleFromMessage(userMessage, allVehicles, historyForDetection);
   console.log(`[VehicleDetection] type=${detection.type}, vehicle=${detection.vehicle?.brand || 'none'} ${detection.vehicle?.model || ''}, question=${detection.questionType}, answer=${detection.directAnswer}`);
-  
-  // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others
-  const vehicleKB = buildSmartVehicleKB(allVehicles, detection.vehicle);
-  
-  // Build target vehicle prompt (will be placed at the END of system prompt for recency bias)
-  const targetVehiclePrompt = buildTargetVehiclePrompt(detection, userMessage, conversation!.customerContact);
 
   // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
   const customerIntents = detectCustomerIntents(userMessage);
-  const intentInstructions = buildIntentInstructions(customerIntents, userMessage, getGenderGreeting(customerGender), conversation!.customerContact);
   console.log(`[IntentDetection] intents=${customerIntents.join(', ') || 'none'}`);
 
   const greeting = getGenderGreeting(customerGender);
 
-  // ============ DYNAMIC PROMPT BUILDER v2 ============
-  // Technical breakthrough: Sandwich Structure + Multi-Message Injection
-  // Full sales psychology preserved, critical instructions amplified
-  const promptContext: PromptContext = {
-    greeting,
-    vehicleKB,
-    targetVehiclePrompt,
-    intentInstructions,
-    intents: customerIntents,
-    detection,
-    customerContact: conversation!.customerContact,
-    leadScore: conversation!.leadScore ?? undefined,
-    userMessage,
-  };
-
-  const llmMessages = buildLLMMessages(promptContext, history.map(m => ({ role: m.role, content: m.content })));
-  console.log(`[LINE] Dynamic prompt: ${llmMessages.length} messages, intents=${customerIntents.join(',') || 'none'}, vehicle=${detection.vehicle?.brand || 'none'}`);
-
-  // OLD STATIC PROMPT REPLACED BY DYNAMIC BUILDER
-  // Keeping this comment as reference for what was replaced
-  // Dynamic prompt builder handles all message construction above
-
   let replyText: string;
   let isHumanHandoff = false;
-  try {
-    console.log(`[LINE] Calling LLM with ${llmMessages.length} messages (system + ${history.length} history)...`);
-    const response = await invokeLLM({ messages: llmMessages });
-    replyText =
-      typeof response.choices[0]?.message?.content === "string"
-        ? response.choices[0].message.content
-        : "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
-    console.log("[LINE] LLM response:", replyText.substring(0, 100));
-  } catch (err) {
-    console.error("[LINE] LLM error:", err);
-    replyText = "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
+
+  // ============ RULE-BASED MODE vs LLM MODE ============
+  if (isRuleBasedMode()) {
+    console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
+    replyText = generateRuleBasedReply({
+      userMessage,
+      greeting,
+      detection,
+      intents: customerIntents,
+      customerContact: conversation!.customerContact,
+      leadScore: conversation!.leadScore ?? undefined,
+    });
+    console.log("[LINE] Rule-based response:", replyText.substring(0, 100));
+  } else {
+    console.log("[LINE] LLM mode, calling Claude API...");
+
+    // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others
+    const vehicleKB = buildSmartVehicleKB(allVehicles, detection.vehicle);
+
+    // Build target vehicle prompt (will be placed at the END of system prompt for recency bias)
+    const targetVehiclePrompt = buildTargetVehiclePrompt(detection, userMessage, conversation!.customerContact);
+    const intentInstructions = buildIntentInstructions(customerIntents, userMessage, greeting, conversation!.customerContact);
+
+    const promptContext: PromptContext = {
+      greeting,
+      vehicleKB,
+      targetVehiclePrompt,
+      intentInstructions,
+      intents: customerIntents,
+      detection,
+      customerContact: conversation!.customerContact,
+      leadScore: conversation!.leadScore ?? undefined,
+      userMessage,
+    };
+
+    const llmMessages = buildLLMMessages(promptContext, history.map(m => ({ role: m.role, content: m.content })));
+    console.log(`[LINE] Dynamic prompt: ${llmMessages.length} messages, intents=${customerIntents.join(',') || 'none'}, vehicle=${detection.vehicle?.brand || 'none'}`);
+
+    try {
+      const response = await invokeLLM({ messages: llmMessages });
+      replyText =
+        typeof response.choices[0]?.message?.content === "string"
+          ? response.choices[0].message.content
+          : "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
+      console.log("[LINE] LLM response:", replyText.substring(0, 100));
+    } catch (err) {
+      console.error("[LINE] LLM error:", err);
+      replyText = "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
+    }
   }
 
   // ============ HUMAN HANDOFF DETECTION ============

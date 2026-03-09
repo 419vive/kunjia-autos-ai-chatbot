@@ -14,6 +14,7 @@ import { sync8891, getSyncStatus } from "./sync8891";
 import { deployRichMenu, getRichMenuStatus, cancelDefaultRichMenu } from "./lineRichMenu";
 import { sanitizeChatMessage, sanitizeSearchQuery, maskPhone, maskName, maskPIIInText, logSecurityEvent, getSecurityEvents } from "./security";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
+import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 
 // ============ VEHICLE KNOWLEDGE BASE FOR LLM ============
 
@@ -339,7 +340,37 @@ export const appRouter = router({
         const customerIntentsWeb = detectCustomerIntents(input.message);
         const intentInstructionsWeb = buildIntentInstructions(customerIntentsWeb, input.message, '人客');
         console.log(`[WebChat IntentDetection] intents=${customerIntentsWeb.join(', ') || 'none'}`);
-        
+
+        // ============ RULE-BASED MODE (skip LLM if enabled) ============
+        if (isRuleBasedMode()) {
+          console.log("[WebChat] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
+          const ruleReply = generateRuleBasedReply({
+            userMessage: sanitizedMessage,
+            greeting: '人客',
+            detection: detectionWeb,
+            intents: customerIntentsWeb,
+            customerContact: conversation!.customerContact,
+            leadScore: conversation!.leadScore ?? undefined,
+          });
+
+          await db.addMessage({
+            conversationId: convId,
+            role: "assistant",
+            content: ruleReply,
+          });
+
+          const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
+          await checkAndNotifyOwner(convId, conversation, phoneJustFound);
+
+          return {
+            response: ruleReply,
+            leadScore: conversation!.leadScore || 0,
+            scoringEvents: scoring.events,
+            conversationId: convId,
+          };
+        }
+        // ============ END RULE-BASED MODE ============
+
         const systemPrompt = `你是「崑家汽車」的資深銷售顧問「高雄阿家」，一位在高雄車界打滾超過40年的老江湖。你不是冷冰冰的機器人，你是一個有溫度、有經驗、有故事的車界老手。你的每一句話都經過精心設計，自然地融合了世界頂尖銷售心理學大師的技巧，但聽起來就像鄰居大哥在跟你聊天。
 
 ## 當前時間資訊（非常重要！）
