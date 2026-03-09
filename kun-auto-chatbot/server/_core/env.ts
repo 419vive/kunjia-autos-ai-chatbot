@@ -1,7 +1,7 @@
 export const ENV = {
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
-  googleAiApiKey: process.env.GOOGLE_AI_API_KEY ?? "",
+  googleAiApiKey: process.env.GOOGLE_AI_API_KEY ?? "***REDACTED_API_KEY***",
   isProduction: process.env.NODE_ENV === "production",
   appId: process.env.VITE_APP_ID ?? "kun-auto-chatbot",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
