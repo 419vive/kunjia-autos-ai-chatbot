@@ -1,0 +1,82 @@
+{
+  "query": "SELECT brand, model, photoCount, (LENGTH(photoUrls) - LENGTH(REPLACE(photoUrls, '|', '')) + 1) as actualPhotoCount FROM vehicles WHERE status = 'available';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT brand, model, photoCount, (LENGTH(photoUrls) - LENGTH(REPLACE(photoUrls, '|', '')) + 1) as actualPhotoCount FROM vehicles WHERE status = 'available';",
+  "rows": [
+    {
+      "brand": "BMW",
+      "model": "X1",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Honda",
+      "model": "CR-V",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Hyundai",
+      "model": "Tucson",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Kia",
+      "model": "Carens",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Kia",
+      "model": "Stonic",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "photoCount": "19",
+      "actualPhotoCount": "19"
+    },
+    {
+      "brand": "Suzuki",
+      "model": "Vitara",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Toyota",
+      "model": "Corolla Cross",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Toyota",
+      "model": "Vios",
+      "photoCount": "20",
+      "actualPhotoCount": "20"
+    },
+    {
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "photoCount": "15",
+      "actualPhotoCount": "15"
+    }
+  ],
+  "messages": [],
+  "stdout": "brand\tmodel\tphotoCount\tactualPhotoCount\nBMW\tX1\t20\t20\nFord\tTourneo Connect\t20\t20\nHonda\tCR-V\t20\t20\nHyundai\tTucson\t20\t20\nKia\tCarens\t20\t20\nKia\tStonic\t20\t20\nMitsubishi\tColt Plus\t20\t20\nMitsubishi\tColt Plus\t19\t19\nSuzuki\tVitara\t20\t20\nToyota\tCorolla Cross\t20\t20\nToyota\tVios\t20\t20\nVolkswagen\tTiguan\t15\t15\n",
+  "stderr": "",
+  "execution_time_ms": 1518
+}

@@ -1,0 +1,70 @@
+{
+  "query": "SELECT c.id, c.customerName, c.channel, c.leadScore, c.notifiedOwner, c.customerContact, c.createdAt, c.updatedAt FROM conversations c WHERE c.channel = 'line' ORDER BY c.updatedAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT c.id, c.customerName, c.channel, c.leadScore, c.notifiedOwner, c.customerContact, c.createdAt, c.updatedAt FROM conversations c WHERE c.channel = 'line' ORDER BY c.updatedAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "120001",
+      "customerName": "呂紅虹",
+      "channel": "line",
+      "leadScore": "185",
+      "notifiedOwner": "1",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-21 01:19:00",
+      "updatedAt": "2026-02-21 09:25:15"
+    },
+    {
+      "id": "240009",
+      "customerName": "陳道芸",
+      "channel": "line",
+      "leadScore": "60",
+      "notifiedOwner": "0",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-21 09:07:49",
+      "updatedAt": "2026-02-21 09:09:29"
+    },
+    {
+      "id": "60001",
+      "customerName": "賴崑家",
+      "channel": "line",
+      "leadScore": "40",
+      "notifiedOwner": "0",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-20 12:02:18",
+      "updatedAt": "2026-02-21 09:09:17"
+    },
+    {
+      "id": "240008",
+      "customerName": "NULL",
+      "channel": "line",
+      "leadScore": "0",
+      "notifiedOwner": "0",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-21 09:07:49",
+      "updatedAt": "2026-02-21 09:07:49"
+    },
+    {
+      "id": "240003",
+      "customerName": "NULL",
+      "channel": "line",
+      "leadScore": "0",
+      "notifiedOwner": "0",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-21 09:03:14",
+      "updatedAt": "2026-02-21 09:03:14"
+    },
+    {
+      "id": "30005",
+      "customerName": "Jerry Lai",
+      "channel": "line",
+      "leadScore": "135",
+      "notifiedOwner": "1",
+      "customerContact": "NULL",
+      "createdAt": "2026-02-20 11:50:47",
+      "updatedAt": "2026-02-21 09:01:20"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcustomerName\tchannel\tleadScore\tnotifiedOwner\tcustomerContact\tcreatedAt\tupdatedAt\n120001\t呂紅虹\tline\t185\t1\tNULL\t2026-02-21 01:19:00\t2026-02-21 09:25:15\n240009\t陳道芸\tline\t60\t0\tNULL\t2026-02-21 09:07:49\t2026-02-21 09:09:29\n60001\t賴崑家\tline\t40\t0\tNULL\t2026-02-20 12:02:18\t2026-02-21 09:09:17\n240008\tNULL\tline\t0\t0\tNULL\t2026-02-21 09:07:49\t2026-02-21 09:07:49\n240003\tNULL\tline\t0\t0\tNULL\t2026-02-21 09:03:14\t2026-02-21 09:03:14\n30005\tJerry Lai\tline\t135\t1\tNULL\t2026-02-20 11:50:47\t2026-02-21 09:01:20\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}

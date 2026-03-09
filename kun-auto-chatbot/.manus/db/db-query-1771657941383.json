@@ -1,0 +1,37 @@
+{
+  "query": "SELECT CONCAT(id, '|', role, '|', LEFT(content, 60)) as info FROM messages WHERE conversationId = 30005 ORDER BY createdAt ASC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT CONCAT(id, '|', role, '|', LEFT(content, 60)) as info FROM messages WHERE conversationId = 30005 ORDER BY createdAt ASC;",
+  "rows": [
+    {
+      "info": "30009|user|你好有人嗎"
+    },
+    {
+      "info": "60015|user|有美女嗎？"
+    },
+    {
+      "info": "60021|user|哈囉在嗎"
+    },
+    {
+      "info": "90009|user|可以給我你的qr嘛？我想要讓我朋友掃條碼？甚至給我要別人在line加你這個官方帳號要用資訊也給我"
+    },
+    {
+      "info": "180007|user|我想買車，預算 50 萬，可以看車嗎？」"
+    },
+    {
+      "info": "240005|user|我想要看車，在嘛？老闆"
+    },
+    {
+      "info": "240006|assistant|哈囉！阿家在啦！👋"
+    },
+    {
+      "info": "拍謝捏，阿家我是LINE智能客服，沒有個人的QR Code可以讓你掃啦！"
+    },
+    {
+      "info": "不過，你朋友如果想找我們"
+    }
+  ],
+  "messages": [],
+  "stdout": "info\n30009|user|你好有人嗎\n60015|user|有美女嗎？\n60021|user|哈囉在嗎\n90009|user|可以給我你的qr嘛？我想要讓我朋友掃條碼？甚至給我要別人在line加你這個官方帳號要用資訊也給我\n180007|user|我想買車，預算 50 萬，可以看車嗎？」\n240005|user|我想要看車，在嘛？老闆\n240006|assistant|哈囉！阿家在啦！👋\n\n拍謝捏，阿家我是LINE智能客服，沒有個人的QR Code可以讓你掃啦！\n不過，你朋友如果想找我們\n",
+  "stderr": "",
+  "execution_time_ms": 1558
+}

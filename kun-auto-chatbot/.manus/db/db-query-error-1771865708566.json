@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, brand, model, model_year, price, displacement, transmission, status FROM vehicles WHERE status = 'available' ORDER BY brand, model;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, brand, model, model_year, price, displacement, transmission, status FROM vehicles WHERE status = 'available' ORDER BY brand, model;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'model_year' in 'field list'"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "query": "SELECT brand, model, modelYear, price, priceDisplay, color, mileage, displacement, transmission, fuelType, bodyType, description, features, guarantees FROM vehicles WHERE status = 'available' LIMIT 3",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT brand, model, modelYear, price, priceDisplay, color, mileage, displacement, transmission, fuelType, bodyType, description, features, guarantees FROM vehicles WHERE status = 'available' LIMIT 3",
+  "rows": [
+    {
+      "brand": "BMW",
+      "model": "X1",
+      "modelYear": "2015",
+      "price": "37.8",
+      "priceDisplay": "37.8萬",
+      "color": "灰色",
+      "mileage": "8.7萬公里",
+      "displacement": "2.0L",
+      "transmission": "手自排",
+      "fuelType": "汽油",
+      "bodyType": "SUV",
+      "description": "【崑家】2015年式/BMW X1 20i/總代理/全景天窗/跑8萬7/雙電動椅",
+      "features": "循跡系統, 電動天窗, 真皮/皮革座椅",
+      "guarantees": "售價真實, 100%有車, 車況真實, 無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固"
+    },
+    {
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "modelYear": "2022",
+      "price": "62.8",
+      "priceDisplay": "62.8萬",
+      "color": "灰色",
+      "mileage": "6.6萬公里",
+      "displacement": "1.5L",
+      "transmission": "手自排",
+      "fuelType": "柴油",
+      "bodyType": "5門7座",
+      "description": "【崑家】2022年式/福特/柴油版/七人座/跑6萬6/全景天窗HID/I-KEY",
+      "features": "主動式智慧定速系統, 盲點偵測系統, 倒車顯影系統, 駕駛模式選擇, 車頂行李架",
+      "guarantees": "無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固"
+    },
+    {
+      "brand": "Honda",
+      "model": "CR-V",
+      "modelYear": "2025",
+      "price": "103.8",
+      "priceDisplay": "103.8萬",
+      "color": "白色",
+      "mileage": "13公里",
+      "displacement": "1.5L",
+      "transmission": "CVT",
+      "fuelType": "汽油",
+      "bodyType": "SUV",
+      "description": "【崑家】CR-V1.5 Prestige/全新領牌車/2025年10月31日領牌",
+      "features": "循跡系統,倒車顯影系統,胎壓偵測,電動天窗,煞車輔助系統",
+      "guarantees": "售價真實,100%有車,車況真實,無重大事故或車體銜接,無泡水,無計程車變造,無引擎號碼變造,無車身號碼變造,引擎本體無異常,變速箱換檔無異常,方向機本體無異常,車輛配備無異常,提供保固"
+    }
+  ],
+  "messages": [],
+  "stdout": "brand\tmodel\tmodelYear\tprice\tpriceDisplay\tcolor\tmileage\tdisplacement\ttransmission\tfuelType\tbodyType\tdescription\tfeatures\tguarantees\nBMW\tX1\t2015\t37.8\t37.8萬\t灰色\t8.7萬公里\t2.0L\t手自排\t汽油\tSUV\t【崑家】2015年式/BMW X1 20i/總代理/全景天窗/跑8萬7/雙電動椅\t循跡系統, 電動天窗, 真皮/皮革座椅\t售價真實, 100%有車, 車況真實, 無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固\nFord\tTourneo Connect\t2022\t62.8\t62.8萬\t灰色\t6.6萬公里\t1.5L\t手自排\t柴油\t5門7座\t【崑家】2022年式/福特/柴油版/七人座/跑6萬6/全景天窗HID/I-KEY\t主動式智慧定速系統, 盲點偵測系統, 倒車顯影系統, 駕駛模式選擇, 車頂行李架\t無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固\nHonda\tCR-V\t2025\t103.8\t103.8萬\t白色\t13公里\t1.5L\tCVT\t汽油\tSUV\t【崑家】CR-V1.5 Prestige/全新領牌車/2025年10月31日領牌\t循跡系統,倒車顯影系統,胎壓偵測,電動天窗,煞車輔助系統\t售價真實,100%有車,車況真實,無重大事故或車體銜接,無泡水,無計程車變造,無引擎號碼變造,無車身號碼變造,引擎本體無異常,變速箱換檔無異常,方向機本體無異常,車輛配備無異常,提供保固\n",
+  "stderr": "",
+  "execution_time_ms": 1662
+}

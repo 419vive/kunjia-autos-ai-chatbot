@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, sessionId, customerName, channel FROM conversations WHERE channel = 'line';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, sessionId, customerName, channel FROM conversations WHERE channel = 'line';",
+  "rows": [
+    {
+      "id": "30005",
+      "sessionId": "line-U976e5d8a1bfad27a6dd90d53002bd4e1",
+      "customerName": "Jerry Lai",
+      "channel": "line"
+    },
+    {
+      "id": "60001",
+      "sessionId": "line-U5591c54539693c8b5d815e179e6f300d",
+      "customerName": "賴崑家",
+      "channel": "line"
+    },
+    {
+      "id": "120001",
+      "sessionId": "line-U73d3542066d2a5ec8ef985dcf28712f6",
+      "customerName": "呂紅虹",
+      "channel": "line"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsessionId\tcustomerName\tchannel\n30005\tline-U976e5d8a1bfad27a6dd90d53002bd4e1\tJerry Lai\tline\n60001\tline-U5591c54539693c8b5d815e179e6f300d\t賴崑家\tline\n120001\tline-U73d3542066d2a5ec8ef985dcf28712f6\t呂紅虹\tline\n",
+  "stderr": "",
+  "execution_time_ms": 1494
+}

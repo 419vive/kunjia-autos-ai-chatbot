@@ -1,0 +1,80 @@
+{
+  "query": "SELECT m.id, m.conversationId, m.role, m.content, m.createdAt FROM messages m WHERE m.content LIKE '%看車%' OR m.content LIKE '%在嘛%' ORDER BY m.createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT m.id, m.conversationId, m.role, m.content, m.createdAt FROM messages m WHERE m.content LIKE '%看車%' OR m.content LIKE '%在嘛%' ORDER BY m.createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "240005",
+      "conversationId": "30005",
+      "role": "user",
+      "content": "我想要看車，在嘛？老闆",
+      "createdAt": "2026-02-21 06:59:26"
+    },
+    {
+      "id": "240004",
+      "conversationId": "210002",
+      "role": "assistant",
+      "content": "這是一台很棒的車！歡迎預約看車。",
+      "createdAt": "2026-02-21 06:55:40"
+    },
+    {
+      "id": "240003",
+      "conversationId": "210002",
+      "role": "user",
+      "content": "我想買一台SUV，預算大概50萬，可以預約看車嗎？",
+      "createdAt": "2026-02-21 06:55:39"
+    },
+    {
+      "id": "240002",
+      "conversationId": "210001",
+      "role": "assistant",
+      "content": "這是一台很棒的車！歡迎預約看車。",
+      "createdAt": "2026-02-21 06:55:38"
+    },
+    {
+      "id": "210004",
+      "conversationId": "180002",
+      "role": "assistant",
+      "content": "這是一台很棒的車！歡迎預約看車。",
+      "createdAt": "2026-02-21 06:38:37"
+    },
+    {
+      "id": "210003",
+      "conversationId": "180002",
+      "role": "user",
+      "content": "我想買一台SUV，預算大概50萬，可以預約看車嗎？",
+      "createdAt": "2026-02-21 06:38:35"
+    },
+    {
+      "id": "210002",
+      "conversationId": "180001",
+      "role": "assistant",
+      "content": "這是一台很棒的車！歡迎預約看車。",
+      "createdAt": "2026-02-21 06:38:34"
+    },
+    {
+      "id": "180007",
+      "conversationId": "30005",
+      "role": "user",
+      "content": "我想買車，預算 50 萬，可以看車嗎？」",
+      "createdAt": "2026-02-21 06:17:21"
+    },
+    {
+      "id": "180006",
+      "conversationId": "150002",
+      "role": "assistant",
+      "content": "這是一台很棒的車！歡迎預約看車。",
+      "createdAt": "2026-02-21 06:13:45"
+    },
+    {
+      "id": "180005",
+      "conversationId": "150002",
+      "role": "user",
+      "content": "我想買一台SUV，預算大概50萬，可以預約看車嗎？",
+      "createdAt": "2026-02-21 06:13:44"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tconversationId\trole\tcontent\tcreatedAt\n240005\t30005\tuser\t我想要看車，在嘛？老闆\t2026-02-21 06:59:26\n240004\t210002\tassistant\t這是一台很棒的車！歡迎預約看車。\t2026-02-21 06:55:40\n240003\t210002\tuser\t我想買一台SUV，預算大概50萬，可以預約看車嗎？\t2026-02-21 06:55:39\n240002\t210001\tassistant\t這是一台很棒的車！歡迎預約看車。\t2026-02-21 06:55:38\n210004\t180002\tassistant\t這是一台很棒的車！歡迎預約看車。\t2026-02-21 06:38:37\n210003\t180002\tuser\t我想買一台SUV，預算大概50萬，可以預約看車嗎？\t2026-02-21 06:38:35\n210002\t180001\tassistant\t這是一台很棒的車！歡迎預約看車。\t2026-02-21 06:38:34\n180007\t30005\tuser\t我想買車，預算 50 萬，可以看車嗎？」\t2026-02-21 06:17:21\n180006\t150002\tassistant\t這是一台很棒的車！歡迎預約看車。\t2026-02-21 06:13:45\n180005\t150002\tuser\t我想買一台SUV，預算大概50萬，可以預約看車嗎？\t2026-02-21 06:13:44\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

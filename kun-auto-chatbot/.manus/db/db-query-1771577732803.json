@@ -1,0 +1,82 @@
+{
+  "query": "SELECT id, brand, model, LEFT(photoUrls, 200) as photo_preview FROM vehicles ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, brand, model, LEFT(photoUrls, 200) as photo_preview FROM vehicles ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "brand": "BMW",
+      "model": "X1",
+      "photo_preview": "https://photo.8891.com.tw/m125770/v569891/s4075406/2025/08/05/1754365431870194_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4075406/2023/04/10/1681109885434048_800_600.jpg?v=2|https://ph"
+    },
+    {
+      "id": "2",
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "photo_preview": "https://photo.8891.com.tw/m125770/v569891/s4355054/2025/06/30/1751253121802671_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4355054/2025/06/30/1751253098249659_800_600.png?v=2|https://ph"
+    },
+    {
+      "id": "3",
+      "brand": "Honda",
+      "model": "CR-V",
+      "photo_preview": "https://photo.8891.com.tw/m125770/v569891/s4488564/2025/11/07/17624851440318051887_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4488564/2025/11/07/17624851431635367417_800_600.jpg?v=2|ht"
+    },
+    {
+      "id": "4",
+      "brand": "Hyundai",
+      "model": "Tucson",
+      "photo_preview": "https://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com"
+    },
+    {
+      "id": "5",
+      "brand": "Kia",
+      "model": "Carens",
+      "photo_preview": "NULL"
+    },
+    {
+      "id": "6",
+      "brand": "Kia",
+      "model": "Stonic",
+      "photo_preview": "https://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com"
+    },
+    {
+      "id": "7",
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "photo_preview": "https://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com"
+    },
+    {
+      "id": "8",
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "photo_preview": "NULL"
+    },
+    {
+      "id": "9",
+      "brand": "Suzuki",
+      "model": "Vitara",
+      "photo_preview": "NULL"
+    },
+    {
+      "id": "10",
+      "brand": "Toyota",
+      "model": "Corolla Cross",
+      "photo_preview": "https://photo.8891.com.tw/2026/01/29/17696520054168775913.png|https://photo.8891.com.tw/2026/01/29/s/17696520054168775913.png"
+    },
+    {
+      "id": "11",
+      "brand": "Toyota",
+      "model": "Vios",
+      "photo_preview": "https://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com"
+    },
+    {
+      "id": "12",
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "photo_preview": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tbrand\tmodel\tphoto_preview\n1\tBMW\tX1\thttps://photo.8891.com.tw/m125770/v569891/s4075406/2025/08/05/1754365431870194_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4075406/2023/04/10/1681109885434048_800_600.jpg?v=2|https://ph\n2\tFord\tTourneo Connect\thttps://photo.8891.com.tw/m125770/v569891/s4355054/2025/06/30/1751253121802671_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4355054/2025/06/30/1751253098249659_800_600.png?v=2|https://ph\n3\tHonda\tCR-V\thttps://photo.8891.com.tw/m125770/v569891/s4488564/2025/11/07/17624851440318051887_800_600.jpg?v=2|https://photo.8891.com.tw/m125770/v569891/s4488564/2025/11/07/17624851431635367417_800_600.jpg?v=2|ht\n4\tHyundai\tTucson\thttps://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com\n5\tKia\tCarens\tNULL\n6\tKia\tStonic\thttps://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com\n7\tMitsubishi\tColt Plus\thttps://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com\n8\tMitsubishi\tColt Plus\tNULL\n9\tSuzuki\tVitara\tNULL\n10\tToyota\tCorolla Cross\thttps://photo.8891.com.tw/2026/01/29/17696520054168775913.png|https://photo.8891.com.tw/2026/01/29/s/17696520054168775913.png\n11\tToyota\tVios\thttps://photo.8891.com.tw/2024/11/28/1732775338914899.png|https://photo.8891.com.tw/2025/11/13/17630023461039026210.png|https://photo.8891.com.tw/2024/11/28/1732775383005920.png|https://photo.8891.com\n12\tVolkswagen\tTiguan\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1557
+}

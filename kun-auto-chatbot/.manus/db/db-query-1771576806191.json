@@ -1,0 +1,118 @@
+{
+  "query": "SELECT id, brand, model, priceDisplay, mileage, color, status FROM vehicles ORDER BY brand, model;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, brand, model, priceDisplay, mileage, color, status FROM vehicles ORDER BY brand, model;",
+  "rows": [
+    {
+      "id": "1",
+      "brand": "BMW",
+      "model": "X1",
+      "priceDisplay": "37.8萬",
+      "mileage": "8.7萬公里",
+      "color": "灰色",
+      "status": "available"
+    },
+    {
+      "id": "2",
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "priceDisplay": "62.8萬",
+      "mileage": "6.6萬公里",
+      "color": "灰色",
+      "status": "available"
+    },
+    {
+      "id": "3",
+      "brand": "Honda",
+      "model": "CR-V",
+      "priceDisplay": "103.8萬",
+      "mileage": "13公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "4",
+      "brand": "Hyundai",
+      "model": "Tucson",
+      "priceDisplay": "29.8萬",
+      "mileage": "10萬公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "5",
+      "brand": "Kia",
+      "model": "Carens",
+      "priceDisplay": "36.8萬",
+      "mileage": "7.15萬公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "6",
+      "brand": "Kia",
+      "model": "Stonic",
+      "priceDisplay": "59.8萬",
+      "mileage": "9700公里",
+      "color": "藍色",
+      "status": "available"
+    },
+    {
+      "id": "7",
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "priceDisplay": "29.8萬",
+      "mileage": "5000公里",
+      "color": "灰色",
+      "status": "available"
+    },
+    {
+      "id": "8",
+      "brand": "Mitsubishi",
+      "model": "Colt Plus",
+      "priceDisplay": "42.6萬",
+      "mileage": "24公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "9",
+      "brand": "Suzuki",
+      "model": "Vitara",
+      "priceDisplay": "79.9萬",
+      "mileage": "82公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "10",
+      "brand": "Toyota",
+      "model": "Corolla Cross",
+      "priceDisplay": "70.8萬",
+      "mileage": "2.3萬公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "11",
+      "brand": "Toyota",
+      "model": "Vios",
+      "priceDisplay": "29.8萬",
+      "mileage": "4.7萬公里",
+      "color": "白色",
+      "status": "available"
+    },
+    {
+      "id": "12",
+      "brand": "Volkswagen",
+      "model": "Tiguan",
+      "priceDisplay": "52.8萬",
+      "mileage": "9.7萬公里",
+      "color": "黑色",
+      "status": "available"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tbrand\tmodel\tpriceDisplay\tmileage\tcolor\tstatus\n1\tBMW\tX1\t37.8萬\t8.7萬公里\t灰色\tavailable\n2\tFord\tTourneo Connect\t62.8萬\t6.6萬公里\t灰色\tavailable\n3\tHonda\tCR-V\t103.8萬\t13公里\t白色\tavailable\n4\tHyundai\tTucson\t29.8萬\t10萬公里\t白色\tavailable\n5\tKia\tCarens\t36.8萬\t7.15萬公里\t白色\tavailable\n6\tKia\tStonic\t59.8萬\t9700公里\t藍色\tavailable\n7\tMitsubishi\tColt Plus\t29.8萬\t5000公里\t灰色\tavailable\n8\tMitsubishi\tColt Plus\t42.6萬\t24公里\t白色\tavailable\n9\tSuzuki\tVitara\t79.9萬\t82公里\t白色\tavailable\n10\tToyota\tCorolla Cross\t70.8萬\t2.3萬公里\t白色\tavailable\n11\tToyota\tVios\t29.8萬\t4.7萬公里\t白色\tavailable\n12\tVolkswagen\tTiguan\t52.8萬\t9.7萬公里\t黑色\tavailable\n",
+  "stderr": "",
+  "execution_time_ms": 1656
+}

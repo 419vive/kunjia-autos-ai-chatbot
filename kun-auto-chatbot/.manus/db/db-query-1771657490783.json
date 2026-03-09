@@ -1,0 +1,19 @@
+{
+  "query": "SELECT CONCAT(id, '|', sessionId, '|', IFNULL(customerName,'null'), '|', channel) as info FROM conversations WHERE channel = 'line';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT CONCAT(id, '|', sessionId, '|', IFNULL(customerName,'null'), '|', channel) as info FROM conversations WHERE channel = 'line';",
+  "rows": [
+    {
+      "info": "30005|line-U976e5d8a1bfad27a6dd90d53002bd4e1|Jerry Lai|line"
+    },
+    {
+      "info": "60001|line-U5591c54539693c8b5d815e179e6f300d|賴崑家|line"
+    },
+    {
+      "info": "120001|line-U73d3542066d2a5ec8ef985dcf28712f6|呂紅虹|line"
+    }
+  ],
+  "messages": [],
+  "stdout": "info\n30005|line-U976e5d8a1bfad27a6dd90d53002bd4e1|Jerry Lai|line\n60001|line-U5591c54539693c8b5d815e179e6f300d|賴崑家|line\n120001|line-U73d3542066d2a5ec8ef985dcf28712f6|呂紅虹|line\n",
+  "stderr": "",
+  "execution_time_ms": 1592
+}

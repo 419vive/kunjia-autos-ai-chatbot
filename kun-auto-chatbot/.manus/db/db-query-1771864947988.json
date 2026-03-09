@@ -1,0 +1,38 @@
+{
+  "query": "SELECT * FROM vehicles WHERE brand = 'BMW' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT * FROM vehicles WHERE brand = 'BMW' LIMIT 1;",
+  "rows": [
+    {
+      "id": "1",
+      "externalId": "4075406",
+      "sourceUrl": "https://m.8891.com.tw/auto?id=4075406",
+      "title": "BMW X1 2015年二手車 37.8萬 高雄市-崑家汽車",
+      "brand": "BMW",
+      "model": "X1",
+      "modelYear": "2015",
+      "manufactureYear": "2014",
+      "color": "灰色",
+      "price": "37.8",
+      "priceDisplay": "37.8萬",
+      "mileage": "8.7萬公里",
+      "displacement": "2.0L",
+      "transmission": "手自排",
+      "fuelType": "汽油",
+      "bodyType": "SUV",
+      "licenseDate": "2014/11",
+      "location": "高雄市",
+      "description": "【崑家】2015年式/BMW X1 20i/總代理/全景天窗/跑8萬7/雙電動椅",
+      "features": "循跡系統, 電動天窗, 真皮/皮革座椅",
+      "guarantees": "售價真實, 100%有車, 車況真實, 無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固",
+      "photoUrls": "https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109885434048.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109922079065.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754368213981171.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754368250609427.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109728383826.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109824486744.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109738522670.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109733831986.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109739230838.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365378806599.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109730376628.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365482779791.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365482831351.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109736219593.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365513697778.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109737736616.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109824955805.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365347979842.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365866070708.png?v=2",
+      "photoCount": "20",
+      "status": "available",
+      "createdAt": "2026-02-20 08:39:57",
+      "updatedAt": "2026-02-23 08:04:45"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\texternalId\tsourceUrl\ttitle\tbrand\tmodel\tmodelYear\tmanufactureYear\tcolor\tprice\tpriceDisplay\tmileage\tdisplacement\ttransmission\tfuelType\tbodyType\tlicenseDate\tlocation\tdescription\tfeatures\tguarantees\tphotoUrls\tphotoCount\tstatus\tcreatedAt\tupdatedAt\n1\t4075406\thttps://m.8891.com.tw/auto?id=4075406\tBMW X1 2015年二手車 37.8萬 高雄市-崑家汽車\tBMW\tX1\t2015\t2014\t灰色\t37.8\t37.8萬\t8.7萬公里\t2.0L\t手自排\t汽油\tSUV\t2014/11\t高雄市\t【崑家】2015年式/BMW X1 20i/總代理/全景天窗/跑8萬7/雙電動椅\t循跡系統, 電動天窗, 真皮/皮革座椅\t售價真實, 100%有車, 車況真實, 無重大事故或車體銜接, 無泡水, 無計程車變造, 無引擎號碼變造, 無車身號碼變造, 引擎本體無異常, 變速箱換檔無異常, 方向機本體無異常, 車輛配備無異常, 提供保固\thttps://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109885434048.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109922079065.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754368213981171.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754368250609427.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109728383826.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109824486744.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109738522670.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109733831986.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109739230838.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365378806599.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109730376628.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365482779791.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365482831351.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109736219593.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365513697778.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109737736616.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109824955805.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365347979842.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365866070708.png?v=2\t20\tavailable\t2026-02-20 08:39:57\t2026-02-23 08:04:45\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

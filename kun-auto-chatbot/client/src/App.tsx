@@ -1,0 +1,70 @@
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/NotFound";
+import { Route, Switch } from "wouter";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import Home from "./pages/Home";
+import Chat from "./pages/Chat";
+import Dashboard from "./pages/Dashboard";
+import Conversations from "./pages/Conversations";
+import VehicleManagement from "./pages/VehicleManagement";
+import LineSetup from "./pages/LineSetup";
+import SmartRedirect from "./pages/SmartRedirect";
+import DashboardLayout from "./components/DashboardLayout";
+
+function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+
+function Router() {
+  return (
+    <Switch>
+      {/* Public routes */}
+      <Route path="/" component={Home} />
+      <Route path="/chat" component={Chat} />
+      <Route path="/line" component={SmartRedirect} />
+      <Route path="/contact" component={SmartRedirect} />
+
+      {/* Admin routes */}
+      <Route path="/admin">
+        <AdminLayout>
+          <Dashboard />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/conversations">
+        <AdminLayout>
+          <Conversations />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/vehicles">
+        <AdminLayout>
+          <VehicleManagement />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/line-setup">
+        <AdminLayout>
+          <LineSetup />
+        </AdminLayout>
+      </Route>
+
+      <Route path="/404" component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light">
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

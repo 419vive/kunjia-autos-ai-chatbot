@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, customerName, channel, sessionId, createdAt FROM conversations WHERE channel = 'line' ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, customerName, channel, sessionId, createdAt FROM conversations WHERE channel = 'line' ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "390001",
+      "customerName": "🤍Megan 🤍",
+      "channel": "line",
+      "sessionId": "line-U1587445f622aeb76945e88bbb195ff39",
+      "createdAt": "2026-02-23 04:47:10"
+    },
+    {
+      "id": "240009",
+      "customerName": "陳道芸",
+      "channel": "line",
+      "sessionId": "line-U1b5621e48cf2cc374aafe5ba5a0269f3",
+      "createdAt": "2026-02-21 09:07:49"
+    },
+    {
+      "id": "240008",
+      "customerName": "NULL",
+      "channel": "line",
+      "sessionId": "line-cov-test-user",
+      "createdAt": "2026-02-21 09:07:49"
+    },
+    {
+      "id": "240003",
+      "customerName": "NULL",
+      "channel": "line",
+      "sessionId": "line-test-user-debug",
+      "createdAt": "2026-02-21 09:03:14"
+    },
+    {
+      "id": "120001",
+      "customerName": "呂紅虹",
+      "channel": "line",
+      "sessionId": "line-U73d3542066d2a5ec8ef985dcf28712f6",
+      "createdAt": "2026-02-21 01:19:00"
+    },
+    {
+      "id": "60001",
+      "customerName": "賴崑家",
+      "channel": "line",
+      "sessionId": "line-U5591c54539693c8b5d815e179e6f300d",
+      "createdAt": "2026-02-20 12:02:18"
+    },
+    {
+      "id": "30005",
+      "customerName": "Jerry Lai",
+      "channel": "line",
+      "sessionId": "line-U976e5d8a1bfad27a6dd90d53002bd4e1",
+      "createdAt": "2026-02-20 11:50:47"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcustomerName\tchannel\tsessionId\tcreatedAt\n390001\t🤍Megan 🤍\tline\tline-U1587445f622aeb76945e88bbb195ff39\t2026-02-23 04:47:10\n240009\t陳道芸\tline\tline-U1b5621e48cf2cc374aafe5ba5a0269f3\t2026-02-21 09:07:49\n240008\tNULL\tline\tline-cov-test-user\t2026-02-21 09:07:49\n240003\tNULL\tline\tline-test-user-debug\t2026-02-21 09:03:14\n120001\t呂紅虹\tline\tline-U73d3542066d2a5ec8ef985dcf28712f6\t2026-02-21 01:19:00\n60001\t賴崑家\tline\tline-U5591c54539693c8b5d815e179e6f300d\t2026-02-20 12:02:18\n30005\tJerry Lai\tline\tline-U976e5d8a1bfad27a6dd90d53002bd4e1\t2026-02-20 11:50:47\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

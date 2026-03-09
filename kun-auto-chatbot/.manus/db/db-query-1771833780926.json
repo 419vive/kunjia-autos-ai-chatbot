@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, brand, model, photoCount, LENGTH(photoUrls) as photoUrlsLength, SUBSTRING(photoUrls, 1, 100) as photoUrlsPreview FROM vehicles WHERE status = 'available' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, brand, model, photoCount, LENGTH(photoUrls) as photoUrlsLength, SUBSTRING(photoUrls, 1, 100) as photoUrlsPreview FROM vehicles WHERE status = 'available' LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "brand": "BMW",
+      "model": "X1",
+      "photoCount": "20",
+      "photoUrlsLength": "1899",
+      "photoUrlsPreview": "https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194_800_600.jpg?v=2|https"
+    },
+    {
+      "id": "2",
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "photoCount": "20",
+      "photoUrlsLength": "1899",
+      "photoUrlsPreview": "https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253121802671_800_600.jpg?v=2|https"
+    },
+    {
+      "id": "3",
+      "brand": "Honda",
+      "model": "CR-V",
+      "photoCount": "20",
+      "photoUrlsLength": "1979",
+      "photoUrlsPreview": "https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851440318051887_800_600.jpg?v=2|h"
+    },
+    {
+      "id": "4",
+      "brand": "Hyundai",
+      "model": "Tucson",
+      "photoCount": "20",
+      "photoUrlsLength": "1979",
+      "photoUrlsPreview": "https://photo.8891.com.tw/m125770/v830164/s4517022/2025/12/04/17648183946301611552_800_600.jpg?v=2|h"
+    },
+    {
+      "id": "5",
+      "brand": "Kia",
+      "model": "Carens",
+      "photoCount": "20",
+      "photoUrlsLength": "1979",
+      "photoUrlsPreview": "https://photo.8891.com.tw/m125770/v830164/s4544303/2025/12/30/17670706595044569419_800_600.jpg?v=2|h"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tbrand\tmodel\tphotoCount\tphotoUrlsLength\tphotoUrlsPreview\n1\tBMW\tX1\t20\t1899\thttps://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194_800_600.jpg?v=2|https\n2\tFord\tTourneo Connect\t20\t1899\thttps://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253121802671_800_600.jpg?v=2|https\n3\tHonda\tCR-V\t20\t1979\thttps://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851440318051887_800_600.jpg?v=2|h\n4\tHyundai\tTucson\t20\t1979\thttps://photo.8891.com.tw/m125770/v830164/s4517022/2025/12/04/17648183946301611552_800_600.jpg?v=2|h\n5\tKia\tCarens\t20\t1979\thttps://photo.8891.com.tw/m125770/v830164/s4544303/2025/12/30/17670706595044569419_800_600.jpg?v=2|h\n",
+  "stderr": "",
+  "execution_time_ms": 1655
+}

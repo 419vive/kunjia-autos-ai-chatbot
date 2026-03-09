@@ -1,0 +1,34 @@
+{
+  "query": "SELECT externalId, brand, model, photoCount, LENGTH(photoUrls) as urlLen, SUBSTRING(photoUrls, 1, 300) as urlPreview FROM vehicles WHERE status='available' LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT externalId, brand, model, photoCount, LENGTH(photoUrls) as urlLen, SUBSTRING(photoUrls, 1, 300) as urlPreview FROM vehicles WHERE status='available' LIMIT 3;",
+  "rows": [
+    {
+      "externalId": "4075406",
+      "brand": "BMW",
+      "model": "X1",
+      "photoCount": "20",
+      "urlLen": "1739",
+      "urlPreview": "https://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109885434048.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109922079065.jpg?v=2|https://photo.8891.com.tw/m125770/v8301"
+    },
+    {
+      "externalId": "4355054",
+      "brand": "Ford",
+      "model": "Tourneo Connect",
+      "photoCount": "20",
+      "urlLen": "1739",
+      "urlPreview": "https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253121802671.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253098249659.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253099371575.png?v=2|https://photo.8891.com.tw/m125770/v8301"
+    },
+    {
+      "externalId": "4488564",
+      "brand": "Honda",
+      "model": "CR-V",
+      "photoCount": "20",
+      "urlLen": "1819",
+      "urlPreview": "https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851440318051887.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851431635367417.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851607813944281.jpg?v=2|https://photo.8891.com.tw/m"
+    }
+  ],
+  "messages": [],
+  "stdout": "externalId\tbrand\tmodel\tphotoCount\turlLen\turlPreview\n4075406\tBMW\tX1\t20\t1739\thttps://photo.8891.com.tw/m125770/v830164/s4075406/2025/08/05/1754365431870194.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109885434048.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4075406/2023/04/10/1681109922079065.jpg?v=2|https://photo.8891.com.tw/m125770/v8301\n4355054\tFord\tTourneo Connect\t20\t1739\thttps://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253121802671.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253098249659.png?v=2|https://photo.8891.com.tw/m125770/v830164/s4355054/2025/06/30/1751253099371575.png?v=2|https://photo.8891.com.tw/m125770/v8301\n4488564\tHonda\tCR-V\t20\t1819\thttps://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851440318051887.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851431635367417.jpg?v=2|https://photo.8891.com.tw/m125770/v830164/s4488564/2025/11/07/17624851607813944281.jpg?v=2|https://photo.8891.com.tw/m\n",
+  "stderr": "",
+  "execution_time_ms": 1510
+}
