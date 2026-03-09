@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
@@ -111,61 +110,25 @@ export type ResponseFormat =
   | { type: "json_object" }
   | { type: "json_schema"; json_schema: JsonSchema };
 
-// Claude model to use
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
-
-let anthropicClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (!anthropicClient) {
-    if (!ENV.anthropicApiKey) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
-    }
-    anthropicClient = new Anthropic({ apiKey: ENV.anthropicApiKey });
-  }
-  return anthropicClient;
-}
+// Google AI Gemini model
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GOOGLE_AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 
 /**
- * Extract system message and convert remaining messages to Anthropic format.
+ * Convert messages to OpenAI-compatible format for Google AI.
+ * Google AI's OpenAI-compatible endpoint accepts the same format.
  */
-function convertMessages(messages: Message[]): {
-  system: string | undefined;
-  anthropicMessages: Array<{ role: "user" | "assistant"; content: string }>;
-} {
-  let system: string | undefined;
-  const anthropicMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
+function convertMessages(messages: Message[]): Array<{ role: string; content: string }> {
+  const result: Array<{ role: string; content: string }> = [];
 
   for (const msg of messages) {
     const textContent = extractText(msg.content);
-
-    if (msg.role === "system") {
-      // Combine multiple system messages
-      system = system ? `${system}\n\n${textContent}` : textContent;
-    } else if (msg.role === "user" || msg.role === "assistant") {
-      anthropicMessages.push({ role: msg.role, content: textContent });
-    }
-    // Skip tool/function messages as they're not used in this chatbot
-  }
-
-  // Anthropic requires messages to start with a user message
-  // If first message is assistant, prepend a placeholder user message
-  if (anthropicMessages.length > 0 && anthropicMessages[0].role === "assistant") {
-    anthropicMessages.unshift({ role: "user", content: "(conversation start)" });
-  }
-
-  // Anthropic requires alternating user/assistant messages
-  // Merge consecutive same-role messages
-  const merged: Array<{ role: "user" | "assistant"; content: string }> = [];
-  for (const msg of anthropicMessages) {
-    if (merged.length > 0 && merged[merged.length - 1].role === msg.role) {
-      merged[merged.length - 1].content += "\n\n" + msg.content;
-    } else {
-      merged.push({ ...msg });
+    if (msg.role === "system" || msg.role === "user" || msg.role === "assistant") {
+      result.push({ role: msg.role, content: textContent });
     }
   }
 
-  return { system, anthropicMessages: merged };
+  return result;
 }
 
 function extractText(content: MessageContent | MessageContent[]): string {
@@ -184,51 +147,41 @@ function extractText(content: MessageContent | MessageContent[]): string {
 }
 
 /**
- * Invoke Claude LLM and return result in OpenAI-compatible format
- * (so existing callers don't need to change).
+ * Invoke Google AI Gemini LLM via its OpenAI-compatible endpoint.
+ * Returns result in OpenAI-compatible format (so existing callers don't need to change).
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  const client = getClient();
-
-  const maxTokens = params.maxTokens || params.max_tokens || 4096;
-  const { system, anthropicMessages } = convertMessages(params.messages);
-
-  if (anthropicMessages.length === 0) {
-    anthropicMessages.push({ role: "user", content: "(empty)" });
+  if (!ENV.googleAiApiKey) {
+    throw new Error("GOOGLE_AI_API_KEY is not configured");
   }
 
-  const response = await client.messages.create({
-    model: CLAUDE_MODEL,
+  const maxTokens = params.maxTokens || params.max_tokens || 4096;
+  const openaiMessages = convertMessages(params.messages);
+
+  if (openaiMessages.length === 0) {
+    openaiMessages.push({ role: "user", content: "(empty)" });
+  }
+
+  const body: Record<string, unknown> = {
+    model: GEMINI_MODEL,
     max_tokens: maxTokens,
-    ...(system ? { system } : {}),
-    messages: anthropicMessages,
+    messages: openaiMessages,
+  };
+
+  const response = await fetch(`${GOOGLE_AI_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ENV.googleAiApiKey}`,
+    },
+    body: JSON.stringify(body),
   });
 
-  // Extract text from response
-  const responseText = response.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("");
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google AI API error (${response.status}): ${errorText}`);
+  }
 
-  // Convert to OpenAI-compatible format for existing callers
-  return {
-    id: response.id,
-    created: Math.floor(Date.now() / 1000),
-    model: response.model,
-    choices: [
-      {
-        index: 0,
-        message: {
-          role: "assistant",
-          content: responseText,
-        },
-        finish_reason: response.stop_reason === "end_turn" ? "stop" : response.stop_reason,
-      },
-    ],
-    usage: {
-      prompt_tokens: response.usage.input_tokens,
-      completion_tokens: response.usage.output_tokens,
-      total_tokens: response.usage.input_tokens + response.usage.output_tokens,
-    },
-  };
+  const data = (await response.json()) as InvokeResult;
+  return data;
 }
