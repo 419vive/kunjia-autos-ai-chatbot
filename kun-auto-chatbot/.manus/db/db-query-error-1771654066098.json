@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, customer_name, channel_user_id, channel, created_at FROM conversations WHERE channel = 'line' ORDER BY created_at DESC LIMIT 10;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute SELECT id, customer_name, channel_user_id, channel, created_at FROM conversations WHERE channel = 'line' ORDER BY created_at DESC LIMIT 10;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'customer_name' in 'field list'"
-  ]
-}

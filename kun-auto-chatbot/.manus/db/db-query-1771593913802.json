@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE vehicles SET status = 'available' WHERE externalId IN ('3699687','4075406','4355054','4475535','4472478','4544303','4488564','4517022','4558087','4590033','4477851','4390075');",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user fb6ZvqfLuJXoq6N.546e92496cc7 --database YQVYVFB6KqQhPVgwGtGztr --execute UPDATE vehicles SET status = 'available' WHERE externalId IN ('3699687','4075406','4355054','4475535','4472478','4544303','4488564','4517022','4558087','4590033','4477851','4390075');",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1582
-}
