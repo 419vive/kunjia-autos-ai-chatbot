@@ -549,7 +549,10 @@ export async function sync8891(): Promise<{
           const current = existing[0];
           const updates: Record<string, any> = {};
 
-          if (scraped.price && scraped.price !== current.price?.toString()) {
+          // Compare price using string form to handle decimal vs string mismatch
+          const currentPriceStr = current.price != null ? String(parseFloat(String(current.price))) : null;
+          const scrapedPriceStr = scraped.price != null ? String(parseFloat(String(scraped.price))) : null;
+          if (scrapedPriceStr && scrapedPriceStr !== currentPriceStr) {
             updates.price = scraped.price;
             updates.priceDisplay = scraped.priceDisplay;
           }
@@ -571,6 +574,24 @@ export async function sync8891(): Promise<{
           }
           if (scraped.transmission && scraped.transmission !== current.transmission) {
             updates.transmission = scraped.transmission;
+          }
+          if (scraped.fuelType && scraped.fuelType !== current.fuelType) {
+            updates.fuelType = scraped.fuelType;
+          }
+          if (scraped.bodyType && scraped.bodyType !== current.bodyType) {
+            updates.bodyType = scraped.bodyType;
+          }
+          if (scraped.features && scraped.features !== current.features) {
+            updates.features = scraped.features;
+          }
+          if (scraped.guarantees && scraped.guarantees !== current.guarantees) {
+            updates.guarantees = scraped.guarantees;
+          }
+          if (scraped.title && scraped.title !== current.title) {
+            updates.title = scraped.title;
+          }
+          if (scraped.sourceUrl && scraped.sourceUrl !== current.sourceUrl) {
+            updates.sourceUrl = scraped.sourceUrl;
           }
           if (current.status !== "available") {
             updates.status = "available";
