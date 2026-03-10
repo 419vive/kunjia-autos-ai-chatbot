@@ -175,10 +175,20 @@ describe("LINE Flex Message Templates", () => {
       expect(result.contents.contents).toHaveLength(12);
     });
 
+    it("should include 了解更多 button as first CTA linking to vehicle detail page", () => {
+      const result = buildVehicleCarousel([mockVehicles[0]], "測試", "測試");
+      const footer = result.contents.contents[0].footer;
+      const learnMoreBtn = footer.contents[0];
+      expect(learnMoreBtn.action.type).toBe("uri");
+      expect(learnMoreBtn.action.label).toContain("了解更多");
+      expect(learnMoreBtn.action.uri).toContain("/vehicle/");
+      expect(learnMoreBtn.color).toBe("#C4A265"); // Gold
+    });
+
     it("should include green LINE 問這台車 button with vehicle info", () => {
       const result = buildVehicleCarousel([mockVehicles[0]], "測試", "測試");
       const footer = result.contents.contents[0].footer;
-      const askButton = footer.contents[0];
+      const askButton = footer.contents[1]; // Now second button
       expect(askButton.action.type).toBe("message");
       expect(askButton.action.label).toContain("LINE 問這台車");
       expect(askButton.action.text).toContain("BMW");

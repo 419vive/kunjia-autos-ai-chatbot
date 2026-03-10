@@ -42,7 +42,21 @@ function buildVehicleBubble(v: Vehicle): any {
   // Build LINE inquiry message with vehicle details
   const lineInquiryText = `我想詢問這台車：\n${v.brand} ${v.model} ${v.modelYear || ""}年\n售價：${priceText}\n${specs.slice(0, 3).join(" · ")}`;
 
+  const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`;
+
   const footerButtons: any[] = [
+    // Primary CTA: 了解更多 → 車輛詳情頁（有 3 個意圖問題 + 照片 + 完整資訊）
+    {
+      type: "button",
+      action: {
+        type: "uri",
+        label: "👉 了解更多",
+        uri: vehicleDetailUrl,
+      },
+      style: "primary",
+      color: "#C4A265",
+      height: "md",
+    },
     {
       type: "button",
       action: {
@@ -90,7 +104,7 @@ function buildVehicleBubble(v: Vehicle): any {
       action: {
         type: "uri",
         label: "查看詳情",
-        uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`,
+        uri: vehicleDetailUrl,
       },
     },
     body: {
@@ -181,7 +195,15 @@ export function buildVehicleCarouselMessages(
   }
 
   // LINE reply API max 5 messages, keep within limit
-  return messages.slice(0, 5);
+  const result = messages.slice(0, 5);
+
+  // Attach intent + FAQ quick replies to the LAST carousel message
+  // so they flash at the bottom as the user swipes through cars
+  if (result.length > 0) {
+    result[result.length - 1].quickReply = buildVehicleCarouselQuickReply();
+  }
+
+  return result;
 }
 
 // ============ BACKWARD COMPAT: single message version ============
@@ -718,6 +740,57 @@ export function buildFaqQuickReply(excludeIds: number[] = []): any {
       text: "我想看車，有什麼車可以推薦？",
     },
   });
+
+  return { items };
+}
+
+// ============ VEHICLE CAROUSEL QUICK REPLIES ============
+// 3 intent questions + all 5 FAQ = 人客滑車時看到閃閃的按鈕！
+// LINE Quick Reply 最多 13 個按鈕，我們用 3 + 5 + 1 = 9 個
+
+/**
+ * Build Quick Reply for vehicle carousel:
+ * - 3 intent questions (多少錢/預約/換車) at the top
+ * - All 5 FAQ questions
+ * - "直接看車" at the end
+ */
+export function buildVehicleCarouselQuickReply(): any {
+  const items: any[] = [
+    // === 3 intent questions (matching VehicleLanding.tsx) ===
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "💰 這台多少錢？",
+        text: "這台車多少錢？有優惠嗎？",
+      },
+    },
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "🚗 我想預約看車",
+        text: "我想預約看車，什麼時候方便？",
+      },
+    },
+    {
+      type: "action",
+      action: {
+        type: "message",
+        label: "🔄 舊車想換這台",
+        text: "我有一台舊車想換新車，可以估價嗎？",
+      },
+    },
+    // === All 5 FAQ questions ===
+    ...FAQ_ITEMS.map((item) => ({
+      type: "action",
+      action: {
+        type: "message",
+        label: item.quickReplyLabel,
+        text: item.triggerText,
+      },
+    })),
+  ];
 
   return { items };
 }
