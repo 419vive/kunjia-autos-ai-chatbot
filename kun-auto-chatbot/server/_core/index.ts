@@ -109,6 +109,8 @@ async function runMigrations() {
 
 async function startServer() {
   const app = express();
+  // Trust Railway's reverse proxy for correct IP detection
+  app.set("trust proxy", 1);
   const server = createServer(app);
 
   // ============================================================
