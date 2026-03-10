@@ -9,7 +9,7 @@ import { lineRouter } from "../lineWebhook";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { startSyncScheduler } from "../sync8891";
+import { startSyncScheduler, sync8891 } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import { drizzle } from "drizzle-orm/mysql2";
@@ -191,10 +191,17 @@ async function startServer() {
   // Run database migrations before starting
   await runMigrations();
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
     console.log("[Security] All security layers active: Helmet, Rate Limiting, PII Protection");
-    // Start 8891 auto-sync scheduler (every 6 hours)
+    // Run initial 8891 sync on startup, then schedule every 6 hours
+    try {
+      console.log("[Sync] Running initial 8891 vehicle sync...");
+      const result = await sync8891();
+      console.log("[Sync] Initial sync completed:", result);
+    } catch (err) {
+      console.error("[Sync] Initial sync failed:", err);
+    }
     startSyncScheduler(6);
   });
 }
