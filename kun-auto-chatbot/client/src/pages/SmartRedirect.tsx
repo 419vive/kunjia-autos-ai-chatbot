@@ -20,7 +20,7 @@ const WEBSITE_URL = "/";
 
 export default function SmartRedirect() {
   const [device, setDevice] = useState<DeviceType>("detecting");
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(1);
   const [redirectCancelled, setRedirectCancelled] = useState(false);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function SmartRedirect() {
                   <div
                     className="h-full rounded-full transition-all duration-1000 ease-linear"
                     style={{
-                      width: `${((3 - countdown) / 3) * 100}%`,
+                      width: `${((1 - countdown) / 1) * 100}%`,
                       background:
                         device === "mobile"
                           ? "linear-gradient(90deg, #06C755, #00B900)"
