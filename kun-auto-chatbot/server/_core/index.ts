@@ -11,8 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startSyncScheduler, sync8891 } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
-import { migrate } from "drizzle-orm/mysql2/migrator";
-import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,13 +37,73 @@ async function runMigrations() {
     console.warn("[Database] DATABASE_URL not set, skipping migrations");
     return;
   }
+  let conn: mysql.Connection | null = null;
   try {
     console.log("[Database] Running migrations...");
-    const db = drizzle(process.env.DATABASE_URL);
-    await migrate(db, { migrationsFolder: "./drizzle" });
+    conn = await mysql.createConnection(process.env.DATABASE_URL);
+
+    // Create tables if they don't exist
+    await conn.execute(`CREATE TABLE IF NOT EXISTS users (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      openId varchar(64) NOT NULL UNIQUE,
+      name text,
+      email varchar(320),
+      loginMethod varchar(64),
+      role enum('user','admin') NOT NULL DEFAULT 'user',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      lastSignedIn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS vehicles (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      externalId varchar(32) NOT NULL UNIQUE,
+      sourceUrl text, title text, brand varchar(64) NOT NULL, model varchar(128) NOT NULL,
+      modelYear varchar(8), manufactureYear varchar(8), color varchar(32),
+      price decimal(10,1), priceDisplay varchar(32), mileage varchar(32),
+      displacement varchar(32), transmission varchar(32), fuelType varchar(32),
+      bodyType varchar(32), licenseDate varchar(16), location varchar(64),
+      description text, features text, guarantees text, photoUrls text,
+      photoCount int DEFAULT 0,
+      status enum('available','sold','reserved') NOT NULL DEFAULT 'available',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS conversations (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      sessionId varchar(64) NOT NULL UNIQUE,
+      customerName varchar(128), customerContact varchar(256),
+      channel enum('web','line','facebook','youtube','other') NOT NULL DEFAULT 'web',
+      status enum('active','closed','follow_up') NOT NULL DEFAULT 'active',
+      leadScore int DEFAULT 0,
+      leadStatus enum('new','qualified','hot','converted','lost') NOT NULL DEFAULT 'new',
+      tags text, summary text, interestedVehicleIds text, notifiedOwner int DEFAULT 0,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS messages (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      conversationId int NOT NULL,
+      role enum('user','assistant','system') NOT NULL,
+      content text NOT NULL, metadata text,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS leadEvents (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      conversationId int NOT NULL,
+      eventType varchar(64) NOT NULL,
+      scoreChange int NOT NULL, reason text,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     console.log("[Database] Migrations completed successfully");
   } catch (error) {
     console.error("[Database] Migration failed:", error);
+  } finally {
+    if (conn) await conn.end();
   }
 }
 
