@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Car, MessageCircle, Smartphone, Monitor, ArrowRight, Phone } from "lucide-react";
 
-type DeviceType = "mobile" | "desktop" | "detecting";
+type DeviceType = "mobile" | "desktop";
 
 function detectDevice(): DeviceType {
   const ua = navigator.userAgent || "";
-  // Check for mobile devices
   if (
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
     (navigator.maxTouchPoints > 0 && window.innerWidth < 1024)
@@ -19,46 +18,35 @@ const LINE_URL = "https://page.line.me/825oftez";
 const WEBSITE_URL = "/";
 
 export default function SmartRedirect() {
-  const [device, setDevice] = useState<DeviceType>("detecting");
-  const [countdown, setCountdown] = useState(1);
+  // Detect device synchronously — no "detecting" flash
+  const device = useMemo(() => detectDevice(), []);
   const [redirectCancelled, setRedirectCancelled] = useState(false);
 
+  // Redirect immediately (no countdown delay)
   useEffect(() => {
-    const detected = detectDevice();
-    setDevice(detected);
-  }, []);
+    if (redirectCancelled) return;
 
-  useEffect(() => {
-    if (device === "detecting" || redirectCancelled) return;
-
-    if (countdown <= 0) {
+    // Redirect after a minimal 300ms (just enough for the page to render)
+    const timer = setTimeout(() => {
       if (device === "mobile") {
         window.location.href = LINE_URL;
       } else {
         window.location.href = WEBSITE_URL;
       }
-      return;
-    }
+    }, 300);
 
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [device, countdown, redirectCancelled]);
-
-  const handleCancel = () => {
-    setRedirectCancelled(true);
-  };
+  }, [device, redirectCancelled]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440] flex items-center justify-center p-4">
-      {/* Decorative background elements */}
+      {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-[#C4A265]/5 rounded-full blur-3xl" />
         <div className="absolute bottom-[15%] right-[10%] w-80 h-80 bg-[#C4A265]/5 rounded-full blur-3xl" />
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.02] rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Main card */}
         <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-10 pb-6 text-center">
@@ -69,16 +57,8 @@ export default function SmartRedirect() {
             <p className="text-white/60 text-sm">高雄優質中古車商 · 誠信經營40年老口碑</p>
           </div>
 
-          {/* Status section */}
           <div className="px-8 pb-8">
-            {device === "detecting" ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-4">
-                  <div className="w-6 h-6 border-2 border-[#C4A265] border-t-transparent rounded-full animate-spin" />
-                </div>
-                <p className="text-white/70 text-sm">正在偵測您的裝置...</p>
-              </div>
-            ) : !redirectCancelled ? (
+            {!redirectCancelled ? (
               <div className="text-center py-4">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/10 mb-4">
                   {device === "mobile" ? (
@@ -93,18 +73,14 @@ export default function SmartRedirect() {
                     ? "正在為您開啟 LINE 官方帳號..."
                     : "正在為您導向崑家汽車官網..."}
                 </p>
-                <p className="text-white/50 text-sm mb-6">
-                  {countdown > 0
-                    ? `${countdown} 秒後自動跳轉`
-                    : "正在跳轉中..."}
-                </p>
+                <p className="text-white/50 text-sm mb-6">正在跳轉中...</p>
 
-                {/* Progress bar */}
+                {/* Progress bar — animated immediately */}
                 <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mb-6">
                   <div
-                    className="h-full rounded-full transition-all duration-1000 ease-linear"
+                    className="h-full rounded-full animate-pulse"
                     style={{
-                      width: `${((1 - countdown) / 1) * 100}%`,
+                      width: "100%",
                       background:
                         device === "mobile"
                           ? "linear-gradient(90deg, #06C755, #00B900)"
@@ -114,22 +90,20 @@ export default function SmartRedirect() {
                 </div>
 
                 <button
-                  onClick={handleCancel}
+                  onClick={() => setRedirectCancelled(true)}
                   className="text-white/40 text-xs hover:text-white/70 transition-colors underline underline-offset-2"
                 >
-                  取消自動跳轉
+                  取消自動跳轉，手動選擇
                 </button>
               </div>
             ) : null}
 
-            {/* Manual selection - shown when cancelled or after detection */}
-            {(redirectCancelled || device !== "detecting") && (
-              <div className={`space-y-3 ${!redirectCancelled ? "mt-4 pt-4 border-t border-white/10" : "py-2"}`}>
-                {redirectCancelled && (
-                  <p className="text-white/60 text-sm text-center mb-4">
-                    請選擇您想要的聯繫方式：
-                  </p>
-                )}
+            {/* Manual selection */}
+            {redirectCancelled && (
+              <div className="space-y-3 py-2">
+                <p className="text-white/60 text-sm text-center mb-4">
+                  請選擇您想要的聯繫方式：
+                </p>
 
                 {/* LINE button */}
                 <a

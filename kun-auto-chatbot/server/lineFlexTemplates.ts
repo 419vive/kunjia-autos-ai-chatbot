@@ -628,6 +628,7 @@ export const FAQ_ITEMS = [
     title: "第三方認證",
     color: "#1B3A5C",
     triggerText: "崑家FAQ：車況有保障嗎",
+    quickReplyLabel: "🛡️ 車況有保障嗎？",
     shortQuestion: "車況有保障嗎？會不會買到事故車？",
     answer:
       "絕對不會！我們全車系皆通過具公信力的「第三方認證」，並附有詳細的車況鑑定報告書。\n\n我們敢合約保證：\n✅ 無重大事故\n✅ 無泡水\n✅ 無引擎/車身號碼變造\n✅ 非營業用車\n\n若有不符，保證原價買回！認證書就是您的定心丸，讓您買得安心、開得放心！",
@@ -640,6 +641,7 @@ export const FAQ_ITEMS = [
     title: "超強貸款團隊",
     color: "#C4A265",
     triggerText: "崑家FAQ：自備款不足怎辦",
+    quickReplyLabel: "💰 自備款不足怎辦？",
     shortQuestion: "自備款不足，還可以貸款買車嗎？",
     answer:
       "完全沒問題！我們擁有業界經驗最豐富的「超強貸款團隊」💪\n\n您只要負責挑喜歡的車，貸款難題交給我們搞定！\n\n不管您的條件如何，我們都會盡全力幫您爭取最佳方案。",
@@ -652,6 +654,7 @@ export const FAQ_ITEMS = [
     title: "外縣市免費接駁",
     color: "#06C755",
     triggerText: "崑家FAQ：外縣市怎看車",
+    quickReplyLabel: "🚗 外縣市怎看車？",
     shortQuestion: "住外縣市，過去看車不方便怎辦？",
     answer:
       "我們非常歡迎外縣市的朋友！🙌\n\n提供專屬「Uber」免費接送：\n🚄 高鐵到站 → 專車接送\n🚂 台鐵到站 → 專車接送\n🚌 客運到站 → 專車接送\n\n只要提前預約，我們都會派車接您！\n就算最後沒成交也沒關係，買賣不成仁義在，當作交個朋友！",
@@ -664,6 +667,7 @@ export const FAQ_ITEMS = [
     title: "最快3小時交車",
     color: "#FF6600",
     triggerText: "崑家FAQ：多久能交車",
+    quickReplyLabel: "⚡ 多久能交車？",
     shortQuestion: "流程走完，多久能開新車回家？",
     answer:
       "我們的流程絕對是業界最高效！⚡\n\n💵 現金購車：資料齊全，最快 3 小時內 開回家！\n🏦 貸款購車：對保完成後，最快約 3 天 交車！\n\n不讓您等，效率就是我們的招牌。",
@@ -676,6 +680,7 @@ export const FAQ_ITEMS = [
     title: "高價收購舊車",
     color: "#9B59B6",
     triggerText: "崑家FAQ：舊車可換新車嗎",
+    quickReplyLabel: "🔄 舊車可換新車嗎？",
     shortQuestion: "有台舊車想換，你們有幫忙處理嗎？",
     answer:
       "當然有！我們提供「高價收購 & 車換車」服務 🔄\n\n因為我們有龐大的直營客群與銷售管道：\n💎 不經中間商 → 省下盤車剝削\n💎 舊車直接折抵新車車價\n💎 手續簡便、無縫換車\n\n省去自己賣車的麻煩，輕鬆升級！",
@@ -684,78 +689,48 @@ export const FAQ_ITEMS = [
   },
 ];
 
-// ============ FAQ QUESTION MENU (only questions, no answers!) ============
-// This is what users see FIRST — curiosity gap drives clicks
+// ============ FAQ QUICK REPLY BUTTONS ============
+// Quick Reply = 圓形按鈕直接出現在訊息底部，一進來就看到！
+// 比 Flex Message 的按鈕更醒目、更容易點擊
 
 /**
- * Build the FAQ question menu — shows ONLY questions as clickable buttons.
- * Answers are hidden until user clicks. This is the core of progressive messaging.
+ * Build Quick Reply items for all FAQ questions.
+ * These appear as tappable bubbles at the bottom of any message.
+ */
+export function buildFaqQuickReply(excludeIds: number[] = []): any {
+  const items = FAQ_ITEMS
+    .filter((item) => !excludeIds.includes(item.id))
+    .map((item) => ({
+      type: "action",
+      action: {
+        type: "message",
+        label: item.quickReplyLabel,
+        text: item.triggerText,
+      },
+    }));
+
+  // Add "直接看車" at the end
+  items.push({
+    type: "action",
+    action: {
+      type: "message",
+      label: "🚗 直接看車！",
+      text: "我想看車，有什麼車可以推薦？",
+    },
+  });
+
+  return { items };
+}
+
+/**
+ * @deprecated Use buildFaqQuickReply() instead — Quick Reply buttons are more visible
  */
 export function buildFaqQuestionMenu(): any {
+  // Return a simple text message with Quick Reply attached
   return {
-    type: "flex",
-    altText: "🏆 買車最怕什麼？點一個你最在意的問題 👇",
-    contents: {
-      type: "bubble",
-      size: "mega",
-      header: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: "🏆 崑家汽車 — 五大保證",
-            weight: "bold",
-            size: "lg",
-            color: "#FFFFFF",
-          },
-          {
-            type: "text",
-            text: "買車最怕什麼？點你最在意的 👇",
-            size: "sm",
-            color: "#FFFFFFCC",
-            margin: "sm",
-          },
-        ],
-        backgroundColor: "#1B3A5C",
-        paddingAll: "16px",
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        contents: FAQ_ITEMS.map((item) => ({
-          type: "button",
-          action: {
-            type: "message",
-            label: `${item.icon} ${item.shortQuestion}`,
-            text: item.triggerText,
-          },
-          style: "secondary",
-          height: "sm",
-          margin: "sm",
-        })),
-        paddingAll: "12px",
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "button",
-            action: {
-              type: "message",
-              label: "🚗 跳過，直接看車！",
-              text: "我想看車，有什麼車可以推薦？",
-            },
-            style: "primary",
-            color: "#C4A265",
-            height: "sm",
-          },
-        ],
-        paddingAll: "12px",
-      },
-    },
+    type: "text",
+    text: "👇 點下面的按鈕，阿家幫你解答！",
+    quickReply: buildFaqQuickReply(),
   };
 }
 
@@ -770,7 +745,11 @@ export function detectFaqTrigger(message: string): (typeof FAQ_ITEMS)[number] | 
 
 /**
  * Build the answer reveal for a specific FAQ item.
- * Returns array of messages: [answer bubble, follow-up prompt]
+ * Returns array of messages:
+ *   [1] Answer Flex bubble (with CTA buttons)
+ *   [2] "還想了解什麼？" text with Quick Reply for remaining questions
+ *
+ * Quick Reply buttons appear at the bottom — user can keep tapping to explore.
  */
 export function buildFaqAnswerMessages(faqItem: (typeof FAQ_ITEMS)[number]): any[] {
   // 1. The answer reveal — beautiful Flex bubble
@@ -850,9 +829,9 @@ export function buildFaqAnswerMessages(faqItem: (typeof FAQ_ITEMS)[number]): any
           {
             type: "button",
             action: {
-              type: "message",
+              type: "uri",
               label: "📞 直接打給賴先生",
-              text: "我想打電話聯繫",
+              uri: "tel:0936812818",
             },
             style: "secondary",
             height: "sm",
@@ -863,56 +842,15 @@ export function buildFaqAnswerMessages(faqItem: (typeof FAQ_ITEMS)[number]): any
     },
   };
 
-  // 2. Follow-up: "還想知道什麼？" with remaining questions
-  const remainingItems = FAQ_ITEMS.filter((item) => item.id !== faqItem.id);
-  const followUpBubble: any = {
-    type: "flex",
-    altText: "還想了解什麼？",
-    contents: {
-      type: "bubble",
-      size: "kilo",
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        contents: [
-          {
-            type: "text",
-            text: "還想了解什麼？👇",
-            weight: "bold",
-            size: "md",
-            color: "#1B3A5C",
-          },
-          ...remainingItems.map((item) => ({
-            type: "button",
-            action: {
-              type: "message",
-              label: `${item.icon} ${item.title}`,
-              text: item.triggerText,
-            },
-            style: "secondary",
-            height: "sm",
-            margin: "sm",
-          })),
-          {
-            type: "button",
-            action: {
-              type: "message",
-              label: "🚗 直接看車！",
-              text: "我想看車，有什麼車可以推薦？",
-            },
-            style: "primary",
-            color: "#C4A265",
-            height: "sm",
-            margin: "md",
-          },
-        ],
-        paddingAll: "12px",
-      },
-    },
+  // 2. Follow-up text with Quick Reply for remaining questions
+  // Quick Reply buttons appear at the bottom — immediate, no scrolling needed
+  const followUp: any = {
+    type: "text",
+    text: "還想了解什麼？👇 繼續點，或直接看車！",
+    quickReply: buildFaqQuickReply([faqItem.id]),
   };
 
-  return [answerBubble, followUpBubble];
+  return [answerBubble, followUp];
 }
 
 // ============ BACKWARD COMPAT: full FAQ carousel (all answers visible) ============
@@ -923,17 +861,17 @@ export function buildFaqCarousel(): any {
 
 /**
  * Build the complete follow welcome sequence (progressive design)
- * Message 1: Warm welcome text
- * Message 2: FAQ question menu (questions only, no answers!)
- * The user CHOOSES what they want to know → answers revealed on click
+ * Single welcome text with Quick Reply buttons at the bottom.
+ * User sees welcome message + 5 FAQ question buttons IMMEDIATELY.
+ * No need to scroll, no need to tap anything first — buttons are RIGHT THERE.
  */
 export function buildFollowWelcomeMessages(): any[] {
   return [
     {
       type: "text",
-      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年，專門幫你找到最適合的好車！\n\n👇 買車前最怕什麼？點一個你最在意的，阿家幫你解答！",
+      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年，專門幫你找到最適合的好車！\n\n買車前最怕什麼？\n👇 點下面的問題，阿家馬上幫你解答！",
+      quickReply: buildFaqQuickReply(),
     },
-    buildFaqQuestionMenu(),
   ];
 }
 
