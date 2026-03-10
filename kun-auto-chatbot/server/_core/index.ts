@@ -235,6 +235,47 @@ async function startServer() {
     })
   );
 
+  // ============================================================
+  // FAST REDIRECT: /line and /contact
+  // Server-side device detection + instant redirect (no SPA load needed)
+  // This is ~50ms vs ~2-3s for SPA-based redirect
+  // ============================================================
+  const LINE_OA_URL = "https://page.line.me/825oftez";
+
+  app.get(["/line", "/contact"], (req, res) => {
+    const ua = req.headers["user-agent"] || "";
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const redirectUrl = isMobile ? LINE_OA_URL : "/";
+
+    // Return ultra-lightweight HTML that redirects immediately
+    // No React, no JS bundle, no waiting — just pure instant redirect
+    res.status(200).set({ "Content-Type": "text/html" }).end(`<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="0;url=${redirectUrl}">
+<title>崑家汽車 — 跳轉中</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1B3A5C;font-family:system-ui,-apple-system,sans-serif;color:#fff}
+.c{text-align:center;padding:2rem}
+.s{width:2rem;height:2rem;border:3px solid rgba(196,162,101,.3);border-top-color:#C4A265;border-radius:50%;animation:spin .6s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+a{color:#C4A265;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="c">
+<div class="s"></div>
+<p style="font-size:1.1rem;font-weight:600;margin-bottom:.5rem">${isMobile ? "正在開啟 LINE..." : "正在前往崑家汽車官網..."}</p>
+<p style="font-size:.8rem;opacity:.5">如未自動跳轉，<a href="${redirectUrl}">請點此</a></p>
+</div>
+<script>window.location.href="${redirectUrl}"</script>
+</body>
+</html>`);
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
