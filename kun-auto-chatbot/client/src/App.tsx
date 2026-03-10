@@ -11,6 +11,7 @@ import Conversations from "./pages/Conversations";
 import VehicleManagement from "./pages/VehicleManagement";
 import LineSetup from "./pages/LineSetup";
 import SmartRedirect from "./pages/SmartRedirect";
+import VehicleLanding from "./pages/VehicleLanding";
 import DashboardLayout from "./components/DashboardLayout";
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={Home} />
       <Route path="/chat" component={Chat} />
+      <Route path="/vehicle/:id" component={VehicleLanding} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
 

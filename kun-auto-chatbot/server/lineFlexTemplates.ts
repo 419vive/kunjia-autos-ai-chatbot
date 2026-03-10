@@ -90,7 +90,7 @@ function buildVehicleBubble(v: Vehicle): any {
       action: {
         type: "uri",
         label: "查看詳情",
-        uri: v.sourceUrl || "https://kunchatbot-yqvyvfb6.manus.space",
+        uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`,
       },
     },
     body: {
