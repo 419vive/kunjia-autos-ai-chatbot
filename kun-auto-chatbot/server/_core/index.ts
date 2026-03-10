@@ -11,6 +11,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startSyncScheduler } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import { drizzle } from "drizzle-orm/mysql2";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,6 +31,21 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
     }
   }
   throw new Error(`No available port found starting from ${startPort}`);
+}
+
+async function runMigrations() {
+  if (!process.env.DATABASE_URL) {
+    console.warn("[Database] DATABASE_URL not set, skipping migrations");
+    return;
+  }
+  try {
+    console.log("[Database] Running migrations...");
+    const db = drizzle(process.env.DATABASE_URL);
+    await migrate(db, { migrationsFolder: "./drizzle" });
+    console.log("[Database] Migrations completed successfully");
+  } catch (error) {
+    console.error("[Database] Migration failed:", error);
+  }
 }
 
 async function startServer() {
@@ -170,6 +187,9 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Run database migrations before starting
+  await runMigrations();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
