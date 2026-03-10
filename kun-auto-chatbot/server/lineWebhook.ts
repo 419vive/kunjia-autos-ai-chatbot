@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -374,6 +374,58 @@ async function processLineEvent(
       await checkAndNotifyOwner(conversation!, userMessage, channelAccessToken, ownerUserId, phoneJustFound);
       return;
     }
+  }
+
+  // ============ CHECK IF THIS IS A FAQ PROGRESSIVE TRIGGER ============
+  const faqItem = detectFaqTrigger(userMessage);
+
+  if (faqItem) {
+    console.log(`[LINE] FAQ trigger detected: #${faqItem.id} ${faqItem.title}`);
+
+    // Lead score +10 for each FAQ interaction (shows engagement)
+    const faqScore = 10;
+    const newScore = (conversation!.leadScore || 0) + faqScore;
+    const newStatus = newScore >= 80 ? "hot" : newScore >= 50 ? "qualified" : "new";
+    await db.updateConversation(convId, { leadScore: newScore, leadStatus: newStatus });
+    await db.addLeadEvent({
+      conversationId: convId,
+      eventType: "faq_interaction",
+      scoreChange: faqScore,
+      reason: `🏆 FAQ互動：點擊了「${faqItem.title}」問題`,
+    });
+    conversation = { ...conversation!, leadScore: newScore };
+    console.log(`[LINE] FAQ lead score: +${faqScore} = ${newScore}`);
+
+    // Build answer reveal + follow-up question menu
+    const faqMessages = buildFaqAnswerMessages(faqItem);
+
+    await db.addMessage({
+      conversationId: convId,
+      role: "assistant",
+      content: `[🏆 FAQ揭曉：${faqItem.title} — ${faqItem.shortQuestion}]`,
+    });
+
+    try {
+      const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          replyToken,
+          messages: faqMessages,
+        }),
+      });
+      const replyBody = await replyRes.text();
+      console.log(`[LINE] FAQ answer reply: ${replyRes.status} ${replyBody}`);
+    } catch (err) {
+      console.error("[LINE] FAQ reply failed:", err);
+    }
+
+    const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
+    await checkAndNotifyOwner(conversation!, userMessage, channelAccessToken, ownerUserId, phoneJustFound);
+    return;
   }
 
   // ============ CHECK IF THIS IS A RICH MENU TRIGGER ============

@@ -614,164 +614,326 @@ export function buildSimpleCard(
   };
 }
 
-// ============ FAQ PROGRESSIVE CAROUSEL ============
-// 崑家汽車五大核心優勢 FAQ - 漸進式訊息，用於 follow 事件和 Rich Menu
+// ============ FAQ PROGRESSIVE MESSAGE SYSTEM ============
+// 漸進式訊息設計：只露問題 → 點擊才揭曉答案 → 每次互動加深信任
+//
+// Flow: Follow → 歡迎 + 問題選單（不露答案）
+//       → 用戶點問題 → 揭曉答案 + 推車 + 「還想知道？」
+//       → 每次點擊 = Lead Score +10
 
-const FAQ_ITEMS = [
+export const FAQ_ITEMS = [
   {
     id: 1,
     icon: "🛡️",
     title: "第三方認證",
     color: "#1B3A5C",
-    question: "車況有保障嗎？會不會買到事故車或泡水車？",
+    triggerText: "崑家FAQ：車況有保障嗎",
+    shortQuestion: "車況有保障嗎？會不會買到事故車？",
     answer:
-      "絕對不會！我們全車系皆通過具公信力的「第三方認證」，並附有詳細的車況鑑定報告書。我們敢合約保證「無重大事故、無泡水、無引擎/車身號碼變造、非營業用車」，若有不符，保證原價買回！認證書就是您的定心丸，讓您買得安心、開得放心！",
-    cta: { label: "🔍 瀏覽認證好車", text: "我想看車，有什麼車可以推薦？" },
+      "絕對不會！我們全車系皆通過具公信力的「第三方認證」，並附有詳細的車況鑑定報告書。\n\n我們敢合約保證：\n✅ 無重大事故\n✅ 無泡水\n✅ 無引擎/車身號碼變造\n✅ 非營業用車\n\n若有不符，保證原價買回！認證書就是您的定心丸，讓您買得安心、開得放心！",
+    ctaLabel: "🔍 看認證好車",
+    ctaText: "我想看車，有什麼車可以推薦？",
   },
   {
     id: 2,
     icon: "💰",
     title: "超強貸款團隊",
     color: "#C4A265",
-    question: "自備款不足，還可以貸款買車嗎？",
+    triggerText: "崑家FAQ：自備款不足怎辦",
+    shortQuestion: "自備款不足，還可以貸款買車嗎？",
     answer:
-      "完全沒問題！我們擁有業界經驗最豐富的「超強貸款團隊」，您只要負責挑喜歡的車，貸款難題交給我們幫您搞定！",
-    cta: { label: "💬 詢問貸款方案", text: "我想了解貸款方案，自備款不多可以嗎？" },
+      "完全沒問題！我們擁有業界經驗最豐富的「超強貸款團隊」💪\n\n您只要負責挑喜歡的車，貸款難題交給我們搞定！\n\n不管您的條件如何，我們都會盡全力幫您爭取最佳方案。",
+    ctaLabel: "💬 詢問貸款方案",
+    ctaText: "我想了解貸款方案，自備款不多可以嗎？",
   },
   {
     id: 3,
     icon: "🚗",
     title: "外縣市免費接駁",
     color: "#06C755",
-    question: "住外縣市，過去看車不方便怎麼辦？",
+    triggerText: "崑家FAQ：外縣市怎看車",
+    shortQuestion: "住外縣市，過去看車不方便怎辦？",
     answer:
-      "我們非常歡迎外縣市的朋友！提供專屬的「Uber」接送服務。只要您提前預約，無論搭高鐵、台鐵還是客運，到站後我們都會派專車免費接送您來店賞車。就算最後沒有成交也沒關係，買賣不成仁義在，誠心邀請您來體驗！",
-    cta: { label: "📅 預約免費接駁", text: "我住外縣市，想預約看車可以接送嗎？" },
+      "我們非常歡迎外縣市的朋友！🙌\n\n提供專屬「Uber」免費接送：\n🚄 高鐵到站 → 專車接送\n🚂 台鐵到站 → 專車接送\n🚌 客運到站 → 專車接送\n\n只要提前預約，我們都會派車接您！\n就算最後沒成交也沒關係，買賣不成仁義在，當作交個朋友！",
+    ctaLabel: "📅 預約免費接駁",
+    ctaText: "我住外縣市，想預約看車可以接送嗎？",
   },
   {
     id: 4,
     icon: "⚡",
     title: "最快3小時交車",
     color: "#FF6600",
-    question: "所有手續跟流程走完，多久能開新車回家？",
+    triggerText: "崑家FAQ：多久能交車",
+    shortQuestion: "流程走完，多久能開新車回家？",
     answer:
-      "我們的流程絕對是業界最高效！現金購車，資料齊全最快「3小時內」就能把愛車開回家！貸款購車，銀行對保完成後最快「約3天」就能完美交車。",
-    cta: { label: "📞 聯繫賴先生", text: "我想了解交車流程，大概要多久？" },
+      "我們的流程絕對是業界最高效！⚡\n\n💵 現金購車：資料齊全，最快 3 小時內 開回家！\n🏦 貸款購車：對保完成後，最快約 3 天 交車！\n\n不讓您等，效率就是我們的招牌。",
+    ctaLabel: "📞 聯繫賴先生",
+    ctaText: "我想了解交車流程，大概要多久？",
   },
   {
     id: 5,
     icon: "🔄",
     title: "高價收購舊車",
     color: "#9B59B6",
-    question: "有台舊車想換新車，你們有幫忙處理嗎？",
+    triggerText: "崑家FAQ：舊車可換新車嗎",
+    shortQuestion: "有台舊車想換，你們有幫忙處理嗎？",
     answer:
-      "當然有！我們提供「高價收購與車換車」服務。因為我們有龐大的直營客群與銷售管道，不需經過中間商盤車的剝削，舊車價值可直接折抵新車車價，手續簡便、省去自己賣車的麻煩，輕鬆換車！",
-    cta: { label: "💬 詢問舊車估價", text: "我有一台舊車想換新車，可以估價嗎？" },
+      "當然有！我們提供「高價收購 & 車換車」服務 🔄\n\n因為我們有龐大的直營客群與銷售管道：\n💎 不經中間商 → 省下盤車剝削\n💎 舊車直接折抵新車車價\n💎 手續簡便、無縫換車\n\n省去自己賣車的麻煩，輕鬆升級！",
+    ctaLabel: "💬 詢問舊車估價",
+    ctaText: "我有一台舊車想換新車，可以估價嗎？",
   },
 ];
 
-function buildFaqBubble(item: (typeof FAQ_ITEMS)[number]): any {
+// ============ FAQ QUESTION MENU (only questions, no answers!) ============
+// This is what users see FIRST — curiosity gap drives clicks
+
+/**
+ * Build the FAQ question menu — shows ONLY questions as clickable buttons.
+ * Answers are hidden until user clicks. This is the core of progressive messaging.
+ */
+export function buildFaqQuestionMenu(): any {
   return {
-    type: "bubble",
-    size: "kilo",
-    header: {
-      type: "box",
-      layout: "horizontal",
-      contents: [
-        {
-          type: "text",
-          text: item.icon,
-          size: "xxl",
-          flex: 0,
-        },
-        {
-          type: "text",
-          text: item.title,
-          weight: "bold",
-          size: "lg",
-          color: "#FFFFFF",
-          flex: 1,
-          margin: "md",
-          gravity: "center",
-        },
-      ],
-      backgroundColor: item.color,
-      paddingAll: "16px",
-    },
-    body: {
-      type: "box",
-      layout: "vertical",
-      spacing: "md",
-      contents: [
-        {
-          type: "text",
-          text: `❓ ${item.question}`,
-          size: "sm",
-          color: "#C4A265",
-          weight: "bold",
-          wrap: true,
-        },
-        {
-          type: "separator",
-        },
-        {
-          type: "text",
-          text: item.answer,
-          size: "sm",
-          color: "#555555",
-          wrap: true,
-        },
-      ],
-      paddingAll: "16px",
-    },
-    footer: {
-      type: "box",
-      layout: "vertical",
-      contents: [
-        {
+    type: "flex",
+    altText: "🏆 買車最怕什麼？點一個你最在意的問題 👇",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "🏆 崑家汽車 — 五大保證",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+          {
+            type: "text",
+            text: "買車最怕什麼？點你最在意的 👇",
+            size: "sm",
+            color: "#FFFFFFCC",
+            margin: "sm",
+          },
+        ],
+        backgroundColor: "#1B3A5C",
+        paddingAll: "16px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: FAQ_ITEMS.map((item) => ({
           type: "button",
           action: {
             type: "message",
-            label: item.cta.label,
-            text: item.cta.text,
+            label: `${item.icon} ${item.shortQuestion}`,
+            text: item.triggerText,
           },
-          style: "primary",
-          color: item.color,
+          style: "secondary",
           height: "sm",
-        },
-      ],
-      paddingAll: "12px",
+          margin: "sm",
+        })),
+        paddingAll: "12px",
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "message",
+              label: "🚗 跳過，直接看車！",
+              text: "我想看車，有什麼車可以推薦？",
+            },
+            style: "primary",
+            color: "#C4A265",
+            height: "sm",
+          },
+        ],
+        paddingAll: "12px",
+      },
     },
   };
 }
 
+// ============ FAQ ANSWER REVEAL (shown when user clicks a question) ============
+
 /**
- * Build FAQ progressive carousel - 5 core advantages as swipeable cards
- * Used on: follow event, rich menu "了解崑家" trigger
+ * Detect if a message is an FAQ trigger. Returns the FAQ item or null.
  */
-export function buildFaqCarousel(): any {
-  return {
-    type: "flex",
-    altText: "🏆 崑家汽車五大保證 — 左右滑動瞭解更多",
-    contents: {
-      type: "carousel",
-      contents: FAQ_ITEMS.map(buildFaqBubble),
-    },
-  };
+export function detectFaqTrigger(message: string): (typeof FAQ_ITEMS)[number] | null {
+  return FAQ_ITEMS.find((item) => item.triggerText === message) || null;
 }
 
 /**
- * Build the complete follow welcome sequence (welcome text + FAQ carousel)
- * Returns array of messages for LINE push API
+ * Build the answer reveal for a specific FAQ item.
+ * Returns array of messages: [answer bubble, follow-up prompt]
+ */
+export function buildFaqAnswerMessages(faqItem: (typeof FAQ_ITEMS)[number]): any[] {
+  // 1. The answer reveal — beautiful Flex bubble
+  const answerBubble: any = {
+    type: "flex",
+    altText: `${faqItem.icon} ${faqItem.title}：${faqItem.shortQuestion}`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          {
+            type: "text",
+            text: faqItem.icon,
+            size: "xxl",
+            flex: 0,
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: faqItem.title,
+                weight: "bold",
+                size: "lg",
+                color: "#FFFFFF",
+              },
+              {
+                type: "text",
+                text: faqItem.shortQuestion,
+                size: "xs",
+                color: "#FFFFFFCC",
+                wrap: true,
+              },
+            ],
+            margin: "lg",
+            flex: 1,
+          },
+        ],
+        backgroundColor: faqItem.color,
+        paddingAll: "16px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: faqItem.answer,
+            size: "sm",
+            color: "#333333",
+            wrap: true,
+          },
+        ],
+        paddingAll: "16px",
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "message",
+              label: faqItem.ctaLabel,
+              text: faqItem.ctaText,
+            },
+            style: "primary",
+            color: faqItem.color,
+            height: "sm",
+          },
+          {
+            type: "button",
+            action: {
+              type: "message",
+              label: "📞 直接打給賴先生",
+              text: "我想打電話聯繫",
+            },
+            style: "secondary",
+            height: "sm",
+          },
+        ],
+        paddingAll: "12px",
+      },
+    },
+  };
+
+  // 2. Follow-up: "還想知道什麼？" with remaining questions
+  const remainingItems = FAQ_ITEMS.filter((item) => item.id !== faqItem.id);
+  const followUpBubble: any = {
+    type: "flex",
+    altText: "還想了解什麼？",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "text",
+            text: "還想了解什麼？👇",
+            weight: "bold",
+            size: "md",
+            color: "#1B3A5C",
+          },
+          ...remainingItems.map((item) => ({
+            type: "button",
+            action: {
+              type: "message",
+              label: `${item.icon} ${item.title}`,
+              text: item.triggerText,
+            },
+            style: "secondary",
+            height: "sm",
+            margin: "sm",
+          })),
+          {
+            type: "button",
+            action: {
+              type: "message",
+              label: "🚗 直接看車！",
+              text: "我想看車，有什麼車可以推薦？",
+            },
+            style: "primary",
+            color: "#C4A265",
+            height: "sm",
+            margin: "md",
+          },
+        ],
+        paddingAll: "12px",
+      },
+    },
+  };
+
+  return [answerBubble, followUpBubble];
+}
+
+// ============ BACKWARD COMPAT: full FAQ carousel (all answers visible) ============
+
+export function buildFaqCarousel(): any {
+  return buildFaqQuestionMenu();
+}
+
+/**
+ * Build the complete follow welcome sequence (progressive design)
+ * Message 1: Warm welcome text
+ * Message 2: FAQ question menu (questions only, no answers!)
+ * The user CHOOSES what they want to know → answers revealed on click
  */
 export function buildFollowWelcomeMessages(): any[] {
   return [
     {
       type: "text",
-      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年！\n👇 先滑一下了解我們的五大保證，有問題隨時問，阿家24小時都在！",
+      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年，專門幫你找到最適合的好車！\n\n👇 買車前最怕什麼？點一個你最在意的，阿家幫你解答！",
     },
-    buildFaqCarousel(),
-    buildWelcomeCard(),
+    buildFaqQuestionMenu(),
   ];
 }
 
