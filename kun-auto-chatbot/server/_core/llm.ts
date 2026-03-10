@@ -151,6 +151,7 @@ function extractText(content: MessageContent | MessageContent[]): string {
  * Returns result in OpenAI-compatible format (so existing callers don't need to change).
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  console.log("[LLM] API key present:", !!ENV.googleAiApiKey, "length:", ENV.googleAiApiKey?.length || 0);
   if (!ENV.googleAiApiKey) {
     throw new Error("GOOGLE_AI_API_KEY is not configured");
   }
@@ -179,6 +180,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error("[LLM] API error:", response.status, errorText.substring(0, 500));
     throw new Error(`Google AI API error (${response.status}): ${errorText}`);
   }
 
