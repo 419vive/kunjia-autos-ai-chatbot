@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -170,6 +170,61 @@ async function processLineEvent(
   channelAccessToken: string,
   ownerUserId?: string
 ) {
+  // ============ FOLLOW EVENT: Send welcome + FAQ progressive carousel ============
+  if (event.type === "follow") {
+    const userId = event.source?.userId;
+    console.log(`[LINE] 🎉 New follower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    if (userId) {
+      try {
+        // Get profile for name
+        let customerName: string | null = null;
+        try {
+          const profileRes = await fetch(
+            `https://api.line.me/v2/bot/profile/${userId}`,
+            { headers: { Authorization: `Bearer ${channelAccessToken}` } }
+          );
+          if (profileRes.ok) {
+            const profile = await profileRes.json();
+            customerName = profile.displayName;
+          }
+        } catch {}
+
+        // Create conversation for the new follower
+        const sessionId = `line-${userId}`;
+        let conversation = await db.getConversationBySessionId(sessionId);
+        if (!conversation) {
+          await db.createConversation({
+            sessionId,
+            customerName,
+            channel: "line",
+            status: "active",
+            leadScore: 0,
+            leadStatus: "new",
+          });
+        }
+
+        // Send welcome + FAQ progressive messages via push API (follow events have no replyToken)
+        const welcomeMessages = buildFollowWelcomeMessages();
+        const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: welcomeMessages,
+          }),
+        });
+        const pushBody = await pushRes.text();
+        console.log(`[LINE] Follow welcome push response: ${pushRes.status} ${pushBody}`);
+      } catch (err) {
+        console.error("[LINE] Follow event handling failed:", err);
+      }
+    }
+    return;
+  }
+
   if (event.type !== "message" || event.message?.type !== "text") {
     console.log(`[LINE] Skipping event type: ${event.type}, message type: ${event.message?.type}`);
     return;
@@ -515,6 +570,8 @@ function getAssistantContentForTrigger(trigger: { type: string; label: string })
       return "[📅 已發送預約賞車互動卡片]";
     case "welcome":
       return "[👋 已發送崑家汽車歡迎卡片]";
+    case "faq":
+      return "[🏆 已發送崑家汽車五大保證FAQ卡片]";
     default:
       return "[已發送圖文卡片]";
   }

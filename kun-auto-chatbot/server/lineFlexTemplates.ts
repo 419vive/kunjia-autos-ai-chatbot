@@ -614,10 +614,171 @@ export function buildSimpleCard(
   };
 }
 
+// ============ FAQ PROGRESSIVE CAROUSEL ============
+// 崑家汽車五大核心優勢 FAQ - 漸進式訊息，用於 follow 事件和 Rich Menu
+
+const FAQ_ITEMS = [
+  {
+    id: 1,
+    icon: "🛡️",
+    title: "第三方認證",
+    color: "#1B3A5C",
+    question: "車況有保障嗎？會不會買到事故車或泡水車？",
+    answer:
+      "絕對不會！我們全車系皆通過具公信力的「第三方認證」，並附有詳細的車況鑑定報告書。我們敢合約保證「無重大事故、無泡水、無引擎/車身號碼變造、非營業用車」，若有不符，保證原價買回！認證書就是您的定心丸，讓您買得安心、開得放心！",
+    cta: { label: "🔍 瀏覽認證好車", text: "我想看車，有什麼車可以推薦？" },
+  },
+  {
+    id: 2,
+    icon: "💰",
+    title: "超強貸款團隊",
+    color: "#C4A265",
+    question: "自備款不足，還可以貸款買車嗎？",
+    answer:
+      "完全沒問題！我們擁有業界經驗最豐富的「超強貸款團隊」，您只要負責挑喜歡的車，貸款難題交給我們幫您搞定！",
+    cta: { label: "💬 詢問貸款方案", text: "我想了解貸款方案，自備款不多可以嗎？" },
+  },
+  {
+    id: 3,
+    icon: "🚗",
+    title: "外縣市免費接駁",
+    color: "#06C755",
+    question: "住外縣市，過去看車不方便怎麼辦？",
+    answer:
+      "我們非常歡迎外縣市的朋友！提供專屬的「Uber」接送服務。只要您提前預約，無論搭高鐵、台鐵還是客運，到站後我們都會派專車免費接送您來店賞車。就算最後沒有成交也沒關係，買賣不成仁義在，誠心邀請您來體驗！",
+    cta: { label: "📅 預約免費接駁", text: "我住外縣市，想預約看車可以接送嗎？" },
+  },
+  {
+    id: 4,
+    icon: "⚡",
+    title: "最快3小時交車",
+    color: "#FF6600",
+    question: "所有手續跟流程走完，多久能開新車回家？",
+    answer:
+      "我們的流程絕對是業界最高效！現金購車，資料齊全最快「3小時內」就能把愛車開回家！貸款購車，銀行對保完成後最快「約3天」就能完美交車。",
+    cta: { label: "📞 聯繫賴先生", text: "我想了解交車流程，大概要多久？" },
+  },
+  {
+    id: 5,
+    icon: "🔄",
+    title: "高價收購舊車",
+    color: "#9B59B6",
+    question: "有台舊車想換新車，你們有幫忙處理嗎？",
+    answer:
+      "當然有！我們提供「高價收購與車換車」服務。因為我們有龐大的直營客群與銷售管道，不需經過中間商盤車的剝削，舊車價值可直接折抵新車車價，手續簡便、省去自己賣車的麻煩，輕鬆換車！",
+    cta: { label: "💬 詢問舊車估價", text: "我有一台舊車想換新車，可以估價嗎？" },
+  },
+];
+
+function buildFaqBubble(item: (typeof FAQ_ITEMS)[number]): any {
+  return {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: item.icon,
+          size: "xxl",
+          flex: 0,
+        },
+        {
+          type: "text",
+          text: item.title,
+          weight: "bold",
+          size: "lg",
+          color: "#FFFFFF",
+          flex: 1,
+          margin: "md",
+          gravity: "center",
+        },
+      ],
+      backgroundColor: item.color,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "text",
+          text: `❓ ${item.question}`,
+          size: "sm",
+          color: "#C4A265",
+          weight: "bold",
+          wrap: true,
+        },
+        {
+          type: "separator",
+        },
+        {
+          type: "text",
+          text: item.answer,
+          size: "sm",
+          color: "#555555",
+          wrap: true,
+        },
+      ],
+      paddingAll: "16px",
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "button",
+          action: {
+            type: "message",
+            label: item.cta.label,
+            text: item.cta.text,
+          },
+          style: "primary",
+          color: item.color,
+          height: "sm",
+        },
+      ],
+      paddingAll: "12px",
+    },
+  };
+}
+
+/**
+ * Build FAQ progressive carousel - 5 core advantages as swipeable cards
+ * Used on: follow event, rich menu "了解崑家" trigger
+ */
+export function buildFaqCarousel(): any {
+  return {
+    type: "flex",
+    altText: "🏆 崑家汽車五大保證 — 左右滑動瞭解更多",
+    contents: {
+      type: "carousel",
+      contents: FAQ_ITEMS.map(buildFaqBubble),
+    },
+  };
+}
+
+/**
+ * Build the complete follow welcome sequence (welcome text + FAQ carousel)
+ * Returns array of messages for LINE push API
+ */
+export function buildFollowWelcomeMessages(): any[] {
+  return [
+    {
+      type: "text",
+      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年！\n👇 先滑一下了解我們的五大保證，有問題隨時問，阿家24小時都在！",
+    },
+    buildFaqCarousel(),
+    buildWelcomeCard(),
+  ];
+}
+
 // ============ RICH MENU TRIGGER DETECTION ============
 
 export interface RichMenuTrigger {
-  type: "vehicle_browse" | "appointment" | "popular" | "budget" | "welcome";
+  type: "vehicle_browse" | "appointment" | "popular" | "budget" | "welcome" | "faq";
   label: string;
 }
 
@@ -632,6 +793,8 @@ export function detectRichMenuTrigger(message: string): RichMenuTrigger | null {
     "有什麼熱門車款推薦？": { type: "popular", label: "熱門推薦" },
     "50萬以下有什麼好車？": { type: "budget", label: "50萬以下" },
     "你好，我想了解崑家汽車": { type: "welcome", label: "阿家智能客服" },
+    "崑家五大保證": { type: "faq", label: "五大保證" },
+    "為什麼選崑家": { type: "faq", label: "五大保證" },
   };
 
   return triggers[message] || null;
@@ -692,6 +855,10 @@ export function buildRichMenuResponseMessages(
 
     case "welcome": {
       return [buildWelcomeCard()];
+    }
+
+    case "faq": {
+      return [buildFaqCarousel()];
     }
 
     default:
