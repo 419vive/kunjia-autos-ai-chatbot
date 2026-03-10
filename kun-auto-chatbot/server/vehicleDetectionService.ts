@@ -652,7 +652,7 @@ export function detectCustomerIntents(message: string): CustomerIntent[] {
   }
   
   // How to browse intent — customer asking how to view cars/photos/inventory
-  if (/怎麼看|怎麼瀏覽|在哪看|在哪裡看|哪裡看|如何看|如何瀏覽|怎麼查|怎麼找|看不到|找不到|要怎麼/.test(lower)) {
+  if (/怎麼看|怎麼瀏覽|在哪看|在哪裡看|哪裡看|如何看|如何瀏覽|怎麼查|怎麼找|看不到|找不到|要怎麼|有什麼車|有哪些車|車子在哪|庫存在哪|哪裡可以看|可以看車|想看車|看一下車|看看車|看你們的車/.test(lower)) {
     intents.push('how_to_browse');
   }
   

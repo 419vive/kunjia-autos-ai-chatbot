@@ -252,9 +252,14 @@ function buildBreadBottom(ctx: PromptContext): string {
     parts.push(ctx.targetVehiclePrompt);
   }
 
-  // Inject intent-specific instructions
+  // Inject intent-specific instructions LAST (LLM recency bias — last instruction wins)
   if (ctx.intentInstructions) {
     parts.push(ctx.intentInstructions);
+  }
+
+  // Extra emphasis: if address intent exists alongside vehicle, add final reminder
+  if (ctx.intents.includes('address') && ctx.detection.type !== 'none') {
+    parts.push('\n🚨🚨🚨 最後提醒：客人問了地址！回覆中必須包含「高雄市三民區大順二路269號（肯德基斜對面）」+ Google地圖連結！🚨🚨🚨');
   }
 
   return parts.join('\n');
@@ -350,7 +355,7 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     }
   }
   if (ctx.intents.includes('address')) {
-    reminders.push('客人問地址 → 必須回答：高雄市三民區大順二路269號（肯德基斜對面）+ Google地圖連結');
+    reminders.push('🔴 客人問地址 → 必須回答：高雄市三民區大順二路269號（肯德基斜對面）+ Google地圖：https://maps.google.com/?q=高雄市三民區大順二路269號 🔴');
   }
   if (ctx.intents.includes('phone')) {
     reminders.push('客人問電話 → 必須回答：0936-812-818 賴先生');
