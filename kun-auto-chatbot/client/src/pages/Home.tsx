@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
+import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { nanoid } from "nanoid";
 
 function VehicleCard({ vehicle }: { vehicle: any }) {
@@ -75,11 +76,12 @@ function VehicleCard({ vehicle }: { vehicle: any }) {
       >
         {photos.length > 0 ? (
           <>
-            <img
+            <ProgressiveImage
               src={photos[currentPhoto]}
               alt={`${vehicle.brand} ${vehicle.model} - 照片 ${currentPhoto + 1}`}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-              loading="lazy"
+              className="transition-transform group-hover:scale-105"
+              containerClassName="h-full w-full"
+              aspectRatio="16/10"
             />
             {/* Navigation arrows - only show if multiple photos */}
             {totalPhotos > 1 && (
@@ -217,18 +219,32 @@ export default function Home() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
 
-  // Inline chatbot state
+  // Inline chatbot state — persist across tab close with localStorage
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSessionId] = useState(() => {
-    const stored = sessionStorage.getItem("kun-chat-session");
+    const stored = localStorage.getItem("kun-chat-session");
     if (stored) return stored;
     const id = nanoid();
-    sessionStorage.setItem("kun-chat-session", id);
+    localStorage.setItem("kun-chat-session", id);
     return id;
   });
-  const [chatMessages, setChatMessages] = useState<Message[]>([
-    { role: "system", content: "你是崑家汽車的AI智能客服助理。" },
-  ]);
+  const [chatMessages, setChatMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem("kun-chat-messages");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Message[];
+        if (parsed.length > 1) return parsed; // has real messages beyond system
+      }
+    } catch { /* ignore corrupt data */ }
+    return [{ role: "system", content: "你是崑家汽車的AI智能客服助理。" }];
+  });
+
+  // Persist chat messages to localStorage
+  useEffect(() => {
+    if (chatMessages.length > 1) {
+      localStorage.setItem("kun-chat-messages", JSON.stringify(chatMessages));
+    }
+  }, [chatMessages]);
 
   // Count user messages to trigger LINE CTA
   const userMessageCount = useMemo(() => chatMessages.filter(m => m.role === "user").length, [chatMessages]);
@@ -403,6 +419,38 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Social Proof Strip */}
+      <div className="border-b bg-muted/30">
+        <div className="container py-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Shield className="h-4 w-4 text-primary" />
+              全車第三方認證
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">💰</span>
+              超強貸款團隊
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">🚗</span>
+              外縣市免費接駁
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">⚡</span>
+              最快3小時交車
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">🔄</span>
+              舊車高價收購
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Vehicle Grid */}
       <main className="container py-6">
         <div className="mb-4 flex items-center justify-between">
@@ -477,9 +525,8 @@ export default function Home() {
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
         {!chatOpen && (
-          <div className="animate-bounce-gentle rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
-            <span>人客二手車諮詢發問</span>
-            <span className="ml-1 opacity-80">（點這個）</span>
+          <div className="rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
+            <span>有問題？阿家線上回答你</span>
             <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 rotate-45 bg-primary/90" />
           </div>
         )}

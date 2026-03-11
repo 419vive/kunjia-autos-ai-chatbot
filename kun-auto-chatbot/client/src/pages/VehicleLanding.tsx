@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { ProgressiveImage } from "@/components/ProgressiveImage";
 import {
   Car,
   MapPin,
@@ -207,10 +208,11 @@ export default function VehicleLanding() {
           >
             {photos.length > 0 ? (
               <>
-                <img
+                <ProgressiveImage
                   src={photos[currentPhoto]}
                   alt={`${name} - 照片 ${currentPhoto + 1}`}
-                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
+                  aspectRatio="16/10"
                 />
                 {totalPhotos > 1 && (
                   <>
