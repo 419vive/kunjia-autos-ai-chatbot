@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startSyncScheduler, sync8891 } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
+import { trackingRouter } from "../trackingApi";
 import mysql from "mysql2/promise";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -97,6 +98,37 @@ async function runMigrations() {
       eventType varchar(64) NOT NULL,
       scoreChange int NOT NULL, reason text,
       createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS analyticsEvents (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      conversationId int,
+      userId varchar(64),
+      eventCategory varchar(32) NOT NULL,
+      eventAction varchar(128) NOT NULL,
+      eventLabel varchar(256),
+      channel enum('web','line','facebook','youtube','other') NOT NULL DEFAULT 'line',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS pageViews (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      sessionHash varchar(64) NOT NULL,
+      path varchar(512) NOT NULL,
+      referrer varchar(512),
+      referrerDomain varchar(256),
+      browser varchar(64),
+      os varchar(64),
+      device varchar(32),
+      country varchar(64),
+      region varchar(128),
+      language varchar(16),
+      screenWidth int,
+      duration int DEFAULT 0,
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_pageviews_created (createdAt),
+      INDEX idx_pageviews_session (sessionHash),
+      INDEX idx_pageviews_path (path(191))
     )`);
 
     console.log("[Database] Migrations completed successfully");
@@ -225,6 +257,9 @@ async function startServer() {
     res.setHeader("Surrogate-Control", "no-store");
     next();
   });
+
+  // Page view tracking API (lightweight, no auth required)
+  app.use(trackingRouter);
 
   // tRPC API
   app.use(

@@ -208,10 +208,33 @@ async function processLineEvent(
   channelAccessToken: string,
   ownerUserId?: string
 ) {
+  // ============ UNFOLLOW EVENT: Track unfollow ============
+  if (event.type === "unfollow") {
+    const userId = event.source?.userId;
+    console.log(`[LINE] 👋 Unfollower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    const conv = userId ? await db.getConversationBySessionId(`line-${userId}`) : null;
+    db.addAnalyticsEvent({
+      conversationId: conv?.id ?? null,
+      userId: userId ?? null,
+      eventCategory: "line_unfollow",
+      eventAction: "unfollow",
+      channel: "line",
+    });
+    return;
+  }
+
   // ============ FOLLOW EVENT: Send welcome + FAQ progressive carousel ============
   if (event.type === "follow") {
     const userId = event.source?.userId;
     console.log(`[LINE] 🎉 New follower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    // Track follow event
+    db.addAnalyticsEvent({
+      conversationId: null,
+      userId: userId ?? null,
+      eventCategory: "line_follow",
+      eventAction: "follow",
+      channel: "line",
+    });
     if (userId) {
       try {
         // Get profile for name
@@ -386,6 +409,7 @@ async function processLineEvent(
 
   if (photoExternalId) {
     console.log(`[LINE] Photo trigger detected for externalId: ${photoExternalId}`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "photo_view", eventAction: `看照片 ${photoExternalId}`, channel: "line" });
 
     const allVehicles = await db.getAllVehicles();
     const vehicle = allVehicles.find((v) => String(v.externalId) === photoExternalId);
@@ -429,6 +453,7 @@ async function processLineEvent(
 
   if (faqItem) {
     console.log(`[LINE] FAQ trigger detected: #${faqItem.id} ${faqItem.title}`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "faq_click", eventAction: faqItem.title, eventLabel: faqItem.shortQuestion, channel: "line" });
 
     // Lead score +10 for each FAQ interaction (shows engagement)
     const faqScore = 10;
@@ -481,6 +506,7 @@ async function processLineEvent(
 
   if (trigger) {
     console.log(`[LINE] Rich Menu trigger detected: ${trigger.type} (${trigger.label})`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "rich_menu", eventAction: trigger.label || trigger.type, channel: "line" });
 
     // Fetch vehicles for carousel-type triggers
     const allVehicles = await db.getAllVehicles();

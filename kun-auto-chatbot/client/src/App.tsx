@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -10,9 +11,11 @@ import Dashboard from "./pages/Dashboard";
 import Conversations from "./pages/Conversations";
 import VehicleManagement from "./pages/VehicleManagement";
 import LineSetup from "./pages/LineSetup";
+import Analytics from "./pages/Analytics";
 import SmartRedirect from "./pages/SmartRedirect";
 import VehicleLanding from "./pages/VehicleLanding";
 import DashboardLayout from "./components/DashboardLayout";
+import { initTracker } from "./lib/tracker";
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -49,6 +52,11 @@ function Router() {
           <LineSetup />
         </AdminLayout>
       </Route>
+      <Route path="/admin/analytics">
+        <AdminLayout>
+          <Analytics />
+        </AdminLayout>
+      </Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
@@ -57,6 +65,7 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => { initTracker(); }, []);
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">

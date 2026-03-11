@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   MessageSquare,
@@ -9,7 +10,9 @@ import {
   TrendingUp,
   Car,
   BarChart3,
+  ArrowRight,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 function StatCard({
   title,
@@ -50,14 +53,22 @@ function StatCard({
 
 export default function Dashboard() {
   const { data, isLoading } = trpc.admin.dashboard.useQuery({});
+  const [, setLocation] = useLocation();
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">儀表板</h1>
-        <p className="text-sm text-muted-foreground">
-          崑家汽車 AI 客服系統總覽
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">儀表板</h1>
+          <p className="text-sm text-muted-foreground">
+            崑家汽車 AI 客服系統總覽
+          </p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => setLocation("/admin/analytics")}>
+          <BarChart3 className="h-4 w-4" />
+          完整數據分析
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       {/* Stats Grid */}
