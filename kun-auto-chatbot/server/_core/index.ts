@@ -12,6 +12,7 @@ import { serveStatic, setupVite } from "./vite";
 import { startSyncScheduler, sync8891 } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
 import { trackingRouter } from "../trackingApi";
+import { registerAdminAuthRoutes, seedAdminUser } from "./adminAuth";
 import mysql from "mysql2/promise";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -258,6 +259,9 @@ async function startServer() {
     next();
   });
 
+  // Admin local auth routes (login endpoint)
+  registerAdminAuthRoutes(app);
+
   // Page view tracking API (lightweight, no auth required)
   app.use(trackingRouter);
 
@@ -327,6 +331,9 @@ a{color:#C4A265;text-decoration:underline}
 
   // Run database migrations before starting
   await runMigrations();
+
+  // Seed admin user if ADMIN_PASSWORD is configured
+  await seedAdminUser();
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);

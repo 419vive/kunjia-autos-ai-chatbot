@@ -12,6 +12,7 @@ import Conversations from "./pages/Conversations";
 import VehicleManagement from "./pages/VehicleManagement";
 import LineSetup from "./pages/LineSetup";
 import Analytics from "./pages/Analytics";
+import AdminLogin from "./pages/AdminLogin";
 import SmartRedirect from "./pages/SmartRedirect";
 import VehicleLanding from "./pages/VehicleLanding";
 import DashboardLayout from "./components/DashboardLayout";
@@ -30,6 +31,9 @@ function Router() {
       <Route path="/vehicle/:id" component={VehicleLanding} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
+
+      {/* Admin login */}
+      <Route path="/admin/login" component={AdminLogin} />
 
       {/* Admin routes */}
       <Route path="/admin">
