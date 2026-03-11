@@ -257,10 +257,23 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
     if (ds.sellerInfo?.shopId !== SHOP_ID) return null;
 
     const images = ds.images || {};
-    // Use 'big' for high quality original images, fallback to 'thumbnail' (800x600)
+    // Use 'big' for high quality, but ensure we get ALL photos.
+    // Sometimes 8891 returns fewer 'big' URLs than 'thumbnail' URLs.
+    // Strategy: use 'big' where available, fill remaining from 'thumbnail'.
     const bigImages: string[] = images.big || [];
     const thumbnails: string[] = images.thumbnail || [];
-    const photoList = bigImages.length > 0 ? bigImages : thumbnails;
+    let photoList: string[];
+    if (bigImages.length >= thumbnails.length) {
+      // big has all photos (or more) — use big
+      photoList = bigImages;
+    } else if (bigImages.length > 0) {
+      // big has fewer — use big first, then fill with remaining thumbnails
+      const bigSet = new Set(bigImages);
+      const extras = thumbnails.filter(t => !bigSet.has(t));
+      photoList = [...bigImages, ...extras.slice(0, thumbnails.length - bigImages.length)];
+    } else {
+      photoList = thumbnails;
+    }
     const extended = ds.extended || {};
 
     return {
