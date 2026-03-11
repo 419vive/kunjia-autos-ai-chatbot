@@ -325,7 +325,15 @@ export function buildPhotoCarousel(vehicle: Vehicle): any[] {
   });
 
   // LINE reply API max 5 messages
-  return messages.slice(0, 5);
+  const result = messages.slice(0, 5);
+
+  // Attach intent + FAQ quick replies to the last message
+  // so users browsing photos can also tap to ask questions
+  if (result.length > 0) {
+    result[result.length - 1].quickReply = buildVehicleCarouselQuickReply();
+  }
+
+  return result;
 }
 
 // ============ PHOTO TRIGGER DETECTION ============
