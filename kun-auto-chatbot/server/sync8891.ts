@@ -593,7 +593,9 @@ export async function sync8891(): Promise<{
           if (scraped.sourceUrl && scraped.sourceUrl !== current.sourceUrl) {
             updates.sourceUrl = scraped.sourceUrl;
           }
-          if (current.status !== "available") {
+          // Only reset "sold" back to "available" if the car reappears on 8891.
+          // Do NOT override "reserved" (收訂金) — that's a manual status set by the admin.
+          if (current.status === "sold") {
             updates.status = "available";
           }
 
@@ -611,7 +613,7 @@ export async function sync8891(): Promise<{
       }
     }
 
-    // Step 4: Mark vehicles NOT in API as sold
+    // Step 4: Mark vehicles NOT in API as sold (skip "reserved" — those are manually managed)
     const processedSet = new Set(processedIds);
     const allAvailable = await dbConn
       .select({ id: vehicles.id, externalId: vehicles.externalId, brand: vehicles.brand, model: vehicles.model })
@@ -625,6 +627,8 @@ export async function sync8891(): Promise<{
         console.log(`[8891 Sync] 🚫 Marked sold: ${existing.brand} ${existing.model} (${existing.externalId})`);
       }
     }
+    // Note: "reserved" vehicles are NOT auto-marked as sold even if they disappear from 8891.
+    // The admin must manually change reserved → sold when the car is delivered.
 
     // Step 5: Run Chain of Verification (twice per week only)
     let covReport: CoVReport | null = null;

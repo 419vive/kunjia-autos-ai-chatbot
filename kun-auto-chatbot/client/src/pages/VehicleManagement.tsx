@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useState } from "react";
 import {
   Car,
   ExternalLink,
@@ -17,12 +18,15 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  HandCoins,
+  PackageCheck,
+  Undo2,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   available: { label: "在售", color: "bg-green-100 text-green-700" },
-  sold: { label: "已售出", color: "bg-gray-100 text-gray-500" },
-  reserved: { label: "已預訂", color: "bg-yellow-100 text-yellow-700" },
+  reserved: { label: "已收訂", color: "bg-yellow-100 text-yellow-700" },
+  sold: { label: "已交車", color: "bg-gray-100 text-gray-500" },
 };
 
 const SYNC_STATUS_MAP: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -114,30 +118,62 @@ function SyncStatusCard() {
   );
 }
 
+type StatusFilter = "all" | "available" | "reserved" | "sold";
+
 export default function VehicleManagement() {
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const { data: vehicles, isLoading } = trpc.admin.vehicles.useQuery();
   const utils = trpc.useUtils();
   const updateStatus = trpc.admin.updateVehicleStatus.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       utils.admin.vehicles.invalidate();
-      toast.success("車輛狀態已更新");
+      const label = STATUS_LABELS[variables.status]?.label || variables.status;
+      toast.success(`已更新為「${label}」`);
     },
   });
 
   const availableCount = vehicles?.filter(v => v.status === "available").length || 0;
+  const reservedCount = vehicles?.filter(v => v.status === "reserved").length || 0;
   const soldCount = vehicles?.filter(v => v.status === "sold").length || 0;
+
+  const filtered = vehicles?.filter(v => filter === "all" || v.status === filter) || [];
+
+  const TABS: { key: StatusFilter; label: string; count: number }[] = [
+    { key: "all", label: "全部", count: vehicles?.length || 0 },
+    { key: "available", label: "在售", count: availableCount },
+    { key: "reserved", label: "已收訂", count: reservedCount },
+    { key: "sold", label: "已交車", count: soldCount },
+  ];
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">車輛管理</h1>
         <p className="text-sm text-muted-foreground">
-          管理在售車輛庫存與狀態 · 在售 {availableCount} 台 · 已售 {soldCount} 台
+          在售 {availableCount} 台 · 已收訂 {reservedCount} 台 · 已交車 {soldCount} 台
         </p>
       </div>
 
       {/* 8891 Sync Status */}
       <SyncStatusCard />
+
+      {/* Status filter tabs */}
+      <div className="flex gap-1 border-b">
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
+              filter === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+            <span className="ml-1 text-xs opacity-60">({tab.count})</span>
+          </button>
+        ))}
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">
@@ -145,18 +181,18 @@ export default function VehicleManagement() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
-      ) : !vehicles?.length ? (
+      ) : !filtered.length ? (
         <div className="py-16 text-center text-muted-foreground">
           <Car className="mx-auto mb-3 h-12 w-12 opacity-30" />
-          <p>尚無車輛資料</p>
+          <p>{filter === "all" ? "尚無車輛資料" : `沒有「${TABS.find(t => t.key === filter)?.label}」的車輛`}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {vehicles.map((v) => {
+          {filtered.map((v) => {
             const photoUrl = v.photoUrls?.split("|")[0] || "";
             const statusInfo = STATUS_LABELS[v.status] || STATUS_LABELS.available;
             return (
-              <Card key={v.id} className="overflow-hidden">
+              <Card key={v.id} className={`overflow-hidden ${v.status === "sold" ? "opacity-60" : ""}`}>
                 <CardContent className="flex gap-4 p-3">
                   <div className="h-20 w-28 shrink-0 overflow-hidden rounded-md bg-muted">
                     {photoUrl ? (
@@ -174,9 +210,14 @@ export default function VehicleManagement() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="text-sm font-semibold">
-                          {v.brand} {v.model}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold">
+                            {v.brand} {v.model}
+                          </h3>
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {v.modelYear}年 &middot; {v.color} &middot;{" "}
                           {v.mileage}
@@ -199,28 +240,6 @@ export default function VehicleManagement() {
                         <Calendar className="h-3 w-3" />
                         {v.licenseDate}
                       </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Select
-                        value={v.status}
-                        onValueChange={(val) =>
-                          updateStatus.mutate({
-                            id: v.id,
-                            status: val as any,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-7 w-[100px] text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(STATUS_LABELS).map(([k, s]) => (
-                            <SelectItem key={k} value={k}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                       {v.sourceUrl && (
                         <a
                           href={v.sourceUrl}
@@ -231,6 +250,69 @@ export default function VehicleManagement() {
                           <ExternalLink className="h-3 w-3" />
                           8891
                         </a>
+                      )}
+                    </div>
+                    {/* Quick action buttons */}
+                    <div className="mt-2 flex items-center gap-1.5">
+                      {v.status === "available" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs text-yellow-700 border-yellow-300 hover:bg-yellow-50"
+                          disabled={updateStatus.isPending}
+                          onClick={() => updateStatus.mutate({ id: v.id, status: "reserved" })}
+                        >
+                          <HandCoins className="mr-1 h-3 w-3" />
+                          收訂金
+                        </Button>
+                      )}
+                      {v.status === "available" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs text-gray-500 border-gray-300 hover:bg-gray-50"
+                          disabled={updateStatus.isPending}
+                          onClick={() => updateStatus.mutate({ id: v.id, status: "sold" })}
+                        >
+                          <PackageCheck className="mr-1 h-3 w-3" />
+                          已交車
+                        </Button>
+                      )}
+                      {v.status === "reserved" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs text-gray-500 border-gray-300 hover:bg-gray-50"
+                            disabled={updateStatus.isPending}
+                            onClick={() => updateStatus.mutate({ id: v.id, status: "sold" })}
+                          >
+                            <PackageCheck className="mr-1 h-3 w-3" />
+                            已交車
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-muted-foreground"
+                            disabled={updateStatus.isPending}
+                            onClick={() => updateStatus.mutate({ id: v.id, status: "available" })}
+                          >
+                            <Undo2 className="mr-1 h-3 w-3" />
+                            恢復在售
+                          </Button>
+                        </>
+                      )}
+                      {v.status === "sold" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground"
+                          disabled={updateStatus.isPending}
+                          onClick={() => updateStatus.mutate({ id: v.id, status: "available" })}
+                        >
+                          <Undo2 className="mr-1 h-3 w-3" />
+                          恢復在售
+                        </Button>
                       )}
                     </div>
                   </div>
