@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -103,6 +103,44 @@ export function getGenderGreeting(gender: 'male' | 'female' | 'unknown'): string
     case 'female': return '小姐';
     case 'unknown': return '人客';
   }
+}
+
+// ============ TYPING INDICATOR ============
+// Show "typing..." animation in LINE chat while bot is processing
+
+async function showTypingIndicator(userId: string, channelAccessToken: string) {
+  try {
+    await fetch("https://api.line.me/v2/bot/chat/loading", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${channelAccessToken}`,
+      },
+      body: JSON.stringify({
+        chatId: userId,
+        loadingSeconds: 20, // Show for up to 20 seconds (cancelled when reply is sent)
+      }),
+    });
+  } catch {
+    // Non-critical, silently ignore
+  }
+}
+
+// ============ MESSAGE DEDUPLICATION ============
+// Prevent duplicate processing when LINE retries webhook delivery
+
+const processedMessages = new Map<string, number>();
+const DEDUP_TTL_MS = 60_000; // 1 minute
+
+function isDuplicate(messageId: string): boolean {
+  const now = Date.now();
+  // Clean old entries
+  processedMessages.forEach((ts, id) => {
+    if (now - ts > DEDUP_TTL_MS) processedMessages.delete(id);
+  });
+  if (processedMessages.has(messageId)) return true;
+  processedMessages.set(messageId, now);
+  return false;
 }
 
 const lineRouter = Router();
@@ -233,6 +271,7 @@ async function processLineEvent(
   const userId = event.source?.userId;
   const userMessage = event.message.text;
   const replyToken = event.replyToken;
+  const messageId = event.message?.id;
 
   console.log(`[LINE] Message from ${userId ? userId.slice(0,8) + '...' : 'unknown'}: [message length: ${userMessage?.length || 0}]`);
 
@@ -240,6 +279,15 @@ async function processLineEvent(
     console.warn("[LINE] Missing userId, message, or replyToken");
     return;
   }
+
+  // Deduplication: skip if we already processed this message (LINE retry)
+  if (messageId && isDuplicate(messageId)) {
+    console.log(`[LINE] Duplicate message ${messageId}, skipping`);
+    return;
+  }
+
+  // Show typing indicator immediately while processing
+  showTypingIndicator(userId, channelAccessToken);
 
   // Get or create conversation
   const sessionId = `line-${userId}`;
@@ -573,7 +621,17 @@ async function processLineEvent(
     content: replyText,
   });
 
-  // Reply via LINE API
+  // Build contextual quick reply based on conversation state
+  const quickReplyCtx: ConversationContext = {
+    hasVehicle: detection.type !== 'none' && !!detection.vehicle,
+    hasAppointment: customerIntents.includes('appointment'),
+    hasContact: !!conversation!.customerContact,
+    vehicleName: detection.vehicle ? `${detection.vehicle.brand} ${detection.vehicle.model}` : undefined,
+    vehicleExternalId: detection.vehicle?.externalId ? String(detection.vehicle.externalId) : undefined,
+  };
+  const quickReply = buildContextualQuickReply(quickReplyCtx);
+
+  // Reply via LINE API with contextual quick replies
   try {
     console.log("[LINE] Sending reply via LINE API...");
     const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -584,7 +642,7 @@ async function processLineEvent(
       },
       body: JSON.stringify({
         replyToken,
-        messages: [{ type: "text", text: replyText }],
+        messages: [{ type: "text", text: replyText, quickReply }],
       }),
     });
     const replyBody = await replyRes.text();
