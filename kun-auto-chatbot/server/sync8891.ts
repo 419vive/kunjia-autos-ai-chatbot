@@ -257,10 +257,23 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
     if (ds.sellerInfo?.shopId !== SHOP_ID) return null;
 
     const images = ds.images || {};
-    // Use 'big' for high quality original images, fallback to 'thumbnail' (800x600)
+    // Use 'big' for high quality, but ensure we get ALL photos.
+    // Sometimes 8891 returns fewer 'big' URLs than 'thumbnail' URLs.
+    // Strategy: use 'big' where available, fill remaining from 'thumbnail'.
     const bigImages: string[] = images.big || [];
     const thumbnails: string[] = images.thumbnail || [];
-    const photoList = bigImages.length > 0 ? bigImages : thumbnails;
+    let photoList: string[];
+    if (bigImages.length >= thumbnails.length) {
+      // big has all photos (or more) — use big
+      photoList = bigImages;
+    } else if (bigImages.length > 0) {
+      // big has fewer — use big first, then fill with remaining thumbnails
+      const bigSet = new Set(bigImages);
+      const extras = thumbnails.filter(t => !bigSet.has(t));
+      photoList = [...bigImages, ...extras.slice(0, thumbnails.length - bigImages.length)];
+    } else {
+      photoList = thumbnails;
+    }
     const extended = ds.extended || {};
 
     return {
@@ -593,7 +606,9 @@ export async function sync8891(): Promise<{
           if (scraped.sourceUrl && scraped.sourceUrl !== current.sourceUrl) {
             updates.sourceUrl = scraped.sourceUrl;
           }
-          if (current.status !== "available") {
+          // Only reset "sold" back to "available" if the car reappears on 8891.
+          // Do NOT override "reserved" (收訂金) — that's a manual status set by the admin.
+          if (current.status === "sold") {
             updates.status = "available";
           }
 
@@ -611,7 +626,7 @@ export async function sync8891(): Promise<{
       }
     }
 
-    // Step 4: Mark vehicles NOT in API as sold
+    // Step 4: Mark vehicles NOT in API as sold (skip "reserved" — those are manually managed)
     const processedSet = new Set(processedIds);
     const allAvailable = await dbConn
       .select({ id: vehicles.id, externalId: vehicles.externalId, brand: vehicles.brand, model: vehicles.model })
@@ -625,6 +640,8 @@ export async function sync8891(): Promise<{
         console.log(`[8891 Sync] 🚫 Marked sold: ${existing.brand} ${existing.model} (${existing.externalId})`);
       }
     }
+    // Note: "reserved" vehicles are NOT auto-marked as sold even if they disappear from 8891.
+    // The admin must manually change reserved → sold when the car is delivered.
 
     // Step 5: Run Chain of Verification (twice per week only)
     let covReport: CoVReport | null = null;

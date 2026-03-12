@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, MessageSquare, Car, Home, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, MessageSquare, Car, Home, Settings, BarChart3 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "儀表板", path: "/admin" },
+  { icon: BarChart3, label: "數據分析", path: "/admin/analytics" },
   { icon: MessageSquare, label: "對話管理", path: "/admin/conversations" },
   { icon: Car, label: "車輛管理", path: "/admin/vehicles" },
   { icon: Settings, label: "LINE 整合", path: "/admin/line-setup" },

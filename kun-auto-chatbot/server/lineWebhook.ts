@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -105,6 +105,44 @@ export function getGenderGreeting(gender: 'male' | 'female' | 'unknown'): string
   }
 }
 
+// ============ TYPING INDICATOR ============
+// Show "typing..." animation in LINE chat while bot is processing
+
+async function showTypingIndicator(userId: string, channelAccessToken: string) {
+  try {
+    await fetch("https://api.line.me/v2/bot/chat/loading", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${channelAccessToken}`,
+      },
+      body: JSON.stringify({
+        chatId: userId,
+        loadingSeconds: 20, // Show for up to 20 seconds (cancelled when reply is sent)
+      }),
+    });
+  } catch {
+    // Non-critical, silently ignore
+  }
+}
+
+// ============ MESSAGE DEDUPLICATION ============
+// Prevent duplicate processing when LINE retries webhook delivery
+
+const processedMessages = new Map<string, number>();
+const DEDUP_TTL_MS = 60_000; // 1 minute
+
+function isDuplicate(messageId: string): boolean {
+  const now = Date.now();
+  // Clean old entries
+  processedMessages.forEach((ts, id) => {
+    if (now - ts > DEDUP_TTL_MS) processedMessages.delete(id);
+  });
+  if (processedMessages.has(messageId)) return true;
+  processedMessages.set(messageId, now);
+  return false;
+}
+
 const lineRouter = Router();
 
 // LINE Webhook verification & message handling
@@ -170,10 +208,33 @@ async function processLineEvent(
   channelAccessToken: string,
   ownerUserId?: string
 ) {
+  // ============ UNFOLLOW EVENT: Track unfollow ============
+  if (event.type === "unfollow") {
+    const userId = event.source?.userId;
+    console.log(`[LINE] 👋 Unfollower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    const conv = userId ? await db.getConversationBySessionId(`line-${userId}`) : null;
+    db.addAnalyticsEvent({
+      conversationId: conv?.id ?? null,
+      userId: userId ?? null,
+      eventCategory: "line_unfollow",
+      eventAction: "unfollow",
+      channel: "line",
+    });
+    return;
+  }
+
   // ============ FOLLOW EVENT: Send welcome + FAQ progressive carousel ============
   if (event.type === "follow") {
     const userId = event.source?.userId;
     console.log(`[LINE] 🎉 New follower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    // Track follow event
+    db.addAnalyticsEvent({
+      conversationId: null,
+      userId: userId ?? null,
+      eventCategory: "line_follow",
+      eventAction: "follow",
+      channel: "line",
+    });
     if (userId) {
       try {
         // Get profile for name
@@ -233,6 +294,7 @@ async function processLineEvent(
   const userId = event.source?.userId;
   const userMessage = event.message.text;
   const replyToken = event.replyToken;
+  const messageId = event.message?.id;
 
   console.log(`[LINE] Message from ${userId ? userId.slice(0,8) + '...' : 'unknown'}: [message length: ${userMessage?.length || 0}]`);
 
@@ -240,6 +302,15 @@ async function processLineEvent(
     console.warn("[LINE] Missing userId, message, or replyToken");
     return;
   }
+
+  // Deduplication: skip if we already processed this message (LINE retry)
+  if (messageId && isDuplicate(messageId)) {
+    console.log(`[LINE] Duplicate message ${messageId}, skipping`);
+    return;
+  }
+
+  // Show typing indicator immediately while processing
+  showTypingIndicator(userId, channelAccessToken);
 
   // Get or create conversation
   const sessionId = `line-${userId}`;
@@ -338,6 +409,7 @@ async function processLineEvent(
 
   if (photoExternalId) {
     console.log(`[LINE] Photo trigger detected for externalId: ${photoExternalId}`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "photo_view", eventAction: `看照片 ${photoExternalId}`, channel: "line" });
 
     const allVehicles = await db.getAllVehicles();
     const vehicle = allVehicles.find((v) => String(v.externalId) === photoExternalId);
@@ -381,6 +453,7 @@ async function processLineEvent(
 
   if (faqItem) {
     console.log(`[LINE] FAQ trigger detected: #${faqItem.id} ${faqItem.title}`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "faq_click", eventAction: faqItem.title, eventLabel: faqItem.shortQuestion, channel: "line" });
 
     // Lead score +10 for each FAQ interaction (shows engagement)
     const faqScore = 10;
@@ -433,6 +506,7 @@ async function processLineEvent(
 
   if (trigger) {
     console.log(`[LINE] Rich Menu trigger detected: ${trigger.type} (${trigger.label})`);
+    db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "rich_menu", eventAction: trigger.label || trigger.type, channel: "line" });
 
     // Fetch vehicles for carousel-type triggers
     const allVehicles = await db.getAllVehicles();
@@ -573,7 +647,17 @@ async function processLineEvent(
     content: replyText,
   });
 
-  // Reply via LINE API
+  // Build contextual quick reply based on conversation state
+  const quickReplyCtx: ConversationContext = {
+    hasVehicle: detection.type !== 'none' && !!detection.vehicle,
+    hasAppointment: customerIntents.includes('appointment'),
+    hasContact: !!conversation!.customerContact,
+    vehicleName: detection.vehicle ? `${detection.vehicle.brand} ${detection.vehicle.model}` : undefined,
+    vehicleExternalId: detection.vehicle?.externalId ? String(detection.vehicle.externalId) : undefined,
+  };
+  const quickReply = buildContextualQuickReply(quickReplyCtx);
+
+  // Reply via LINE API with contextual quick replies
   try {
     console.log("[LINE] Sending reply via LINE API...");
     const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -584,7 +668,7 @@ async function processLineEvent(
       },
       body: JSON.stringify({
         replyToken,
-        messages: [{ type: "text", text: replyText }],
+        messages: [{ type: "text", text: replyText, quickReply }],
       }),
     });
     const replyBody = await replyRes.text();
@@ -810,6 +894,10 @@ function getMilestoneLevel(score: number): number {
   return level;
 }
 
+// Dedup: prevent duplicate LINE notifications for the same conversation within 10 minutes
+const lineNotifyCooldownMap = new Map<string, number>();
+const LINE_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
+
 async function checkAndNotifyOwner(
   conversation: any,
   userMessage: string,
@@ -820,14 +908,27 @@ async function checkAndNotifyOwner(
   const score = conversation.leadScore || 0;
   const currentNotifiedLevel = conversation.notifiedOwner || 0;
   const newMilestoneLevel = getMilestoneLevel(score);
-  
+
   // Determine if we should notify:
   // 1. New milestone reached (score crossed a threshold)
   // 2. Phone number just detected (always notify immediately)
   const shouldNotifyMilestone = newMilestoneLevel > currentNotifiedLevel && score >= 50;
   const shouldNotifyPhone = phoneJustDetected && score >= 40;
-  
+
   if (!shouldNotifyMilestone && !shouldNotifyPhone) return;
+
+  // Dedup: skip if same conversation+level was notified recently
+  const dedupKey = `line:${conversation.id}:${newMilestoneLevel}:${phoneJustDetected ? "phone" : "score"}`;
+  const lastNotified = lineNotifyCooldownMap.get(dedupKey);
+  if (lastNotified && Date.now() - lastNotified < LINE_NOTIFY_COOLDOWN_MS) return;
+  lineNotifyCooldownMap.set(dedupKey, Date.now());
+  // Periodic cleanup
+  if (lineNotifyCooldownMap.size > 500) {
+    const now = Date.now();
+    Array.from(lineNotifyCooldownMap.entries()).forEach(([k, t]) => {
+      if (now - t > LINE_NOTIFY_COOLDOWN_MS) lineNotifyCooldownMap.delete(k);
+    });
+  }
 
   // Build notification content based on context
   let emoji = "🔥";

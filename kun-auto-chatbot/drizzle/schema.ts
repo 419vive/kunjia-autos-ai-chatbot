@@ -105,3 +105,90 @@ export const leadEvents = mysqlTable("leadEvents", {
 
 export type LeadEvent = typeof leadEvents.$inferSelect;
 export type InsertLeadEvent = typeof leadEvents.$inferInsert;
+
+/**
+ * Analytics events for tracking LINE behavioral data
+ * Tracks: follow/unfollow, rich menu clicks, quick reply taps, photo views, FAQ clicks, postbacks
+ */
+export const analyticsEvents = mysqlTable("analyticsEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId"),
+  userId: varchar("userId", { length: 64 }),
+  eventCategory: varchar("eventCategory", { length: 32 }).notNull(), // line_follow, line_unfollow, rich_menu, quick_reply, photo_view, faq_click, message, postback
+  eventAction: varchar("eventAction", { length: 128 }).notNull(), // specific action e.g. "看車庫存", "預約賞車"
+  eventLabel: varchar("eventLabel", { length: 256 }), // additional context
+  channel: mysqlEnum("channel", ["web", "line", "facebook", "youtube", "other"]).default("line").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+/**
+ * Page views for website analytics (like Umami/Plausible)
+ * Tracks every page visit with browser, OS, device, referrer, country
+ */
+export const pageViews = mysqlTable("pageViews", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionHash: varchar("sessionHash", { length: 64 }).notNull(), // hashed visitor identifier
+  path: varchar("path", { length: 512 }).notNull(),
+  referrer: varchar("referrer", { length: 512 }),
+  referrerDomain: varchar("referrerDomain", { length: 256 }),
+  browser: varchar("browser", { length: 64 }),
+  os: varchar("os", { length: 64 }),
+  device: varchar("device", { length: 32 }), // mobile, desktop, tablet
+  country: varchar("country", { length: 64 }),
+  region: varchar("region", { length: 128 }),
+  language: varchar("language", { length: 16 }),
+  screenWidth: int("screenWidth"),
+  duration: int("duration").default(0), // seconds spent on page
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = typeof pageViews.$inferInsert;
+
+/**
+ * Loan inquiry submissions from potential customers
+ */
+export const loanInquiries = mysqlTable("loanInquiries", {
+  id: int("id").autoincrement().primaryKey(),
+  vehicleId: int("vehicleId"),
+  vehicleName: varchar("vehicleName", { length: 256 }),
+  customerName: varchar("customerName", { length: 128 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  gender: varchar("gender", { length: 16 }),
+  age: varchar("age", { length: 16 }),
+  hasLicense: varchar("hasLicense", { length: 16 }),
+  employmentType: varchar("employmentType", { length: 64 }),
+  employmentDuration: varchar("employmentDuration", { length: 64 }),
+  hasInsurance: varchar("hasInsurance", { length: 64 }),
+  previousLoans: varchar("previousLoans", { length: 64 }),
+  purchaseMethod: varchar("purchaseMethod", { length: 64 }),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["new", "contacted", "approved", "rejected"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LoanInquiry = typeof loanInquiries.$inferSelect;
+export type InsertLoanInquiry = typeof loanInquiries.$inferInsert;
+
+/**
+ * Appointment bookings for vehicle visits
+ */
+export const appointments = mysqlTable("appointments", {
+  id: int("id").autoincrement().primaryKey(),
+  vehicleId: int("vehicleId"),
+  vehicleName: varchar("vehicleName", { length: 256 }),
+  customerName: varchar("customerName", { length: 128 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  preferredDate: varchar("preferredDate", { length: 32 }),
+  preferredTime: varchar("preferredTime", { length: 64 }),
+  timeFlexible: varchar("timeFlexible", { length: 16 }).default("no"),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["new", "confirmed", "completed", "cancelled"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = typeof appointments.$inferInsert;

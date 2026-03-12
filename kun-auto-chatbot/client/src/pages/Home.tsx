@@ -4,14 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
+import { ProgressiveImage } from "@/components/ProgressiveImage";
+import { useCompareList, CompareBar } from "@/components/VehicleCompare";
+import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import { nanoid } from "nanoid";
 
-function VehicleCard({ vehicle }: { vehicle: any }) {
+function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
   const [, setLocation] = useLocation();
   const photos = useMemo(() => {
     if (!vehicle.photoUrls) return [];
@@ -75,11 +78,12 @@ function VehicleCard({ vehicle }: { vehicle: any }) {
       >
         {photos.length > 0 ? (
           <>
-            <img
+            <ProgressiveImage
               src={photos[currentPhoto]}
               alt={`${vehicle.brand} ${vehicle.model} - 照片 ${currentPhoto + 1}`}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-              loading="lazy"
+              className="transition-transform group-hover:scale-105"
+              containerClassName="h-full w-full"
+              aspectRatio="16/10"
             />
             {/* Navigation arrows - only show if multiple photos */}
             {totalPhotos > 1 && (
@@ -139,11 +143,20 @@ function VehicleCard({ vehicle }: { vehicle: any }) {
       </div>
       <CardContent className="p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-foreground">
-              {vehicle.brand} {vehicle.model}
-            </h3>
-            <p className="text-xs text-muted-foreground">{vehicle.modelYear}年款</p>
+          <div className="min-w-0 flex items-start gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
+              className={`mt-0.5 shrink-0 flex items-center justify-center h-6 w-6 rounded-md border transition-all ${isComparing ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary"}`}
+              title={isComparing ? "取消比較" : "加入比較"}
+            >
+              <GitCompareArrows className="h-3.5 w-3.5" />
+            </button>
+            <div>
+              <h3 className="truncate text-sm font-semibold text-foreground">
+                {vehicle.brand} {vehicle.model}
+              </h3>
+              <p className="text-xs text-muted-foreground">{vehicle.modelYear}年款</p>
+            </div>
           </div>
           <span className="shrink-0 text-lg font-bold text-primary">
             {vehicle.priceDisplay || `${vehicle.price}萬`}
@@ -216,19 +229,35 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
+  const compare = useCompareList();
+  const [recentlyViewed] = useState<RecentlyViewedItem[]>(() => getRecentlyViewed());
 
-  // Inline chatbot state
+  // Inline chatbot state — persist across tab close with localStorage
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSessionId] = useState(() => {
-    const stored = sessionStorage.getItem("kun-chat-session");
+    const stored = localStorage.getItem("kun-chat-session");
     if (stored) return stored;
     const id = nanoid();
-    sessionStorage.setItem("kun-chat-session", id);
+    localStorage.setItem("kun-chat-session", id);
     return id;
   });
-  const [chatMessages, setChatMessages] = useState<Message[]>([
-    { role: "system", content: "你是崑家汽車的AI智能客服助理。" },
-  ]);
+  const [chatMessages, setChatMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem("kun-chat-messages");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Message[];
+        if (parsed.length > 1) return parsed; // has real messages beyond system
+      }
+    } catch { /* ignore corrupt data */ }
+    return [{ role: "system", content: "你是崑家汽車的AI智能客服助理。" }];
+  });
+
+  // Persist chat messages to localStorage
+  useEffect(() => {
+    if (chatMessages.length > 1) {
+      localStorage.setItem("kun-chat-messages", JSON.stringify(chatMessages));
+    }
+  }, [chatMessages]);
 
   // Count user messages to trigger LINE CTA
   const userMessageCount = useMemo(() => chatMessages.filter(m => m.role === "user").length, [chatMessages]);
@@ -252,15 +281,35 @@ export default function Home() {
       setChatMessages((prev) => [...prev, { role: "assistant", content: "抱歉，系統暫時忙禄中。您可以加 LINE @825oftez 聯繫我們。" }]);
     },
   });
+  // A/B test: rotate prompt sets, assign variant on first visit
+  const [promptVariant] = useState<string>(() => {
+    const stored = localStorage.getItem("kun-prompt-variant");
+    if (stored && ["A", "B", "C"].includes(stored)) return stored;
+    const v = ["A", "B", "C"][Math.floor(Math.random() * 3)];
+    localStorage.setItem("kun-prompt-variant", v);
+    return v;
+  });
+  const chatPrompts = useMemo(() => {
+    const variants: Record<string, string[]> = {
+      A: ["目前有哪些車可以看？", "有沒有50萬以下的SUV？", "我想找一台省油的家庭用車"],
+      B: ["最近有什麼新進的車？", "幫我推薦適合小家庭的車", "有沒有可以貸款的方案？"],
+      C: ["你們的車有保固嗎？", "想找一台代步小車，預算30萬", "可以預約看車嗎？"],
+    };
+    return variants[promptVariant] || variants.A;
+  }, [promptVariant]);
   const handleChatSend = (content: string) => {
     setChatMessages((prev) => [...prev, { role: "user", content }]);
     chatMutation.mutate({ sessionId: chatSessionId, message: content, channel: "web" });
+    // Track suggested prompt clicks for A/B analysis
+    if (chatPrompts.includes(content)) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: `/_event/prompt-click/${promptVariant}` }),
+        keepalive: true,
+      }).catch(() => {});
+    }
   };
-  const chatPrompts = useMemo(() => [
-    "目前有哪些車可以看？",
-    "有沒有50萬以下的SUV？",
-    "我想找一台省油的家庭用車",
-  ], []);
 
   const chatExternalActions = useMemo(() => [
     {
@@ -403,6 +452,66 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Social Proof Strip */}
+      <div className="border-b bg-muted/30">
+        <div className="container py-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Shield className="h-4 w-4 text-primary" />
+              全車第三方認證
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">💰</span>
+              超強貸款團隊
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">🚗</span>
+              外縣市免費接駁
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">⚡</span>
+              最快3小時交車
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-border" />
+            <span className="flex items-center gap-1.5">
+              <span className="text-base">🔄</span>
+              舊車高價收購
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Recently Viewed */}
+      {recentlyViewed.length > 0 && (
+        <div className="container pt-5 pb-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">最近瀏覽過的車</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {recentlyViewed.map((item) => (
+              <a
+                key={item.id}
+                href={`/vehicle/${item.id}`}
+                className="shrink-0 flex items-center gap-3 rounded-xl border bg-background p-2 pr-4 hover:shadow-md transition-shadow"
+              >
+                <div className="h-12 w-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                  {item.photo ? (
+                    <img src={item.photo} alt={`${item.brand} ${item.model}`} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center"><Car className="h-5 w-5 text-muted-foreground/30" /></div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{item.brand} {item.model}</p>
+                  <p className="text-xs text-primary font-bold">{item.price}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Vehicle Grid */}
       <main className="container py-6">
         <div className="mb-4 flex items-center justify-between">
@@ -438,7 +547,7 @@ export default function Home() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((v) => (
-              <VehicleCard key={v.id} vehicle={v} />
+              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} />
             ))}
           </div>
         )}
@@ -474,12 +583,14 @@ export default function Home() {
         </div>
       )}
 
+      {/* Vehicle Compare Bar */}
+      <CompareBar ids={compare.ids} onClear={compare.clear} />
+
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
         {!chatOpen && (
-          <div className="animate-bounce-gentle rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
-            <span>人客二手車諮詢發問</span>
-            <span className="ml-1 opacity-80">（點這個）</span>
+          <div className="rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
+            <span>有問題？阿家線上回答你</span>
             <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 rotate-45 bg-primary/90" />
           </div>
         )}

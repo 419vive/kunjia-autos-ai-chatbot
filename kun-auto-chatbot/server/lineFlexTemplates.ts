@@ -69,6 +69,18 @@ function buildVehicleBubble(v: Vehicle): any {
     },
   ];
 
+  // Appointment booking button
+  const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  footerButtons.push({
+    type: "button",
+    action: {
+      type: "uri",
+      label: "📅 預約看車",
+      uri: bookUrl,
+    },
+    style: "secondary",
+  });
+
   // Add "看所有照片" button if vehicle has more than 1 photo
   if (photoCount > 1) {
     footerButtons.push({
@@ -81,6 +93,18 @@ function buildVehicleBubble(v: Vehicle): any {
       style: "secondary",
     });
   }
+
+  // Loan inquiry button
+  const loanUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  footerButtons.push({
+    type: "button",
+    action: {
+      type: "uri",
+      label: "💰 貸款利率怎麼算",
+      uri: loanUrl,
+    },
+    style: "secondary",
+  });
 
   footerButtons.push({
     type: "button",
@@ -525,58 +549,16 @@ export function buildAppointmentCard(): any {
             ],
           },
           {
-            type: "box",
-            layout: "vertical",
-            spacing: "sm",
+            type: "button",
+            action: {
+              type: "uri",
+              label: "📋 線上預約表單",
+              uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit`,
+            },
+            style: "primary",
+            color: "#C4A265",
             margin: "lg",
-            contents: [
-              {
-                type: "text",
-                text: "選擇你方便的時段：",
-                size: "sm",
-                color: "#999999",
-              },
-              {
-                type: "button",
-                action: {
-                  type: "message",
-                  label: "🌅 平日上午 (9:00-12:00)",
-                  text: "我想平日上午去看車",
-                },
-                style: "secondary",
-                height: "sm",
-              },
-              {
-                type: "button",
-                action: {
-                  type: "message",
-                  label: "☀️ 平日下午 (13:00-17:00)",
-                  text: "我想平日下午去看車",
-                },
-                style: "secondary",
-                height: "sm",
-              },
-              {
-                type: "button",
-                action: {
-                  type: "message",
-                  label: "🌙 平日晚上 (17:00-20:00)",
-                  text: "我想平日晚上去看車",
-                },
-                style: "secondary",
-                height: "sm",
-              },
-              {
-                type: "button",
-                action: {
-                  type: "message",
-                  label: "🗓️ 週末 (需預約)",
-                  text: "我想週末去看車，可以預約嗎？",
-                },
-                style: "secondary",
-                height: "sm",
-              },
-            ],
+            height: "md",
           },
           {
             type: "button",
@@ -585,8 +567,9 @@ export function buildAppointmentCard(): any {
               label: "📞 直接打電話預約",
               uri: "tel:0936812818",
             },
-            color: "#C4A265",
-            margin: "lg",
+            style: "secondary",
+            margin: "sm",
+            height: "sm",
           },
         ],
       },
@@ -947,13 +930,143 @@ export function buildFaqCarousel(): any {
  * No need to scroll, no need to tap anything first — buttons are RIGHT THERE.
  */
 export function buildFollowWelcomeMessages(): any[] {
-  return [
-    {
-      type: "text",
-      text: "人客你好！歡迎加入崑家汽車 🚗\n\n我是高雄阿家，在車界打滾40年，專門幫你找到最適合的好車！\n\n買車前最怕什麼？\n👇 點下面的問題，阿家馬上幫你解答！",
-      quickReply: buildFaqQuickReply(),
+  const baseUrl = process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app";
+
+  // Message 1: Rich hero card with branding
+  const heroBubble = {
+    type: "flex",
+    altText: "歡迎來到崑家汽車！高雄40年老口碑",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      hero: {
+        type: "image",
+        url: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663029682479/HUwsVqzcZmQPFDJR.jpg",
+        size: "full",
+        aspectRatio: "20:9",
+        aspectMode: "cover",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "人客你好！歡迎來到崑家汽車 🚗",
+            weight: "bold",
+            size: "lg",
+            color: "#1B3A5C",
+          },
+          {
+            type: "text",
+            text: "我是高雄阿家，在高雄車界40年了！\n很高興認識你 👋 有什麼需要儘管問！",
+            size: "sm",
+            color: "#555555",
+            wrap: true,
+          },
+          {
+            type: "separator",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              { type: "text", text: "🛡️ 第三方認證", size: "xxs", color: "#999999", flex: 1, align: "center" },
+              { type: "text", text: "💰 超強貸款", size: "xxs", color: "#999999", flex: 1, align: "center" },
+              { type: "text", text: "🚗 免費接駁", size: "xxs", color: "#999999", flex: 1, align: "center" },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            action: { type: "message", label: "🔍 瀏覽在售車輛", text: "我想看車，有什麼車可以推薦？" },
+            style: "primary",
+            color: "#1B3A5C",
+          },
+          {
+            type: "button",
+            action: { type: "message", label: "💰 50萬以下好車", text: "50萬以下有什麼好車？" },
+            style: "primary",
+            color: "#C4A265",
+          },
+          {
+            type: "button",
+            action: { type: "uri", label: "🌐 開啟網站瀏覽", uri: baseUrl },
+            style: "secondary",
+          },
+        ],
+      },
     },
-  ];
+  };
+
+  // Message 2: Text with quick reply buttons for deeper engagement
+  const welcomeText = {
+    type: "text",
+    text: "請問你今天是想…？👇",
+    quickReply: {
+      items: [
+        // Engagement questions — qualify the lead immediately
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "🔍 找一台好車",
+            text: "我想看車，有什麼車可以推薦？",
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "💰 看看預算內的車",
+            text: "50萬以下有什麼好車？",
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "📅 預約看車",
+            text: "我想預約看車，什麼時候方便？",
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "🔄 舊車想換新",
+            text: "我有一台舊車想換新車，可以估價嗎？",
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "🛡️ 了解崑家保障",
+            text: FAQ_ITEMS[0].triggerText,
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: "💬 隨便問問",
+            text: "你好，我想了解崑家汽車",
+          },
+        },
+      ],
+    },
+  };
+
+  return [heroBubble, welcomeText];
 }
 
 // ============ RICH MENU TRIGGER DETECTION ============
@@ -1045,6 +1158,154 @@ export function buildRichMenuResponseMessages(
     default:
       return [];
   }
+}
+
+// ============ CONTEXTUAL QUICK REPLIES FOR TEXT RESPONSES ============
+// Every text reply should have quick reply buttons to keep the conversation flowing.
+// Buttons are contextual: different based on what the customer just asked about.
+
+export type ConversationContext = {
+  hasVehicle: boolean;       // Customer asked about a specific vehicle
+  hasAppointment: boolean;   // Customer mentioned appointment
+  hasContact: boolean;       // Customer already provided phone
+  vehicleName?: string;      // e.g., "Toyota Corolla"
+  vehicleExternalId?: string;
+};
+
+/**
+ * Build contextual quick reply buttons for regular text responses.
+ * These keep the customer engaged by showing relevant next actions.
+ */
+export function buildContextualQuickReply(ctx: ConversationContext): any {
+  const items: any[] = [];
+
+  if (ctx.hasVehicle && ctx.vehicleName) {
+    // Customer is asking about a specific vehicle → show vehicle-specific actions
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💰 這台多少錢？",
+        text: `${ctx.vehicleName} 多少錢？有優惠嗎？`,
+      },
+    });
+    if (ctx.vehicleExternalId) {
+      items.push({
+        type: "action",
+        action: {
+          type: "message",
+          label: "📸 看照片",
+          text: `看照片 ${ctx.vehicleExternalId}`,
+        },
+      });
+    }
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "🚗 預約看這台車",
+        text: "我想預約看車，什麼時候方便？",
+      },
+    });
+    if (!ctx.hasContact) {
+      items.push({
+        type: "action",
+        action: {
+          type: "message",
+          label: "📞 直接聯繫",
+          text: "可以給我你們的聯絡方式嗎？",
+        },
+      });
+    }
+  } else if (ctx.hasAppointment) {
+    // Customer wants to visit → show time slots + contact
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "🌅 上午去看",
+        text: "我想平日上午去看車",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "☀️ 下午去看",
+        text: "我想平日下午去看車",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "🌙 晚上去看",
+        text: "我想平日晚上去看車",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "📍 怎麼去？",
+        text: "你們地址在哪？怎麼去？",
+      },
+    });
+  } else {
+    // General conversation → show discovery actions
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "🚗 看車庫存",
+        text: "我想看車，有什麼車可以推薦？",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💰 50萬以下",
+        text: "50萬以下有什麼好車？",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "📅 預約賞車",
+        text: "我想預約看車，什麼時候方便？",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "📞 聯絡我們",
+        text: "可以給我你們的聯絡方式嗎？",
+      },
+    });
+  }
+
+  // Always add FAQ at the end (pick top 2 most useful)
+  items.push({
+    type: "action",
+    action: {
+      type: "message",
+      label: "🛡️ 車況保障？",
+      text: FAQ_ITEMS[0].triggerText,
+    },
+  });
+  items.push({
+    type: "action",
+    action: {
+      type: "message",
+      label: "🔄 舊車換新",
+      text: FAQ_ITEMS[4].triggerText,
+    },
+  });
+
+  return { items };
 }
 
 // Backward compat: single message version

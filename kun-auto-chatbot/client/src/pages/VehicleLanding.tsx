@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { ProgressiveImage } from "@/components/ProgressiveImage";
+import { addRecentlyViewed } from "@/lib/recentlyViewed";
 import {
   Car,
   MapPin,
@@ -53,6 +55,7 @@ function getIntentQuestions(vehicle: any) {
       bgColor: "rgba(6, 199, 85, 0.1)",
       borderColor: "rgba(6, 199, 85, 0.25)",
       lineMessage: `我想預約看這台 ${name} ${year}，什麼時候方便？`,
+      bookUrl: true,
     },
     {
       id: "trade",
@@ -62,6 +65,16 @@ function getIntentQuestions(vehicle: any) {
       bgColor: "rgba(155, 89, 182, 0.1)",
       borderColor: "rgba(155, 89, 182, 0.25)",
       lineMessage: `我有一台舊車想換這台 ${name} ${year}，可以幫我估價折抵嗎？`,
+    },
+    {
+      id: "loan",
+      icon: "💰",
+      label: "貸款利率怎麼算？",
+      color: "#E67E22",
+      bgColor: "rgba(230, 126, 34, 0.1)",
+      borderColor: "rgba(230, 126, 34, 0.25)",
+      lineMessage: "",
+      loanUrl: true,
     },
   ];
 }
@@ -122,10 +135,18 @@ export default function VehicleLanding() {
     setTouchEnd(null);
   };
 
-  // Set page title for OG preview
+  // Set page title for OG preview + track recently viewed
   useEffect(() => {
     if (vehicle) {
       document.title = `${vehicle.brand} ${vehicle.model} ${vehicle.modelYear || ""}年 ${vehicle.priceDisplay || vehicle.price + "萬"} | 崑家汽車`;
+      const photoList = vehicle.photoUrls ? String(vehicle.photoUrls).split("|").filter((u: string) => u.trim()) : [];
+      addRecentlyViewed({
+        id: vehicle.id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        price: vehicle.priceDisplay || `${vehicle.price}萬`,
+        photo: photoList[0] || undefined,
+      });
     }
   }, [vehicle]);
 
@@ -172,6 +193,16 @@ export default function VehicleLanding() {
   if (vehicle.transmission) specs.push({ icon: <Gauge className="w-3.5 h-3.5" />, text: vehicle.transmission });
 
   const handleQuestionClick = (question: ReturnType<typeof getIntentQuestions>[number]) => {
+    // Loan inquiry → redirect to form page
+    if ((question as any).loanUrl) {
+      window.location.href = `/loan-inquiry?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(name)}`;
+      return;
+    }
+    // Appointment booking → redirect to booking form
+    if ((question as any).bookUrl) {
+      window.location.href = `/book-visit?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(name)}`;
+      return;
+    }
     if (device === "mobile") {
       // Mobile → open LINE OA with pre-filled message
       window.location.href = buildLineDeepLink(question.lineMessage);
@@ -207,10 +238,11 @@ export default function VehicleLanding() {
           >
             {photos.length > 0 ? (
               <>
-                <img
+                <ProgressiveImage
                   src={photos[currentPhoto]}
                   alt={`${name} - 照片 ${currentPhoto + 1}`}
-                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
+                  aspectRatio="16/10"
                 />
                 {totalPhotos > 1 && (
                   <>

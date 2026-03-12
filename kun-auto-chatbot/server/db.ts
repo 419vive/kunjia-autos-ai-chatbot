@@ -6,6 +6,10 @@ import {
   conversations, Conversation, InsertConversation,
   messages, Message as DbMessage, InsertMessage,
   leadEvents, InsertLeadEvent,
+  analyticsEvents, InsertAnalyticsEvent,
+  pageViews, InsertPageView,
+  loanInquiries, InsertLoanInquiry,
+  appointments, InsertAppointment,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -205,6 +209,356 @@ export async function getLeadEvents(conversationId: number) {
     .orderBy(desc(leadEvents.createdAt));
 }
 
+// ============ ANALYTICS EVENTS ============
+
+export async function addAnalyticsEvent(data: InsertAnalyticsEvent) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(analyticsEvents).values(data);
+}
+
+export async function getAnalyticsEvents(filters?: {
+  eventCategory?: string;
+  channel?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.eventCategory) conditions.push(eq(analyticsEvents.eventCategory, filters.eventCategory));
+  if (filters?.channel) conditions.push(eq(analyticsEvents.channel, filters.channel as any));
+  if (filters?.startDate) conditions.push(gte(analyticsEvents.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(analyticsEvents.createdAt, filters.endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select().from(analyticsEvents).where(where).orderBy(desc(analyticsEvents.createdAt)).limit(filters?.limit || 200);
+}
+
+// ============ REPORT QUERIES ============
+
+/** Daily conversation counts for time-series chart */
+export async function getDailyConversationStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(conversations.createdAt, startDate));
+  if (endDate) conditions.push(lte(conversations.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    date: sql<string>`DATE(${conversations.createdAt})`.as('date'),
+    count: sql<number>`count(*)`.as('count'),
+    channel: conversations.channel,
+  }).from(conversations).where(where)
+    .groupBy(sql`DATE(${conversations.createdAt})`, conversations.channel)
+    .orderBy(sql`DATE(${conversations.createdAt})`);
+}
+
+/** Daily message volume */
+export async function getDailyMessageStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(messages.createdAt, startDate));
+  if (endDate) conditions.push(lte(messages.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    date: sql<string>`DATE(${messages.createdAt})`.as('date'),
+    count: sql<number>`count(*)`.as('count'),
+    role: messages.role,
+  }).from(messages).where(where)
+    .groupBy(sql`DATE(${messages.createdAt})`, messages.role)
+    .orderBy(sql`DATE(${messages.createdAt})`);
+}
+
+/** Lead conversion funnel */
+export async function getLeadConversionFunnel(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(conversations.createdAt, startDate));
+  if (endDate) conditions.push(lte(conversations.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    leadStatus: conversations.leadStatus,
+    count: sql<number>`count(*)`.as('count'),
+    avgScore: sql<number>`ROUND(AVG(${conversations.leadScore}), 1)`.as('avgScore'),
+  }).from(conversations).where(where)
+    .groupBy(conversations.leadStatus);
+}
+
+/** Popular vehicles by interest (mentioned in conversations) */
+export async function getPopularVehicles(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  // Get vehicles that appear in interestedVehicleIds
+  const convs = await db.select({
+    interestedVehicleIds: conversations.interestedVehicleIds,
+  }).from(conversations)
+    .where(sql`${conversations.interestedVehicleIds} IS NOT NULL AND ${conversations.interestedVehicleIds} != ''`);
+
+  // Count vehicle mentions
+  const vehicleCounts = new Map<number, number>();
+  for (const c of convs) {
+    if (!c.interestedVehicleIds) continue;
+    const ids = c.interestedVehicleIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    for (const id of ids) {
+      vehicleCounts.set(id, (vehicleCounts.get(id) || 0) + 1);
+    }
+  }
+
+  if (vehicleCounts.size === 0) return [];
+
+  // Get top vehicles
+  const topIds = Array.from(vehicleCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+
+  const vehicleIds = topIds.map(([id]) => id);
+  const vehicleList = await db.select().from(vehicles).where(inArray(vehicles.id, vehicleIds));
+
+  return topIds.map(([id, count]) => {
+    const v = vehicleList.find(v => v.id === id);
+    return v ? { ...v, interestCount: count } : null;
+  }).filter(Boolean);
+}
+
+/** Lead score distribution */
+export async function getLeadScoreDistribution() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    range: sql<string>`CASE
+      WHEN ${conversations.leadScore} = 0 THEN '0'
+      WHEN ${conversations.leadScore} BETWEEN 1 AND 30 THEN '1-30'
+      WHEN ${conversations.leadScore} BETWEEN 31 AND 60 THEN '31-60'
+      WHEN ${conversations.leadScore} BETWEEN 61 AND 100 THEN '61-100'
+      WHEN ${conversations.leadScore} BETWEEN 101 AND 150 THEN '101-150'
+      ELSE '150+'
+    END`.as('range'),
+    count: sql<number>`count(*)`.as('count'),
+  }).from(conversations)
+    .groupBy(sql`CASE
+      WHEN ${conversations.leadScore} = 0 THEN '0'
+      WHEN ${conversations.leadScore} BETWEEN 1 AND 30 THEN '1-30'
+      WHEN ${conversations.leadScore} BETWEEN 31 AND 60 THEN '31-60'
+      WHEN ${conversations.leadScore} BETWEEN 61 AND 100 THEN '61-100'
+      WHEN ${conversations.leadScore} BETWEEN 101 AND 150 THEN '101-150'
+      ELSE '150+'
+    END`);
+}
+
+/** Lead event type breakdown */
+export async function getLeadEventBreakdown(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(leadEvents.createdAt, startDate));
+  if (endDate) conditions.push(lte(leadEvents.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    eventType: leadEvents.eventType,
+    count: sql<number>`count(*)`.as('count'),
+    totalScore: sql<number>`SUM(${leadEvents.scoreChange})`.as('totalScore'),
+  }).from(leadEvents).where(where)
+    .groupBy(leadEvents.eventType)
+    .orderBy(sql`count(*) DESC`);
+}
+
+/** Analytics event breakdown (for LINE behavioral tracking) */
+export async function getAnalyticsEventBreakdown(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(analyticsEvents.createdAt, startDate));
+  if (endDate) conditions.push(lte(analyticsEvents.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    eventCategory: analyticsEvents.eventCategory,
+    eventAction: analyticsEvents.eventAction,
+    count: sql<number>`count(*)`.as('count'),
+  }).from(analyticsEvents).where(where)
+    .groupBy(analyticsEvents.eventCategory, analyticsEvents.eventAction)
+    .orderBy(sql`count(*) DESC`);
+}
+
+/** Get all conversations for CSV export */
+export async function getAllConversationsForExport(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(conversations.createdAt, startDate));
+  if (endDate) conditions.push(lte(conversations.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select().from(conversations).where(where).orderBy(desc(conversations.createdAt));
+}
+
+/** Get all lead events for CSV export */
+export async function getAllLeadEventsForExport(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(leadEvents.createdAt, startDate));
+  if (endDate) conditions.push(lte(leadEvents.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select().from(leadEvents).where(where).orderBy(desc(leadEvents.createdAt));
+}
+
+// ============ PAGE VIEW TRACKING ============
+
+export async function addPageView(data: InsertPageView) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(pageViews).values(data);
+}
+
+export async function updatePageViewDuration(id: number, duration: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(pageViews).set({ duration }).where(eq(pageViews.id, id));
+}
+
+/** Web analytics: page view summary stats */
+export async function getWebAnalyticsSummary(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return null;
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [totalViews, uniqueVisitors, avgDuration] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(pageViews).where(where),
+    db.select({ count: sql<number>`count(DISTINCT ${pageViews.sessionHash})` }).from(pageViews).where(where),
+    db.select({ avg: sql<number>`ROUND(AVG(CASE WHEN ${pageViews.duration} > 0 THEN ${pageViews.duration} END), 0)` }).from(pageViews).where(where),
+  ]);
+
+  return {
+    pageViews: Number(totalViews[0]?.count || 0),
+    uniqueVisitors: Number(uniqueVisitors[0]?.count || 0),
+    avgDuration: Number(avgDuration[0]?.avg || 0),
+  };
+}
+
+/** Daily visitor time-series */
+export async function getDailyVisitorStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    date: sql<string>`DATE(${pageViews.createdAt})`.as('date'),
+    pageViews: sql<number>`count(*)`.as('pageViews'),
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(sql`DATE(${pageViews.createdAt})`)
+    .orderBy(sql`DATE(${pageViews.createdAt})`);
+}
+
+/** Most viewed pages */
+export async function getTopPages(startDate?: Date, endDate?: Date, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    path: pageViews.path,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+    views: sql<number>`count(*)`.as('views'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.path)
+    .orderBy(sql`count(*) DESC`)
+    .limit(limit);
+}
+
+/** Referrer breakdown */
+export async function getTopReferrers(startDate?: Date, endDate?: Date, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  // Only count non-null referrers
+  conditions.push(sql`${pageViews.referrerDomain} IS NOT NULL AND ${pageViews.referrerDomain} != ''`);
+  const where = and(...conditions);
+  return db.select({
+    referrerDomain: pageViews.referrerDomain,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.referrerDomain)
+    .orderBy(sql`count(DISTINCT ${pageViews.sessionHash}) DESC`)
+    .limit(limit);
+}
+
+/** Browser breakdown */
+export async function getBrowserStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    browser: pageViews.browser,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.browser)
+    .orderBy(sql`count(DISTINCT ${pageViews.sessionHash}) DESC`);
+}
+
+/** OS breakdown */
+export async function getOsStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    os: pageViews.os,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.os)
+    .orderBy(sql`count(DISTINCT ${pageViews.sessionHash}) DESC`);
+}
+
+/** Device breakdown */
+export async function getDeviceStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select({
+    device: pageViews.device,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.device)
+    .orderBy(sql`count(DISTINCT ${pageViews.sessionHash}) DESC`);
+}
+
+/** Country/Region breakdown */
+export async function getCountryStats(startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (startDate) conditions.push(gte(pageViews.createdAt, startDate));
+  if (endDate) conditions.push(lte(pageViews.createdAt, endDate));
+  conditions.push(sql`${pageViews.country} IS NOT NULL AND ${pageViews.country} != ''`);
+  const where = and(...conditions);
+  return db.select({
+    country: pageViews.country,
+    visitors: sql<number>`count(DISTINCT ${pageViews.sessionHash})`.as('visitors'),
+  }).from(pageViews).where(where)
+    .groupBy(pageViews.country)
+    .orderBy(sql`count(DISTINCT ${pageViews.sessionHash}) DESC`);
+}
+
 // ============ DASHBOARD STATS ============
 
 export async function getDashboardStats(startDate?: Date, endDate?: Date) {
@@ -239,4 +593,46 @@ export async function getDashboardStats(startDate?: Date, endDate?: Date) {
     channelBreakdown: channelStats,
     avgLeadScore: Number(vehicleInterest[0]?.avgScore || 0),
   };
+}
+
+// ============ LOAN INQUIRIES ============
+
+export async function createLoanInquiry(data: InsertLoanInquiry) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(loanInquiries).values(data);
+  return result.insertId;
+}
+
+export async function getLoanInquiries(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(loanInquiries).orderBy(desc(loanInquiries.createdAt)).limit(limit);
+}
+
+export async function updateLoanInquiryStatus(id: number, status: "new" | "contacted" | "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(loanInquiries).set({ status }).where(eq(loanInquiries.id, id));
+}
+
+// ============ APPOINTMENTS ============
+
+export async function createAppointment(data: InsertAppointment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(appointments).values(data);
+  return result.insertId;
+}
+
+export async function getAppointments(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appointments).orderBy(desc(appointments.createdAt)).limit(limit);
+}
+
+export async function updateAppointmentStatus(id: number, status: "new" | "confirmed" | "completed" | "cancelled") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(appointments).set({ status }).where(eq(appointments.id, id));
 }

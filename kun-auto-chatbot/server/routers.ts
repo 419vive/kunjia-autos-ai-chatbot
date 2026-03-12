@@ -117,18 +117,35 @@ function getWebMilestoneLevel(score: number): number {
   return level;
 }
 
+// Dedup: prevent duplicate notifications for the same conversation within 10 minutes
+const notifyCooldownMap = new Map<string, number>();
+const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
+
 async function checkAndNotifyOwner(conversationId: number, conversation: any, phoneJustDetected?: boolean) {
   const score = conversation.leadScore || 0;
   const currentNotifiedLevel = conversation.notifiedOwner || 0;
   const newMilestoneLevel = getWebMilestoneLevel(score);
-  
+
   // Determine if we should notify:
   // 1. New milestone reached (score crossed a threshold)
   // 2. Phone number just detected (always notify immediately)
   const shouldNotifyMilestone = newMilestoneLevel > currentNotifiedLevel && score >= QUALITY_LEAD_THRESHOLD;
   const shouldNotifyPhone = phoneJustDetected && score >= 40;
-  
+
   if (!shouldNotifyMilestone && !shouldNotifyPhone) return;
+
+  // Dedup: skip if same conversation+level was notified recently
+  const dedupKey = `web:${conversationId}:${newMilestoneLevel}:${phoneJustDetected ? "phone" : "score"}`;
+  const lastNotified = notifyCooldownMap.get(dedupKey);
+  if (lastNotified && Date.now() - lastNotified < NOTIFY_COOLDOWN_MS) return;
+  notifyCooldownMap.set(dedupKey, Date.now());
+  // Periodic cleanup: remove expired entries
+  if (notifyCooldownMap.size > 500) {
+    const now = Date.now();
+    Array.from(notifyCooldownMap.entries()).forEach(([k, t]) => {
+      if (now - t > NOTIFY_COOLDOWN_MS) notifyCooldownMap.delete(k);
+    });
+  }
   
   const msgs = await db.getMessagesByConversation(conversationId, 20);
   const summary = msgs
@@ -259,6 +276,164 @@ export const appRouter = router({
     brands: publicProcedure.query(async () => {
       return db.getVehicleBrands();
     }),
+  }),
+
+  // ============ LOAN INQUIRY ENDPOINTS ============
+  loan: router({
+    submit: publicProcedure
+      .input(z.object({
+        vehicleId: z.number().optional(),
+        vehicleName: z.string().optional(),
+        customerName: z.string().min(1),
+        phone: z.string().min(1),
+        gender: z.string().optional(),
+        age: z.string().optional(),
+        hasLicense: z.string().optional(),
+        employmentType: z.string().optional(),
+        employmentDuration: z.string().optional(),
+        hasInsurance: z.string().optional(),
+        previousLoans: z.string().optional(),
+        purchaseMethod: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createLoanInquiry(input);
+
+        // Notify owner via LINE + system notification
+        const vehicleInfo = input.vehicleName || "未指定車輛";
+        const title = `💰 貸款諮詢申請！${input.customerName} · ${vehicleInfo}`;
+        const content = [
+          `姓名：${input.customerName}`,
+          `電話：${input.phone}`,
+          `性別：${input.gender || "未填"}`,
+          `年紀：${input.age || "未填"}`,
+          `駕照：${input.hasLicense || "未填"}`,
+          `工作類型：${input.employmentType || "未填"}`,
+          `工作年資：${input.employmentDuration || "未填"}`,
+          `勞健保：${input.hasInsurance || "未填"}`,
+          `貸款紀錄：${input.previousLoans || "未填"}`,
+          `購買方式：${input.purchaseMethod || "未填"}`,
+          `詢問車輛：${vehicleInfo}`,
+          input.notes ? `備註：${input.notes}` : "",
+          `---`,
+          `⚠️ 請盡快撥打 ${input.phone} 聯繫此客戶！`,
+        ].filter(Boolean).join("\n");
+
+        try {
+          await notifyOwner({ title, content });
+
+          // Also push to LINE owner
+          const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+          const ownerUserId = process.env.LINE_OWNER_USER_ID;
+          const recipientIds: string[] = [];
+          if (ownerUserId) recipientIds.push(ownerUserId);
+          const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
+          if (additionalIds) {
+            additionalIds.split(",").map(id => id.trim()).filter(Boolean).forEach(id => {
+              if (!recipientIds.includes(id)) recipientIds.push(id);
+            });
+          }
+          if (channelAccessToken && recipientIds.length > 0) {
+            for (const recipientId of recipientIds) {
+              try {
+                await fetch("https://api.line.me/v2/bot/message/push", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+                  body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
+                });
+              } catch { /* ignore individual push failures */ }
+            }
+          }
+        } catch (err) {
+          console.error("[Loan Inquiry Notify] Failed:", err);
+        }
+
+        return { success: true, id };
+      }),
+
+    list: adminProcedure.query(async () => {
+      return db.getLoanInquiries();
+    }),
+
+    updateStatus: adminProcedure
+      .input(z.object({ id: z.number(), status: z.enum(["new", "contacted", "approved", "rejected"]) }))
+      .mutation(async ({ input }) => {
+        await db.updateLoanInquiryStatus(input.id, input.status);
+        return { success: true };
+      }),
+  }),
+
+  // ============ APPOINTMENT ENDPOINTS ============
+  appointment: router({
+    submit: publicProcedure
+      .input(z.object({
+        vehicleId: z.number().optional(),
+        vehicleName: z.string().optional(),
+        customerName: z.string().min(1),
+        phone: z.string().min(1),
+        preferredDate: z.string().optional(),
+        preferredTime: z.string().optional(),
+        timeFlexible: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createAppointment(input);
+
+        const vehicleInfo = input.vehicleName || "未指定車輛";
+        const timeInfo = input.timeFlexible === "yes"
+          ? "暫不確定時間（彈性）"
+          : `${input.preferredDate || "未選日期"} ${input.preferredTime || ""}`;
+        const title = `📅 預約看車！${input.customerName} · ${vehicleInfo}`;
+        const content = [
+          `姓名：${input.customerName}`,
+          `電話：${input.phone}`,
+          `車輛：${vehicleInfo}`,
+          `時間：${timeInfo}`,
+          input.notes ? `備註：${input.notes}` : "",
+          `---`,
+          `⚠️ 請盡快撥打 ${input.phone} 確認預約！`,
+        ].filter(Boolean).join("\n");
+
+        try {
+          await notifyOwner({ title, content });
+          const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+          const ownerUserId = process.env.LINE_OWNER_USER_ID;
+          const recipientIds: string[] = [];
+          if (ownerUserId) recipientIds.push(ownerUserId);
+          const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
+          if (additionalIds) {
+            additionalIds.split(",").map(id => id.trim()).filter(Boolean).forEach(id => {
+              if (!recipientIds.includes(id)) recipientIds.push(id);
+            });
+          }
+          if (channelAccessToken && recipientIds.length > 0) {
+            for (const recipientId of recipientIds) {
+              try {
+                await fetch("https://api.line.me/v2/bot/message/push", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+                  body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
+                });
+              } catch { /* ignore */ }
+            }
+          }
+        } catch (err) {
+          console.error("[Appointment Notify] Failed:", err);
+        }
+
+        return { success: true, id };
+      }),
+
+    list: adminProcedure.query(async () => {
+      return db.getAppointments();
+    }),
+
+    updateStatus: adminProcedure
+      .input(z.object({ id: z.number(), status: z.enum(["new", "confirmed", "completed", "cancelled"]) }))
+      .mutation(async ({ input }) => {
+        await db.updateAppointmentStatus(input.id, input.status);
+        return { success: true };
+      }),
   }),
 
   // ============ CHAT ENDPOINTS ============
@@ -863,6 +1038,222 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
         });
         return getSecurityEvents(input?.limit || 50);
       }),
+
+    // ============ ANALYTICS & REPORTS ============
+
+    /** Daily conversation trends (time-series) */
+    dailyConversations: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getDailyConversationStats(start, end);
+      }),
+
+    /** Daily message volume */
+    dailyMessages: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getDailyMessageStats(start, end);
+      }),
+
+    /** Lead conversion funnel */
+    leadFunnel: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getLeadConversionFunnel(start, end);
+      }),
+
+    /** Popular vehicles by customer interest */
+    popularVehicles: adminProcedure.query(async () => {
+      return db.getPopularVehicles(10);
+    }),
+
+    /** Lead score distribution */
+    leadScoreDistribution: adminProcedure.query(async () => {
+      return db.getLeadScoreDistribution();
+    }),
+
+    /** Lead event type breakdown */
+    leadEventBreakdown: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getLeadEventBreakdown(start, end);
+      }),
+
+    /** LINE behavioral analytics */
+    lineAnalytics: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getAnalyticsEventBreakdown(start, end);
+      }),
+
+    // ============ WEB ANALYTICS (like Umami) ============
+
+    /** Web analytics summary (page views, visitors, duration) */
+    webSummary: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getWebAnalyticsSummary(start, end);
+      }),
+
+    /** Daily visitor time-series */
+    dailyVisitors: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getDailyVisitorStats(start, end);
+      }),
+
+    /** Top pages */
+    topPages: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getTopPages(start, end);
+      }),
+
+    /** Top referrers */
+    topReferrers: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getTopReferrers(start, end);
+      }),
+
+    /** Browser stats */
+    browserStats: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getBrowserStats(start, end);
+      }),
+
+    /** OS stats */
+    osStats: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getOsStats(start, end);
+      }),
+
+    /** Device stats */
+    deviceStats: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getDeviceStats(start, end);
+      }),
+
+    /** Country stats */
+    countryStats: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        return db.getCountryStats(start, end);
+      }),
+
+    // ============ CSV EXPORT ============
+
+    /** Export conversations as CSV */
+    exportConversations: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        const rows = await db.getAllConversationsForExport(start, end);
+        const header = "ID,SessionID,CustomerName,Channel,Status,LeadScore,LeadStatus,CreatedAt,UpdatedAt";
+        const csvRows = rows.map(r =>
+          `${r.id},"${r.sessionId}","${(r.customerName || '').replace(/"/g, '""')}",${r.channel},${r.status},${r.leadScore},${r.leadStatus},"${r.createdAt}","${r.updatedAt}"`
+        );
+        return { csv: [header, ...csvRows].join("\n"), filename: `conversations_${new Date().toISOString().split('T')[0]}.csv` };
+      }),
+
+    /** Export lead events as CSV */
+    exportLeadEvents: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const start = input?.startDate ? new Date(input.startDate) : undefined;
+        const end = input?.endDate ? new Date(input.endDate) : undefined;
+        const rows = await db.getAllLeadEventsForExport(start, end);
+        const header = "ID,ConversationID,EventType,ScoreChange,Reason,CreatedAt";
+        const csvRows = rows.map(r =>
+          `${r.id},${r.conversationId},"${r.eventType}",${r.scoreChange},"${(r.reason || '').replace(/"/g, '""')}","${r.createdAt}"`
+        );
+        return { csv: [header, ...csvRows].join("\n"), filename: `lead_events_${new Date().toISOString().split('T')[0]}.csv` };
+      }),
+
+    /** Export vehicles as CSV */
+    exportVehicles: adminProcedure.query(async () => {
+      const rows = await db.getAllVehicles();
+      const header = "ID,ExternalID,Brand,Model,Year,Price,Mileage,Color,Transmission,FuelType,Status";
+      const csvRows = rows.map(r =>
+        `${r.id},"${r.externalId}","${r.brand}","${r.model}","${r.modelYear || ''}","${r.priceDisplay || r.price || ''}","${r.mileage || ''}","${r.color || ''}","${r.transmission || ''}","${r.fuelType || ''}",${r.status}`
+      );
+      return { csv: [header, ...csvRows].join("\n"), filename: `vehicles_${new Date().toISOString().split('T')[0]}.csv` };
+    }),
   }),
 });
 
