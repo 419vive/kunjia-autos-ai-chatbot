@@ -13,6 +13,8 @@ import VehicleManagement from "./pages/VehicleManagement";
 import LineSetup from "./pages/LineSetup";
 import Analytics from "./pages/Analytics";
 import AdminLogin from "./pages/AdminLogin";
+import LoanInquiries from "./pages/LoanInquiries";
+import Appointments from "./pages/Appointments";
 import SmartRedirect from "./pages/SmartRedirect";
 import VehicleLanding from "./pages/VehicleLanding";
 import LoanInquiry from "./pages/LoanInquiry";
@@ -53,6 +55,16 @@ function Router() {
       <Route path="/admin/vehicles">
         <AdminLayout>
           <VehicleManagement />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/loans">
+        <AdminLayout>
+          <LoanInquiries />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/appointments">
+        <AdminLayout>
+          <Appointments />
         </AdminLayout>
       </Route>
       <Route path="/admin/line-setup">

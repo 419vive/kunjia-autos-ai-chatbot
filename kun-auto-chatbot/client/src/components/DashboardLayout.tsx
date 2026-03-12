@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, MessageSquare, Car, Home, Settings, BarChart3 } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, MessageSquare, Car, Home, Settings, BarChart3, DollarSign, CalendarDays } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -32,6 +32,8 @@ const menuItems = [
   { icon: BarChart3, label: "數據分析", path: "/admin/analytics" },
   { icon: MessageSquare, label: "對話管理", path: "/admin/conversations" },
   { icon: Car, label: "車輛管理", path: "/admin/vehicles" },
+  { icon: DollarSign, label: "貸款諮詢", path: "/admin/loans" },
+  { icon: CalendarDays, label: "預約看車", path: "/admin/appointments" },
   { icon: Settings, label: "LINE 整合", path: "/admin/line-setup" },
 ];
 
