@@ -333,15 +333,20 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
+          console.log(`[Loan Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientIds: ${JSON.stringify(recipientIds)}`);
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
-                await fetch("https://api.line.me/v2/bot/message/push", {
+                const res = await fetch("https://api.line.me/v2/bot/message/push", {
                   method: "POST",
                   headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
                   body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
                 });
-              } catch { /* ignore individual push failures */ }
+                const resBody = await res.text();
+                console.log(`[Loan Notify] LINE push to ${recipientId}: ${res.status} ${resBody}`);
+              } catch (pushErr) {
+                console.error(`[Loan Notify] LINE push failed for ${recipientId}:`, pushErr);
+              }
             }
           }
         } catch (err) {
@@ -406,15 +411,20 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
+          console.log(`[Appointment Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientIds: ${JSON.stringify(recipientIds)}`);
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
-                await fetch("https://api.line.me/v2/bot/message/push", {
+                const res = await fetch("https://api.line.me/v2/bot/message/push", {
                   method: "POST",
                   headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
                   body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
                 });
-              } catch { /* ignore */ }
+                const resBody = await res.text();
+                console.log(`[Appointment Notify] LINE push to ${recipientId}: ${res.status} ${resBody}`);
+              } catch (pushErr) {
+                console.error(`[Appointment Notify] LINE push failed for ${recipientId}:`, pushErr);
+              }
             }
           }
         } catch (err) {
