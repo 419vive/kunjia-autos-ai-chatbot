@@ -172,3 +172,23 @@ export const loanInquiries = mysqlTable("loanInquiries", {
 
 export type LoanInquiry = typeof loanInquiries.$inferSelect;
 export type InsertLoanInquiry = typeof loanInquiries.$inferInsert;
+
+/**
+ * Appointment bookings for vehicle visits
+ */
+export const appointments = mysqlTable("appointments", {
+  id: int("id").autoincrement().primaryKey(),
+  vehicleId: int("vehicleId"),
+  vehicleName: varchar("vehicleName", { length: 256 }),
+  customerName: varchar("customerName", { length: 128 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  preferredDate: varchar("preferredDate", { length: 32 }),
+  preferredTime: varchar("preferredTime", { length: 64 }),
+  timeFlexible: varchar("timeFlexible", { length: 16 }).default("no"),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["new", "confirmed", "completed", "cancelled"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = typeof appointments.$inferInsert;

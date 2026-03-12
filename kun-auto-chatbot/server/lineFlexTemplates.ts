@@ -69,6 +69,18 @@ function buildVehicleBubble(v: Vehicle): any {
     },
   ];
 
+  // Appointment booking button
+  const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  footerButtons.push({
+    type: "button",
+    action: {
+      type: "uri",
+      label: "📅 預約看車",
+      uri: bookUrl,
+    },
+    style: "secondary",
+  });
+
   // Add "看所有照片" button if vehicle has more than 1 photo
   if (photoCount > 1) {
     footerButtons.push({

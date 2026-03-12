@@ -55,6 +55,7 @@ function getIntentQuestions(vehicle: any) {
       bgColor: "rgba(6, 199, 85, 0.1)",
       borderColor: "rgba(6, 199, 85, 0.25)",
       lineMessage: `我想預約看這台 ${name} ${year}，什麼時候方便？`,
+      bookUrl: true,
     },
     {
       id: "trade",
@@ -195,6 +196,11 @@ export default function VehicleLanding() {
     // Loan inquiry → redirect to form page
     if ((question as any).loanUrl) {
       window.location.href = `/loan-inquiry?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(name)}`;
+      return;
+    }
+    // Appointment booking → redirect to booking form
+    if ((question as any).bookUrl) {
+      window.location.href = `/book-visit?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(name)}`;
       return;
     }
     if (device === "mobile") {

@@ -9,6 +9,7 @@ import {
   analyticsEvents, InsertAnalyticsEvent,
   pageViews, InsertPageView,
   loanInquiries, InsertLoanInquiry,
+  appointments, InsertAppointment,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -613,4 +614,25 @@ export async function updateLoanInquiryStatus(id: number, status: "new" | "conta
   const db = await getDb();
   if (!db) return;
   await db.update(loanInquiries).set({ status }).where(eq(loanInquiries.id, id));
+}
+
+// ============ APPOINTMENTS ============
+
+export async function createAppointment(data: InsertAppointment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(appointments).values(data);
+  return result.insertId;
+}
+
+export async function getAppointments(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appointments).orderBy(desc(appointments.createdAt)).limit(limit);
+}
+
+export async function updateAppointmentStatus(id: number, status: "new" | "confirmed" | "completed" | "cancelled") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(appointments).set({ status }).where(eq(appointments.id, id));
 }
