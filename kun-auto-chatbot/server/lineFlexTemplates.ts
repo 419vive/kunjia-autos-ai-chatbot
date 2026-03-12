@@ -947,10 +947,87 @@ export function buildFaqCarousel(): any {
  * No need to scroll, no need to tap anything first — buttons are RIGHT THERE.
  */
 export function buildFollowWelcomeMessages(): any[] {
-  // Message 1: Warm, personal greeting with engagement question
+  const baseUrl = process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app";
+
+  // Message 1: Rich hero card with branding
+  const heroBubble = {
+    type: "flex",
+    altText: "歡迎來到崑家汽車！高雄40年老口碑",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      hero: {
+        type: "image",
+        url: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663029682479/HUwsVqzcZmQPFDJR.jpg",
+        size: "full",
+        aspectRatio: "20:9",
+        aspectMode: "cover",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "人客你好！歡迎來到崑家汽車 🚗",
+            weight: "bold",
+            size: "lg",
+            color: "#1B3A5C",
+          },
+          {
+            type: "text",
+            text: "我是高雄阿家，在高雄車界40年了！\n很高興認識你 👋 有什麼需要儘管問！",
+            size: "sm",
+            color: "#555555",
+            wrap: true,
+          },
+          {
+            type: "separator",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              { type: "text", text: "🛡️ 第三方認證", size: "xxs", color: "#999999", flex: 1, align: "center" },
+              { type: "text", text: "💰 超強貸款", size: "xxs", color: "#999999", flex: 1, align: "center" },
+              { type: "text", text: "🚗 免費接駁", size: "xxs", color: "#999999", flex: 1, align: "center" },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            action: { type: "message", label: "🔍 瀏覽在售車輛", text: "我想看車，有什麼車可以推薦？" },
+            style: "primary",
+            color: "#1B3A5C",
+          },
+          {
+            type: "button",
+            action: { type: "message", label: "💰 50萬以下好車", text: "50萬以下有什麼好車？" },
+            style: "primary",
+            color: "#C4A265",
+          },
+          {
+            type: "button",
+            action: { type: "uri", label: "🌐 開啟網站瀏覽", uri: baseUrl },
+            style: "secondary",
+          },
+        ],
+      },
+    },
+  };
+
+  // Message 2: Text with quick reply buttons for deeper engagement
   const welcomeText = {
     type: "text",
-    text: "人客你好！歡迎來到崑家汽車 🚗\n\n我是高雄阿家，在高雄車界40年了！\n很高興認識你 👋\n\n請問你今天是想…？👇",
+    text: "請問你今天是想…？👇",
     quickReply: {
       items: [
         // Engagement questions — qualify the lead immediately
@@ -1006,7 +1083,7 @@ export function buildFollowWelcomeMessages(): any[] {
     },
   };
 
-  return [welcomeText];
+  return [heroBubble, welcomeText];
 }
 
 // ============ RICH MENU TRIGGER DETECTION ============

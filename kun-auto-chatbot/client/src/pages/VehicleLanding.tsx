@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
+import { addRecentlyViewed } from "@/lib/recentlyViewed";
 import {
   Car,
   MapPin,
@@ -123,10 +124,18 @@ export default function VehicleLanding() {
     setTouchEnd(null);
   };
 
-  // Set page title for OG preview
+  // Set page title for OG preview + track recently viewed
   useEffect(() => {
     if (vehicle) {
       document.title = `${vehicle.brand} ${vehicle.model} ${vehicle.modelYear || ""}年 ${vehicle.priceDisplay || vehicle.price + "萬"} | 崑家汽車`;
+      const photoList = vehicle.photoUrls ? String(vehicle.photoUrls).split("|").filter((u: string) => u.trim()) : [];
+      addRecentlyViewed({
+        id: vehicle.id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        price: vehicle.priceDisplay || `${vehicle.price}萬`,
+        photo: photoList[0] || undefined,
+      });
     }
   }, [vehicle]);
 

@@ -4,15 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink } from "lucide-react";
+import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
+import { useCompareList, CompareBar } from "@/components/VehicleCompare";
+import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import { nanoid } from "nanoid";
 
-function VehicleCard({ vehicle }: { vehicle: any }) {
+function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
   const [, setLocation] = useLocation();
   const photos = useMemo(() => {
     if (!vehicle.photoUrls) return [];
@@ -141,11 +143,20 @@ function VehicleCard({ vehicle }: { vehicle: any }) {
       </div>
       <CardContent className="p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-foreground">
-              {vehicle.brand} {vehicle.model}
-            </h3>
-            <p className="text-xs text-muted-foreground">{vehicle.modelYear}年款</p>
+          <div className="min-w-0 flex items-start gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleCompare(); }}
+              className={`mt-0.5 shrink-0 flex items-center justify-center h-6 w-6 rounded-md border transition-all ${isComparing ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary"}`}
+              title={isComparing ? "取消比較" : "加入比較"}
+            >
+              <GitCompareArrows className="h-3.5 w-3.5" />
+            </button>
+            <div>
+              <h3 className="truncate text-sm font-semibold text-foreground">
+                {vehicle.brand} {vehicle.model}
+              </h3>
+              <p className="text-xs text-muted-foreground">{vehicle.modelYear}年款</p>
+            </div>
           </div>
           <span className="shrink-0 text-lg font-bold text-primary">
             {vehicle.priceDisplay || `${vehicle.price}萬`}
@@ -218,6 +229,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
+  const compare = useCompareList();
+  const [recentlyViewed] = useState<RecentlyViewedItem[]>(() => getRecentlyViewed());
 
   // Inline chatbot state — persist across tab close with localStorage
   const [chatOpen, setChatOpen] = useState(false);
@@ -451,6 +464,34 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Recently Viewed */}
+      {recentlyViewed.length > 0 && (
+        <div className="container pt-5 pb-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">最近瀏覽過的車</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {recentlyViewed.map((item) => (
+              <a
+                key={item.id}
+                href={`/vehicle/${item.id}`}
+                className="shrink-0 flex items-center gap-3 rounded-xl border bg-background p-2 pr-4 hover:shadow-md transition-shadow"
+              >
+                <div className="h-12 w-16 rounded-lg overflow-hidden bg-muted shrink-0">
+                  {item.photo ? (
+                    <img src={item.photo} alt={`${item.brand} ${item.model}`} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center"><Car className="h-5 w-5 text-muted-foreground/30" /></div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{item.brand} {item.model}</p>
+                  <p className="text-xs text-primary font-bold">{item.price}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Vehicle Grid */}
       <main className="container py-6">
         <div className="mb-4 flex items-center justify-between">
@@ -486,7 +527,7 @@ export default function Home() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((v) => (
-              <VehicleCard key={v.id} vehicle={v} />
+              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} />
             ))}
           </div>
         )}
@@ -521,6 +562,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Vehicle Compare Bar */}
+      <CompareBar ids={compare.ids} onClear={compare.clear} />
 
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
