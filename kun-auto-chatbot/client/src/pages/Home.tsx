@@ -281,15 +281,35 @@ export default function Home() {
       setChatMessages((prev) => [...prev, { role: "assistant", content: "抱歉，系統暫時忙禄中。您可以加 LINE @825oftez 聯繫我們。" }]);
     },
   });
+  // A/B test: rotate prompt sets, assign variant on first visit
+  const [promptVariant] = useState<string>(() => {
+    const stored = localStorage.getItem("kun-prompt-variant");
+    if (stored && ["A", "B", "C"].includes(stored)) return stored;
+    const v = ["A", "B", "C"][Math.floor(Math.random() * 3)];
+    localStorage.setItem("kun-prompt-variant", v);
+    return v;
+  });
+  const chatPrompts = useMemo(() => {
+    const variants: Record<string, string[]> = {
+      A: ["目前有哪些車可以看？", "有沒有50萬以下的SUV？", "我想找一台省油的家庭用車"],
+      B: ["最近有什麼新進的車？", "幫我推薦適合小家庭的車", "有沒有可以貸款的方案？"],
+      C: ["你們的車有保固嗎？", "想找一台代步小車，預算30萬", "可以預約看車嗎？"],
+    };
+    return variants[promptVariant] || variants.A;
+  }, [promptVariant]);
   const handleChatSend = (content: string) => {
     setChatMessages((prev) => [...prev, { role: "user", content }]);
     chatMutation.mutate({ sessionId: chatSessionId, message: content, channel: "web" });
+    // Track suggested prompt clicks for A/B analysis
+    if (chatPrompts.includes(content)) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: `/_event/prompt-click/${promptVariant}` }),
+        keepalive: true,
+      }).catch(() => {});
+    }
   };
-  const chatPrompts = useMemo(() => [
-    "目前有哪些車可以看？",
-    "有沒有50萬以下的SUV？",
-    "我想找一台省油的家庭用車",
-  ], []);
 
   const chatExternalActions = useMemo(() => [
     {

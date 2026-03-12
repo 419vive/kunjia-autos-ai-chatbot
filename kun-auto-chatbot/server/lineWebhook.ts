@@ -894,6 +894,10 @@ function getMilestoneLevel(score: number): number {
   return level;
 }
 
+// Dedup: prevent duplicate LINE notifications for the same conversation within 10 minutes
+const lineNotifyCooldownMap = new Map<string, number>();
+const LINE_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
+
 async function checkAndNotifyOwner(
   conversation: any,
   userMessage: string,
@@ -904,14 +908,27 @@ async function checkAndNotifyOwner(
   const score = conversation.leadScore || 0;
   const currentNotifiedLevel = conversation.notifiedOwner || 0;
   const newMilestoneLevel = getMilestoneLevel(score);
-  
+
   // Determine if we should notify:
   // 1. New milestone reached (score crossed a threshold)
   // 2. Phone number just detected (always notify immediately)
   const shouldNotifyMilestone = newMilestoneLevel > currentNotifiedLevel && score >= 50;
   const shouldNotifyPhone = phoneJustDetected && score >= 40;
-  
+
   if (!shouldNotifyMilestone && !shouldNotifyPhone) return;
+
+  // Dedup: skip if same conversation+level was notified recently
+  const dedupKey = `line:${conversation.id}:${newMilestoneLevel}:${phoneJustDetected ? "phone" : "score"}`;
+  const lastNotified = lineNotifyCooldownMap.get(dedupKey);
+  if (lastNotified && Date.now() - lastNotified < LINE_NOTIFY_COOLDOWN_MS) return;
+  lineNotifyCooldownMap.set(dedupKey, Date.now());
+  // Periodic cleanup
+  if (lineNotifyCooldownMap.size > 500) {
+    const now = Date.now();
+    Array.from(lineNotifyCooldownMap.entries()).forEach(([k, t]) => {
+      if (now - t > LINE_NOTIFY_COOLDOWN_MS) lineNotifyCooldownMap.delete(k);
+    });
+  }
 
   // Build notification content based on context
   let emoji = "🔥";

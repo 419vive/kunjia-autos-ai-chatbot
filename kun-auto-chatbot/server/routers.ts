@@ -117,18 +117,35 @@ function getWebMilestoneLevel(score: number): number {
   return level;
 }
 
+// Dedup: prevent duplicate notifications for the same conversation within 10 minutes
+const notifyCooldownMap = new Map<string, number>();
+const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000;
+
 async function checkAndNotifyOwner(conversationId: number, conversation: any, phoneJustDetected?: boolean) {
   const score = conversation.leadScore || 0;
   const currentNotifiedLevel = conversation.notifiedOwner || 0;
   const newMilestoneLevel = getWebMilestoneLevel(score);
-  
+
   // Determine if we should notify:
   // 1. New milestone reached (score crossed a threshold)
   // 2. Phone number just detected (always notify immediately)
   const shouldNotifyMilestone = newMilestoneLevel > currentNotifiedLevel && score >= QUALITY_LEAD_THRESHOLD;
   const shouldNotifyPhone = phoneJustDetected && score >= 40;
-  
+
   if (!shouldNotifyMilestone && !shouldNotifyPhone) return;
+
+  // Dedup: skip if same conversation+level was notified recently
+  const dedupKey = `web:${conversationId}:${newMilestoneLevel}:${phoneJustDetected ? "phone" : "score"}`;
+  const lastNotified = notifyCooldownMap.get(dedupKey);
+  if (lastNotified && Date.now() - lastNotified < NOTIFY_COOLDOWN_MS) return;
+  notifyCooldownMap.set(dedupKey, Date.now());
+  // Periodic cleanup: remove expired entries
+  if (notifyCooldownMap.size > 500) {
+    const now = Date.now();
+    Array.from(notifyCooldownMap.entries()).forEach(([k, t]) => {
+      if (now - t > NOTIFY_COOLDOWN_MS) notifyCooldownMap.delete(k);
+    });
+  }
   
   const msgs = await db.getMessagesByConversation(conversationId, 20);
   const summary = msgs
