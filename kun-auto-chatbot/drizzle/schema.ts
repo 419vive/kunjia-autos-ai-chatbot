@@ -147,3 +147,28 @@ export const pageViews = mysqlTable("pageViews", {
 
 export type PageView = typeof pageViews.$inferSelect;
 export type InsertPageView = typeof pageViews.$inferInsert;
+
+/**
+ * Loan inquiry submissions from potential customers
+ */
+export const loanInquiries = mysqlTable("loanInquiries", {
+  id: int("id").autoincrement().primaryKey(),
+  vehicleId: int("vehicleId"),
+  vehicleName: varchar("vehicleName", { length: 256 }),
+  customerName: varchar("customerName", { length: 128 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  gender: varchar("gender", { length: 16 }),
+  age: varchar("age", { length: 16 }),
+  hasLicense: varchar("hasLicense", { length: 16 }),
+  employmentType: varchar("employmentType", { length: 64 }),
+  employmentDuration: varchar("employmentDuration", { length: 64 }),
+  hasInsurance: varchar("hasInsurance", { length: 64 }),
+  previousLoans: varchar("previousLoans", { length: 64 }),
+  purchaseMethod: varchar("purchaseMethod", { length: 64 }),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["new", "contacted", "approved", "rejected"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LoanInquiry = typeof loanInquiries.$inferSelect;
+export type InsertLoanInquiry = typeof loanInquiries.$inferInsert;

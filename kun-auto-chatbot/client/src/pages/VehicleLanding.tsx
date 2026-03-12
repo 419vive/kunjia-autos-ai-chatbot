@@ -65,6 +65,16 @@ function getIntentQuestions(vehicle: any) {
       borderColor: "rgba(155, 89, 182, 0.25)",
       lineMessage: `我有一台舊車想換這台 ${name} ${year}，可以幫我估價折抵嗎？`,
     },
+    {
+      id: "loan",
+      icon: "💰",
+      label: "貸款利率怎麼算？",
+      color: "#E67E22",
+      bgColor: "rgba(230, 126, 34, 0.1)",
+      borderColor: "rgba(230, 126, 34, 0.25)",
+      lineMessage: "",
+      loanUrl: true,
+    },
   ];
 }
 
@@ -182,6 +192,11 @@ export default function VehicleLanding() {
   if (vehicle.transmission) specs.push({ icon: <Gauge className="w-3.5 h-3.5" />, text: vehicle.transmission });
 
   const handleQuestionClick = (question: ReturnType<typeof getIntentQuestions>[number]) => {
+    // Loan inquiry → redirect to form page
+    if ((question as any).loanUrl) {
+      window.location.href = `/loan-inquiry?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(name)}`;
+      return;
+    }
     if (device === "mobile") {
       // Mobile → open LINE OA with pre-filled message
       window.location.href = buildLineDeepLink(question.lineMessage);

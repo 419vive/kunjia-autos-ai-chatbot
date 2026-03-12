@@ -82,6 +82,18 @@ function buildVehicleBubble(v: Vehicle): any {
     });
   }
 
+  // Loan inquiry button
+  const loanUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  footerButtons.push({
+    type: "button",
+    action: {
+      type: "uri",
+      label: "💰 貸款利率怎麼算",
+      uri: loanUrl,
+    },
+    style: "secondary",
+  });
+
   footerButtons.push({
     type: "button",
     action: {

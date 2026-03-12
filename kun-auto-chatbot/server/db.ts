@@ -8,6 +8,7 @@ import {
   leadEvents, InsertLeadEvent,
   analyticsEvents, InsertAnalyticsEvent,
   pageViews, InsertPageView,
+  loanInquiries, InsertLoanInquiry,
 } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -591,4 +592,25 @@ export async function getDashboardStats(startDate?: Date, endDate?: Date) {
     channelBreakdown: channelStats,
     avgLeadScore: Number(vehicleInterest[0]?.avgScore || 0),
   };
+}
+
+// ============ LOAN INQUIRIES ============
+
+export async function createLoanInquiry(data: InsertLoanInquiry) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(loanInquiries).values(data);
+  return result.insertId;
+}
+
+export async function getLoanInquiries(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(loanInquiries).orderBy(desc(loanInquiries.createdAt)).limit(limit);
+}
+
+export async function updateLoanInquiryStatus(id: number, status: "new" | "contacted" | "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(loanInquiries).set({ status }).where(eq(loanInquiries.id, id));
 }

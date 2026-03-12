@@ -15,6 +15,7 @@ import Analytics from "./pages/Analytics";
 import AdminLogin from "./pages/AdminLogin";
 import SmartRedirect from "./pages/SmartRedirect";
 import VehicleLanding from "./pages/VehicleLanding";
+import LoanInquiry from "./pages/LoanInquiry";
 import DashboardLayout from "./components/DashboardLayout";
 import { initTracker } from "./lib/tracker";
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/chat" component={Chat} />
       <Route path="/vehicle/:id" component={VehicleLanding} />
+      <Route path="/loan-inquiry" component={LoanInquiry} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
 
