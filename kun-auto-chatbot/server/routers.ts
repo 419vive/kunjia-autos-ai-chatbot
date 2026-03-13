@@ -899,8 +899,15 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
             conversationId: convId,
           };
         } catch (err: any) {
-          console.error("[Chat] LLM error:", err);
-          const fallback = "抱歉，系統暫時忙碌中。您可以直接撥打 0936-812-818 聯繫賴先生，或加Line：lai 0936812818";
+          console.error("[Chat] LLM error, falling back to rule-based reply:", err);
+          const fallback = generateRuleBasedReply({
+            userMessage: sanitizedMessage,
+            greeting: '人客',
+            detection: detectionWeb,
+            intents: customerIntentsWeb,
+            customerContact: conversation!.customerContact,
+            leadScore: conversation!.leadScore ?? undefined,
+          });
           await db.addMessage({ conversationId: convId, role: "assistant", content: fallback });
           return {
             response: fallback,

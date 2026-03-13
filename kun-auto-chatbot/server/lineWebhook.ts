@@ -613,11 +613,29 @@ async function processLineEvent(
       replyText =
         typeof response.choices[0]?.message?.content === "string"
           ? response.choices[0].message.content
-          : "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
+          : "";
+      if (!replyText) {
+        console.warn("[LINE] LLM returned empty content, falling back to rule-based reply");
+        replyText = generateRuleBasedReply({
+          userMessage,
+          greeting,
+          detection,
+          intents: customerIntents,
+          customerContact: conversation!.customerContact,
+          leadScore: conversation!.leadScore ?? undefined,
+        });
+      }
       console.log("[LINE] LLM response:", replyText.substring(0, 100));
     } catch (err) {
-      console.error("[LINE] LLM error:", err);
-      replyText = "抱歉，系統暫時忙禄中。請直接撥打 0936-812-818 聯繫賴先生。";
+      console.error("[LINE] LLM error, falling back to rule-based reply:", err);
+      replyText = generateRuleBasedReply({
+        userMessage,
+        greeting,
+        detection,
+        intents: customerIntents,
+        customerContact: conversation!.customerContact,
+        leadScore: conversation!.leadScore ?? undefined,
+      });
     }
   }
 
