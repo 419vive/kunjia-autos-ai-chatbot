@@ -27,7 +27,8 @@ import crypto from "crypto";
 // Use JWT_SECRET as the base for deriving encryption key
 // In production, this should be a separate ENCRYPTION_KEY env var
 function getEncryptionKey(): Buffer {
-  const secret = process.env.JWT_SECRET || "default-dev-key-change-in-production";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("Missing required environment variable: JWT_SECRET");
   // Derive a 32-byte key using SHA-256 (NIST approved KDF)
   return crypto.createHash("sha256").update(secret).digest();
 }

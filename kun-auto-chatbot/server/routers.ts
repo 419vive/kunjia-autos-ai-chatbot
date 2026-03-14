@@ -333,7 +333,7 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
-          console.log(`[Loan Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientIds: ${JSON.stringify(recipientIds)}`);
+          console.log(`[Loan Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientCount: ${recipientIds.length}`);
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
@@ -411,7 +411,7 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
-          console.log(`[Appointment Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientIds: ${JSON.stringify(recipientIds)}`);
+          console.log(`[Appointment Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientCount: ${recipientIds.length}`);
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
