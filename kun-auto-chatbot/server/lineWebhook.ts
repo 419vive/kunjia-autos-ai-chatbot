@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, type ConversationContext } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -124,6 +125,98 @@ async function showTypingIndicator(userId: string, channelAccessToken: string) {
   } catch {
     // Non-critical, silently ignore
   }
+}
+
+// ============ IMAGE VEHICLE RECOGNITION ============
+// Download image from LINE and use Gemini Vision to identify the vehicle
+
+async function downloadLineImage(messageId: string, channelAccessToken: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
+      headers: { Authorization: `Bearer ${channelAccessToken}` },
+    });
+    if (!res.ok) {
+      console.error(`[LINE Image] Download failed: ${res.status}`);
+      return null;
+    }
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } catch (err) {
+    console.error("[LINE Image] Download error:", err);
+    return null;
+  }
+}
+
+async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: string; model: string } | null> {
+  try {
+    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ENV.googleAiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gemini-2.5-flash",
+        max_tokens: 200,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: '這張圖片裡有車嗎？如果有，請辨識車輛的品牌(brand)和車型(model)。只回覆 JSON 格式：{"brand":"品牌","model":"車型"}。如果無法辨識或圖中沒有車，回覆 {"brand":"","model":""}。不要回覆其他文字。',
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.error(`[LINE Image] Gemini Vision error: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    console.log("[LINE Image] Gemini Vision raw response:", content.substring(0, 200));
+
+    // Extract JSON from response (may have markdown code block wrapping)
+    const jsonMatch = content.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (parsed.brand && parsed.model) {
+      return { brand: parsed.brand, model: parsed.model };
+    }
+    return null;
+  } catch (err) {
+    console.error("[LINE Image] Vision identification error:", err);
+    return null;
+  }
+}
+
+function findMatchingVehicles(
+  identified: { brand: string; model: string },
+  allVehicles: any[]
+): any[] {
+  const brandLower = identified.brand.toLowerCase();
+  const modelLower = identified.model.toLowerCase();
+
+  return allVehicles.filter((v) => {
+    if (v.status !== "available") return false;
+    const vBrand = (v.brand || "").toLowerCase();
+    const vModel = (v.model || "").toLowerCase();
+    // Match brand (fuzzy: contains or contained-by)
+    const brandMatch = vBrand.includes(brandLower) || brandLower.includes(vBrand);
+    // Match model (fuzzy: contains or contained-by)
+    const modelMatch = vModel.includes(modelLower) || modelLower.includes(vModel);
+    return brandMatch && modelMatch;
+  });
 }
 
 // ============ MESSAGE DEDUPLICATION ============
@@ -282,6 +375,130 @@ async function processLineEvent(
       } catch (err) {
         console.error("[LINE] Follow event handling failed:", err);
       }
+    }
+    return;
+  }
+
+  // ============ IMAGE MESSAGE HANDLING ============
+  // When customer sends a car photo, identify the vehicle and reply with Flex card
+  if (event.type === "message" && event.message?.type === "image") {
+    const userId = event.source?.userId;
+    const replyToken = event.replyToken;
+    const imageMessageId = event.message?.id;
+
+    if (!userId || !replyToken || !imageMessageId) return;
+
+    console.log(`[LINE Image] Received image message from ${userId.slice(0, 8)}...`);
+    showTypingIndicator(userId, channelAccessToken);
+
+    try {
+      // 1. Download image from LINE
+      const imageBuffer = await downloadLineImage(imageMessageId, channelAccessToken);
+      if (!imageBuffer) {
+        console.warn("[LINE Image] Could not download image, skipping");
+        return;
+      }
+
+      const imageBase64 = imageBuffer.toString("base64");
+      console.log(`[LINE Image] Downloaded image, size: ${imageBuffer.length} bytes`);
+
+      // 2. Use Gemini Vision to identify the vehicle
+      const identified = await identifyVehicleFromImage(imageBase64);
+      if (!identified) {
+        console.log("[LINE Image] Could not identify vehicle from image");
+        // Reply with a helpful message
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{
+              type: "text",
+              text: "收到你的照片了！😊 不過我沒有辨識到車輛。\n\n你可以直接告訴我想找什麼車，或點選下面的按鈕瀏覽庫存 👇",
+              quickReply: {
+                items: [
+                  { type: "action", action: { type: "message", label: "🚗 瀏覽所有車輛", text: "我想看車，有什麼車可以推薦？" } },
+                  { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
+                  { type: "action", action: { type: "message", label: "📞 直接聯繫", text: "可以給我你們的聯絡方式嗎？" } },
+                ],
+              },
+            }],
+          }),
+        });
+        return;
+      }
+
+      console.log(`[LINE Image] Identified vehicle: ${identified.brand} ${identified.model}`);
+
+      // 3. Match against inventory
+      const allVehicles = await db.getAllVehicles();
+      const matches = findMatchingVehicles(identified, allVehicles);
+      console.log(`[LINE Image] Found ${matches.length} matching vehicles in inventory`);
+
+      if (matches.length > 0) {
+        // 4. Reply with matching vehicle Flex cards
+        const flexMessages = buildVehicleCarouselMessages(
+          matches,
+          `🔍 ${identified.brand} ${identified.model}`,
+          "根據你傳的照片，幫你找到這些車"
+        );
+
+        // Prepend a text message
+        const textMsg = {
+          type: "text" as const,
+          text: `我看到你傳了一張 ${identified.brand} ${identified.model} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇`,
+        };
+
+        // LINE reply max 5 messages
+        const replyMessages = [textMsg, ...flexMessages].slice(0, 5);
+
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({ replyToken, messages: replyMessages }),
+        });
+      } else {
+        // No match in inventory — still acknowledge the identification
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{
+              type: "text",
+              text: `我看到你傳了一張 ${identified.brand} ${identified.model} 的照片！🚗\n不過目前庫存裡沒有這台車。\n\n要不要看看我們其他的好車？👇`,
+              quickReply: {
+                items: [
+                  { type: "action", action: { type: "message", label: "🚗 瀏覽所有車輛", text: "我想看車，有什麼車可以推薦？" } },
+                  { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
+                  { type: "action", action: { type: "message", label: "📞 直接聯繫", text: "可以給我你們的聯絡方式嗎？" } },
+                ],
+              },
+            }],
+          }),
+        });
+      }
+
+      // Save to conversation history
+      const sessionId = `line-${userId}`;
+      let conversation = await db.getConversationBySessionId(sessionId);
+      if (conversation) {
+        await db.addMessage({ conversationId: conversation.id, role: "user", content: `[客戶傳了一張圖片，辨識為 ${identified.brand} ${identified.model}]` });
+        await db.addMessage({ conversationId: conversation.id, role: "assistant", content: matches.length > 0
+          ? `已回覆 ${identified.brand} ${identified.model} 的 ${matches.length} 台庫存車輛卡片`
+          : `已辨識為 ${identified.brand} ${identified.model}，但目前無庫存` });
+      }
+    } catch (err) {
+      console.error("[LINE Image] Processing error:", err);
     }
     return;
   }
