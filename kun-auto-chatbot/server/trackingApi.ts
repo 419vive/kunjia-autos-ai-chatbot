@@ -53,7 +53,8 @@ function extractDomain(url: string | undefined): string {
 // Generate a session hash from IP + User-Agent + date (privacy-friendly, no cookies)
 function generateSessionHash(ip: string, ua: string): string {
   const date = new Date().toISOString().split("T")[0]; // daily rotation
-  const salt = process.env.JWT_SECRET || "kun-auto-analytics";
+  const salt = process.env.JWT_SECRET;
+  if (!salt) throw new Error("Missing required environment variable: JWT_SECRET");
   return crypto.createHash("sha256").update(`${ip}|${ua}|${date}|${salt}`).digest("hex").slice(0, 16);
 }
 
