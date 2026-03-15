@@ -500,17 +500,35 @@ export async function sync8891(): Promise<{
     let removed = 0;
     const processedIds: string[] = [];
 
-    // Step 3: Process each vehicle from API
+    // Step 3a: Pre-fetch detail pages concurrently (3 at a time) for richer data.
+    // This is ~3x faster than sequential fetching (was 1.5s * N, now ~1.5s * N/3).
+    const CONCURRENCY = 3;
+    const enrichedMap = new Map<string, Partial<ScrapedVehicle> | null>();
+
+    for (let i = 0; i < apiItems.length; i += CONCURRENCY) {
+      const batch = apiItems.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map(apiV => fetchVehicleDetailEnriched(String(apiV.itemId)))
+      );
+      results.forEach((r, idx) => {
+        const carId = String(batch[idx].itemId);
+        enrichedMap.set(carId, r.status === "fulfilled" ? r.value : null);
+      });
+      // Polite delay between batches to avoid rate-limiting by 8891
+      if (i + CONCURRENCY < apiItems.length) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    // Step 3b: Process DB operations sequentially (fast since no network I/O)
     for (const apiV of apiItems) {
       const carId = String(apiV.itemId);
       processedIds.push(carId);
 
       try {
-        // Convert API data to our format
         const scraped = apiVehicleToScraped(apiV);
+        const enriched = enrichedMap.get(carId) || null;
 
-        // Try to enrich with detail page data (photos, features)
-        const enriched = await fetchVehicleDetailEnriched(carId);
         if (enriched) {
           if (enriched.photoUrls && enriched.photoCount && enriched.photoCount > 0) {
             scraped.photoUrls = enriched.photoUrls;
@@ -521,7 +539,6 @@ export async function sync8891(): Promise<{
           if (enriched.bodyType) scraped.bodyType = enriched.bodyType;
         }
 
-        // Check if vehicle exists in database
         const existing = await dbConn
           .select()
           .from(vehicles)
@@ -529,7 +546,6 @@ export async function sync8891(): Promise<{
           .limit(1);
 
         if (existing.length === 0) {
-          // New vehicle - insert
           await dbConn.insert(vehicles).values({
             externalId: scraped.externalId,
             sourceUrl: scraped.sourceUrl,
@@ -558,11 +574,9 @@ export async function sync8891(): Promise<{
           added++;
           console.log(`[8891 Sync] ✅ Added: ${scraped.brand} ${scraped.model} (${carId})`);
         } else {
-          // Existing vehicle - check for updates
           const current = existing[0];
           const updates: Record<string, any> = {};
 
-          // Compare price using string form to handle decimal vs string mismatch
           const currentPriceStr = current.price != null ? String(parseFloat(String(current.price))) : null;
           const scrapedPriceStr = scraped.price != null ? String(parseFloat(String(scraped.price))) : null;
           if (scrapedPriceStr && scrapedPriceStr !== currentPriceStr) {
@@ -573,39 +587,17 @@ export async function sync8891(): Promise<{
             updates.photoUrls = scraped.photoUrls;
             updates.photoCount = scraped.photoCount;
           }
-          if (scraped.description && scraped.description !== current.description) {
-            updates.description = scraped.description;
-          }
-          if (scraped.color && scraped.color !== current.color) {
-            updates.color = scraped.color;
-          }
-          if (scraped.mileage && scraped.mileage !== current.mileage) {
-            updates.mileage = scraped.mileage;
-          }
-          if (scraped.displacement && scraped.displacement !== current.displacement) {
-            updates.displacement = scraped.displacement;
-          }
-          if (scraped.transmission && scraped.transmission !== current.transmission) {
-            updates.transmission = scraped.transmission;
-          }
-          if (scraped.fuelType && scraped.fuelType !== current.fuelType) {
-            updates.fuelType = scraped.fuelType;
-          }
-          if (scraped.bodyType && scraped.bodyType !== current.bodyType) {
-            updates.bodyType = scraped.bodyType;
-          }
-          if (scraped.features && scraped.features !== current.features) {
-            updates.features = scraped.features;
-          }
-          if (scraped.guarantees && scraped.guarantees !== current.guarantees) {
-            updates.guarantees = scraped.guarantees;
-          }
-          if (scraped.title && scraped.title !== current.title) {
-            updates.title = scraped.title;
-          }
-          if (scraped.sourceUrl && scraped.sourceUrl !== current.sourceUrl) {
-            updates.sourceUrl = scraped.sourceUrl;
-          }
+          if (scraped.description && scraped.description !== current.description) updates.description = scraped.description;
+          if (scraped.color && scraped.color !== current.color) updates.color = scraped.color;
+          if (scraped.mileage && scraped.mileage !== current.mileage) updates.mileage = scraped.mileage;
+          if (scraped.displacement && scraped.displacement !== current.displacement) updates.displacement = scraped.displacement;
+          if (scraped.transmission && scraped.transmission !== current.transmission) updates.transmission = scraped.transmission;
+          if (scraped.fuelType && scraped.fuelType !== current.fuelType) updates.fuelType = scraped.fuelType;
+          if (scraped.bodyType && scraped.bodyType !== current.bodyType) updates.bodyType = scraped.bodyType;
+          if (scraped.features && scraped.features !== current.features) updates.features = scraped.features;
+          if (scraped.guarantees && scraped.guarantees !== current.guarantees) updates.guarantees = scraped.guarantees;
+          if (scraped.title && scraped.title !== current.title) updates.title = scraped.title;
+          if (scraped.sourceUrl && scraped.sourceUrl !== current.sourceUrl) updates.sourceUrl = scraped.sourceUrl;
           // Only reset "sold" back to "available" if the car reappears on 8891.
           // Do NOT override "reserved" (收訂金) — that's a manual status set by the admin.
           if (current.status === "sold") {
@@ -618,9 +610,6 @@ export async function sync8891(): Promise<{
             console.log(`[8891 Sync] 🔄 Updated: ${current.brand} ${current.model} (${carId}) - ${Object.keys(updates).join(", ")}`);
           }
         }
-
-        // Polite delay between detail page requests
-        await new Promise((r) => setTimeout(r, 1500));
       } catch (err: any) {
         console.error(`[8891 Sync] Error processing vehicle ${carId}:`, err.message);
       }
@@ -682,6 +671,9 @@ export async function sync8891(): Promise<{
         content: contentParts.join("\n"),
       });
     }
+
+    // Invalidate cached vehicle list so chatbot picks up changes immediately
+    db.invalidateVehicleCache();
 
     lastSyncTime = new Date();
     lastSyncStatus = (covReport && covReport.overallStatus === "fail") ? "partial" : "success";

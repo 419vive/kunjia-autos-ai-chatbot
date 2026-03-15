@@ -21,6 +21,11 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; 
     return vehicle.photoUrls.split("|").filter((url: string) => url.trim());
   }, [vehicle.photoUrls]);
 
+  const featureList = useMemo(() => {
+    if (!vehicle.features) return [];
+    return vehicle.features.split(",").map((f: string) => f.trim()).filter(Boolean);
+  }, [vehicle.features]);
+
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -176,19 +181,16 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; 
             <Car className="h-3 w-3" /> {vehicle.transmission || "N/A"}
           </span>
         </div>
-        {vehicle.features && (
+        {featureList.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
-            {vehicle.features
-              .split(",")
-              .slice(0, 3)
-              .map((f: string, i: number) => (
-                <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {f.trim()}
-                </Badge>
-              ))}
-            {vehicle.features.split(",").length > 3 && (
+            {featureList.slice(0, 3).map((f: string, i: number) => (
+              <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {f}
+              </Badge>
+            ))}
+            {featureList.length > 3 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                +{vehicle.features.split(",").length - 3}
+                +{featureList.length - 3}
               </Badge>
             )}
           </div>

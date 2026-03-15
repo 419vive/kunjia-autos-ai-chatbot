@@ -146,9 +146,13 @@ function extractText(content: MessageContent | MessageContent[]): string {
     .join("\n");
 }
 
+const LLM_TIMEOUT_MS = 30_000; // 30 second timeout
+const LLM_MAX_RETRIES = 2; // retry up to 2 times on transient errors
+
 /**
  * Invoke Google AI Gemini LLM via its OpenAI-compatible endpoint.
  * Returns result in OpenAI-compatible format (so existing callers don't need to change).
+ * Includes timeout (30s) and retry logic (2 retries on 429/5xx).
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   console.log("[LLM] API key configured:", !!ENV.googleAiApiKey);
@@ -169,21 +173,62 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: openaiMessages,
   };
 
-  const response = await fetch(`${GOOGLE_AI_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ENV.googleAiApiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[LLM] API error:", response.status, errorText.substring(0, 500));
-    throw new Error(`Google AI API error (${response.status}): ${errorText}`);
+  for (let attempt = 0; attempt <= LLM_MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+      const response = await fetch(`${GOOGLE_AI_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ENV.googleAiApiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        // Retry on rate limit (429) or server errors (5xx)
+        if ((response.status === 429 || response.status >= 500) && attempt < LLM_MAX_RETRIES) {
+          const backoff = (attempt + 1) * 1000;
+          console.warn(`[LLM] Retrying (attempt ${attempt + 1}) after ${response.status}, backoff ${backoff}ms`);
+          await new Promise(r => setTimeout(r, backoff));
+          lastError = new Error(`Google AI API error (${response.status}): ${errorText}`);
+          continue;
+        }
+        console.error("[LLM] API error:", response.status, errorText.substring(0, 500));
+        throw new Error(`Google AI API error (${response.status}): ${errorText}`);
+      }
+
+      const data = (await response.json()) as InvokeResult;
+      return data;
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        lastError = new Error(`LLM request timed out after ${LLM_TIMEOUT_MS}ms`);
+        if (attempt < LLM_MAX_RETRIES) {
+          console.warn(`[LLM] Timeout, retrying (attempt ${attempt + 1})`);
+          continue;
+        }
+      }
+      // Don't retry non-transient errors
+      if (err.message?.includes("not configured") || err.message?.includes("(4")) {
+        throw err;
+      }
+      lastError = err;
+      if (attempt < LLM_MAX_RETRIES) {
+        const backoff = (attempt + 1) * 1000;
+        console.warn(`[LLM] Error, retrying (attempt ${attempt + 1}), backoff ${backoff}ms:`, err.message);
+        await new Promise(r => setTimeout(r, backoff));
+        continue;
+      }
+    }
   }
 
-  const data = (await response.json()) as InvokeResult;
-  return data;
+  throw lastError || new Error("LLM invocation failed after retries");
 }
