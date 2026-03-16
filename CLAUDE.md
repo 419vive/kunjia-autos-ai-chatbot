@@ -52,5 +52,9 @@ And only implement if you are 100% sure it will work.
 4. Explain → high-level summary each step
 5. Learn → tasks/lessons.md after corrections
 
+## COST CONTROL
+- Never load files larger than 100 lines into context unless explicitly needed.
+- For simple tasks like reading files or checking status, suggest switching to a cheaper model with /model before starting.
+
 ## LEARNED
 (Claude fills this in over time)
