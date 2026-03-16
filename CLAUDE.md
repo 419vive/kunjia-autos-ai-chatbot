@@ -56,5 +56,8 @@ And only implement if you are 100% sure it will work.
 - Never load files larger than 100 lines into context unless explicitly needed.
 - For simple tasks like reading files or checking status, suggest switching to a cheaper model with /model before starting.
 
-## LEARNED
-(Claude fills this in over time)
+## SELF-LEARNING
+- After any correction from me, immediately add an entry to tasks/lessons.md
+- Format: [date] | what went wrong | rule to follow next time
+- Read tasks/lessons.md at the start of every session before doing anything
+- Apply every rule before touching any code
