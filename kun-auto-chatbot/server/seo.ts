@@ -265,6 +265,108 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     ]));
   }
 
+  // ---------- Brand category pages (/brand/:brand) ----------
+  else if (path.startsWith("/brand/")) {
+    const brand = decodeURIComponent(path.replace("/brand/", ""));
+    if (brand) {
+      title = `${brand} 二手車推薦｜${SITE_NAME}｜高雄在地老字號`;
+      description = `崑家汽車精選 ${brand} 二手車，全車第三方認證，提供貸款服務。高雄在地40年，正派經營。`;
+      jsonLdBlocks.push(breadcrumb([
+        { name: "首頁", url: baseUrl },
+        { name: `${brand} 二手車`, url: canonicalUrl },
+      ]));
+      jsonLdBlocks.push(faqSchema([
+        { q: `${brand} 二手車怎麼買？`, a: `可至崑家汽車直接看${brand}在售車款，所有車輛均通過第三方認證，提供貸款服務。` },
+        { q: `${brand} 二手車可以貸款嗎？`, a: `可以，崑家汽車提供多種貸款方案，${brand}車款皆適用。` },
+      ]));
+    }
+  }
+
+  // ---------- Price range pages (/price/:range) ----------
+  else if (path.startsWith("/price/")) {
+    const rangeMap: Record<string, { label: string; desc: string }> = {
+      "under-30": { label: "30萬以下", desc: "30萬以下平價二手車推薦，CP值超高。全車第三方認證，崑家汽車高雄在地40年。" },
+      "30-50":    { label: "30–50萬",  desc: "30至50萬二手車推薦，入門家用首選。全車第三方認證，崑家汽車高雄在地40年。" },
+      "50-80":    { label: "50–80萬",  desc: "50至80萬中高階二手車推薦，品質兼顧。全車第三方認證，崑家汽車高雄在地40年。" },
+      "over-80":  { label: "80萬以上", desc: "80萬以上高階豪華二手車推薦，歐系進口首選。全車第三方認證，崑家汽車高雄在地40年。" },
+    };
+    const rangeSlug = path.replace("/price/", "");
+    const rangeMeta = rangeMap[rangeSlug];
+    if (rangeMeta) {
+      title = `${rangeMeta.label}二手車推薦｜${SITE_NAME}｜高雄中古車`;
+      description = rangeMeta.desc;
+      jsonLdBlocks.push(breadcrumb([
+        { name: "首頁", url: baseUrl },
+        { name: `${rangeMeta.label}二手車`, url: canonicalUrl },
+      ]));
+    }
+  }
+
+  // ---------- Blog index ----------
+  else if (path === "/blog") {
+    title = `二手車攻略｜${SITE_NAME}購車指南`;
+    description = `崑家汽車40年二手車知識，完整購車指南：買車注意事項、貸款攻略、過戶流程、高雄二手車市場資訊。`;
+    jsonLdBlocks.push(breadcrumb([
+      { name: "首頁", url: baseUrl },
+      { name: "購車攻略", url: canonicalUrl },
+    ]));
+  }
+
+  // ---------- Blog post pages (/blog/:slug) ----------
+  else if (path.startsWith("/blog/")) {
+    const slug = path.replace("/blog/", "");
+    // Blog post meta is static data — import inline to avoid circular deps
+    const blogMeta: Record<string, { title: string; description: string; keywords: string[] }> = {
+      "buy-used-car-guide": {
+        title: "買二手車必看！7大注意事項，避免踩雷完整指南",
+        description: "買二手車前必看的7大注意事項，從車輛歷史查詢、第三方認證、泡水車辨認到貸款陷阱，完整教學幫你避開所有地雷。",
+        keywords: ["買二手車", "二手車注意事項"],
+      },
+      "used-car-loan-guide": {
+        title: "二手車貸款全攻略：利率、條件、申辦流程一次看懂（2026年最新）",
+        description: "完整解析二手車貸款：貸款成數、利率比較、所需文件、申辦流程與注意事項。2026年最新資訊。",
+        keywords: ["二手車貸款", "中古車貸款", "二手車利率"],
+      },
+      "kaohsiung-used-car-guide": {
+        title: "高雄買二手車推薦：在地40年崑家汽車，正派經營完整評價",
+        description: "想在高雄買二手車？本文介紹高雄二手車市場生態、挑選車行標準，以及崑家汽車完整評價與服務特色。",
+        keywords: ["高雄二手車", "高雄二手車行", "高雄中古車推薦"],
+      },
+      "third-party-inspection-guide": {
+        title: "二手車第三方認證是什麼？買中古車一定要看的完整指南",
+        description: "詳解二手車第三方認證的意義、認證項目、如何閱讀認證報告，以及未認證車輛的潛在風險。",
+        keywords: ["二手車第三方認證", "中古車認證", "驗車"],
+      },
+      "used-car-transfer-guide": {
+        title: "二手車過戶流程與費用：2026年最新完整指南",
+        description: "完整解析2026年二手車過戶流程、所需文件、費用明細與注意事項。讓你輕鬆完成二手車過戶。",
+        keywords: ["二手車過戶", "中古車過戶流程", "過戶費用"],
+      },
+    };
+    const meta = blogMeta[slug];
+    if (meta) {
+      title = `${meta.title}｜${SITE_NAME}`;
+      description = meta.description;
+      jsonLdBlocks.push(breadcrumb([
+        { name: "首頁", url: baseUrl },
+        { name: "購車攻略", url: `${baseUrl}/blog` },
+        { name: meta.title, url: canonicalUrl },
+      ]));
+      // Article schema
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": meta.title,
+        "description": meta.description,
+        "author": { "@type": "Organization", "name": SITE_NAME },
+        "publisher": { "@type": "Organization", "name": SITE_NAME, "url": baseUrl },
+        "url": canonicalUrl,
+        "keywords": meta.keywords.join(", "),
+        "inLanguage": "zh-TW",
+      });
+    }
+  }
+
   // ---------- Build the meta tag block ----------
   const seoBlock = `
     <!-- SEO Meta Tags -->
@@ -338,10 +440,37 @@ Crawl-delay: 1
 
       // Static pages
       const staticPages = [
-        { loc: "/", changefreq: "daily", priority: "1.0" },
+        { loc: "/",                              changefreq: "daily",   priority: "1.0" },
+        { loc: "/blog",                          changefreq: "weekly",  priority: "0.8" },
+        { loc: "/blog/buy-used-car-guide",       changefreq: "monthly", priority: "0.7" },
+        { loc: "/blog/used-car-loan-guide",      changefreq: "monthly", priority: "0.7" },
+        { loc: "/blog/kaohsiung-used-car-guide", changefreq: "monthly", priority: "0.7" },
+        { loc: "/blog/third-party-inspection-guide", changefreq: "monthly", priority: "0.7" },
+        { loc: "/blog/used-car-transfer-guide",  changefreq: "monthly", priority: "0.7" },
+        { loc: "/price/under-30",                changefreq: "weekly",  priority: "0.6" },
+        { loc: "/price/30-50",                   changefreq: "weekly",  priority: "0.6" },
+        { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
+        { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
       ];
 
-      // Dynamic vehicle pages
+      // Dynamic brand pages
+      let brandEntries: string[] = [];
+      try {
+        const vehicles = await db.getAllVehicles();
+        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand).filter(Boolean)));
+        brandEntries = brands.map((brand: string) =>
+          `  <url>
+    <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`
+        );
+      } catch (err) {
+        console.error("[SEO] Failed to fetch brands for sitemap:", err);
+      }
+
+      // Dynamic vehicle pages + brand pages
       let vehicleEntries: string[] = [];
       try {
         const vehicles = await db.getAllVehicles();
@@ -353,6 +482,17 @@ Crawl-delay: 1
     <priority>0.8</priority>
   </url>`
         );
+        // Add unique brand pages
+        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand as string)));
+        const brandEntries = brands.map(brand =>
+          `  <url>
+    <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`
+        );
+        vehicleEntries = [...vehicleEntries, ...brandEntries];
       } catch (err) {
         console.error("[SEO] Failed to fetch vehicles for sitemap:", err);
       }

@@ -24,6 +24,10 @@ const Appointments = lazy(() => import("./pages/Appointments"));
 const VehicleLanding = lazy(() => import("./pages/VehicleLanding"));
 const LoanInquiry = lazy(() => import("./pages/LoanInquiry"));
 const BookVisit = lazy(() => import("./pages/BookVisit"));
+const BrandPage = lazy(() => import("./pages/BrandPage"));
+const PricePage = lazy(() => import("./pages/PricePage"));
+const BlogIndex = lazy(() => import("./pages/BlogIndex"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +43,10 @@ function Router() {
       <Route path="/vehicle/:id" component={VehicleLanding} />
       <Route path="/loan-inquiry" component={LoanInquiry} />
       <Route path="/book-visit" component={BookVisit} />
+      <Route path="/brand/:brand" component={BrandPage} />
+      <Route path="/price/:range" component={PricePage} />
+      <Route path="/blog/:slug" component={BlogPost} />
+      <Route path="/blog" component={BlogIndex} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
 
