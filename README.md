@@ -22,6 +22,8 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
+- [Agent Reach — AI Agent Internet Access](#agent-reach--ai-agent-internet-access)
+- [Security Audit — Agent Reach](#security-audit--agent-reach)
 
 ---
 
@@ -824,6 +826,142 @@ The project is designed for **Railway** deployment:
 3. Railway auto-detects Node.js, runs `npm run build` then `npm start`
 4. Set your LINE webhook URL to `https://your-app.railway.app/api/line/webhook`
 5. Database tables auto-migrate on first boot
+
+---
+
+## Agent Reach — AI Agent Internet Access
+
+[Agent Reach](https://github.com/Panniantong/Agent-Reach) is integrated as a CLI tool that gives the AI agent internet access across 15+ platforms — enabling research, content monitoring, and competitive intelligence without API fees.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                  AGENT REACH INTEGRATION                             │
+└─────────────────────────────────────────────────────────────────────┘
+
+  AI Agent (Claude Code)
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  agent-reach CLI (Python)                                       │
+  │  - install / doctor / configure / watch                         │
+  │  - Health monitoring for all channels                           │
+  │  - Credential management (~/.agent-reach/config.yaml, 0o600)    │
+  └──────────────────────┬──────────────────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+         ▼               ▼               ▼
+  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+  │  Tier 0      │ │  Tier 1      │ │  Tier 2      │
+  │  Zero Config │ │  Free Key    │ │  Setup Req'd │
+  │              │ │              │ │              │
+  │  • Web/Jina  │ │  • Twitter/X │ │  • 小紅書    │
+  │  • RSS       │ │  • Reddit    │ │  • 抖音      │
+  │  • YouTube   │ │  • Bilibili  │ │  • LinkedIn  │
+  │  • GitHub    │ │  • 微博      │ │  • 微信公眾號│
+  │  • V2EX      │ │  • Exa Search│ │  • 小宇宙    │
+  └──────────────┘ └──────────────┘ └──────────────┘
+         │               │               │
+         └───────────────┼───────────────┘
+                         │
+                         ▼
+              Upstream Tools (direct calls)
+              xreach · yt-dlp · mcporter · gh · curl
+```
+
+### Active Channels (Current Status)
+
+| Channel | Tool | Status |
+|---------|------|--------|
+| Web (any URL) | Jina Reader | ✅ Active |
+| RSS/Atom | feedparser | ✅ Active |
+| YouTube | yt-dlp | ✅ Active |
+| Twitter/X | xreach CLI | ✅ Active |
+| Bilibili | yt-dlp | ✅ Active |
+| Exa Search | mcporter | ✅ Active |
+| GitHub | gh CLI | Needs install |
+| Reddit | curl + proxy | Needs proxy |
+| 微博 | mcp-server-weibo | Needs setup |
+| 小紅書 | xiaohongshu-mcp | Needs Docker |
+| 抖音 | douyin-mcp-server | Needs Docker |
+| LinkedIn | linkedin-scraper-mcp | Needs setup |
+| 微信公眾號 | camoufox | Needs setup |
+| 小宇宙播客 | Groq Whisper | Needs ffmpeg + key |
+| V2EX | V2EX API | Blocked (proxy) |
+
+### Quick Reference
+
+```bash
+# Health check
+agent-reach doctor
+
+# Configure Twitter
+agent-reach configure twitter-cookies "auth_token=xxx; ct0=yyy"
+
+# Configure proxy (Reddit/Bilibili on servers)
+agent-reach configure proxy http://user:pass@ip:port
+
+# Check for updates
+agent-reach check-update
+```
+
+---
+
+## Security Audit — Agent Reach
+
+**Audit date:** 2026-03-17
+**Auditor:** AI Security Review (Claude Opus 4.6)
+**Verdict:** ✅ SAFE WITH CAVEATS
+
+A comprehensive code review was performed on all 30+ source files in the Agent Reach repository. The tool is open-source (MIT), has no obfuscated code, no hidden network calls, and no data exfiltration vectors.
+
+### Security Positives
+
+| Area | Finding |
+|------|---------|
+| **Credential Storage** | Config saved to `~/.agent-reach/config.yaml` with `0o600` permissions (owner-only read/write). Atomic file creation via `os.open()` avoids race conditions |
+| **Sensitive Value Masking** | `Config.to_dict()` masks keys, tokens, passwords, and proxy URLs in output |
+| **No Data Exfiltration** | No outbound network calls from agent-reach itself. All network traffic goes through upstream tools (yt-dlp, xreach, curl) that the user controls |
+| **No Obfuscation** | 100% readable Python. No base64-encoded payloads, no `exec()`, no `eval()`, no dynamic code loading |
+| **Safe YAML** | Uses `yaml.safe_load()` (not `yaml.load()`) — immune to YAML deserialization attacks |
+| **Subprocess Safety** | All `subprocess.run()` calls use list arguments (not shell=True), preventing command injection |
+| **Permission Checks** | Doctor reports if config.yaml has overly permissive file permissions |
+| **Install Boundaries** | Install docs explicitly forbid `sudo`, system file modification, and workspace pollution |
+| **Safe Mode** | `--safe` flag and `--dry-run` available for cautious installations |
+| **MCP Server** | Read-only — only exposes `get_status` tool (doctor report), no write operations |
+
+### Caveats & Recommendations
+
+| # | Severity | Finding | Recommendation |
+|---|----------|---------|----------------|
+| 1 | **MEDIUM** | Cookie extraction (`cookie_extract.py`) reads browser cookies for Twitter, XiaoHongShu, Bilibili | Use `--from-browser` only on your own machine. Use dedicated/secondary accounts for cookie-based platforms |
+| 2 | **MEDIUM** | Cookies stored in plaintext YAML (`~/.agent-reach/config.yaml`) | File is 0o600 by default. Do not relax permissions. Consider encrypted credential store for production |
+| 3 | **LOW** | `sync-upstream.sh` clones from GitHub over HTTPS | Script is developer-only (not run during install). Verify upstream changes before merging |
+| 4 | **LOW** | Third-party Docker images for 小紅書/抖音 (`xpzouying/xiaohongshu-mcp`, `yzfly/douyin-mcp-server`) | Audit Docker images before running. Pin to specific versions |
+| 5 | **LOW** | Proxy credentials passed via CLI argument (`agent-reach configure proxy http://user:pass@ip:port`) | Credentials may appear in shell history. Use env vars or config file directly |
+| 6 | **INFO** | No dependency pinning (uses `>=` ranges in pyproject.toml) | For production, pin exact versions with lock file |
+| 7 | **INFO** | `feedparser` dependency pulls `sgmllib3k` which has legacy setuptools compatibility issues | Non-security issue, build environment workaround needed |
+
+### Files Reviewed
+
+```
+agent_reach/cli.py          — CLI entry point, argument parsing, install logic
+agent_reach/core.py         — AgentReach class (thin wrapper)
+agent_reach/config.py       — YAML config with 0o600 permissions
+agent_reach/cookie_extract.py — Browser cookie extraction (optional)
+agent_reach/doctor.py       — Health check with permission audit
+agent_reach/channels/*.py   — 15 channel implementations (all read-only checks)
+agent_reach/integrations/mcp_server.py — MCP server (read-only)
+scripts/sync-upstream.sh    — Developer sync script
+pyproject.toml              — Dependencies (all mainstream packages)
+docs/install.md             — Install guide with security boundaries
+```
+
+### Summary
+
+Agent Reach is a well-structured, transparent tool. It does not phone home, does not collect telemetry, and does not transmit credentials anywhere. All internet access happens through well-known upstream tools (yt-dlp, xreach, curl, mcporter) that the user can independently audit. The main security consideration is browser cookie handling — use dedicated accounts for cookie-based platforms and keep `~/.agent-reach/config.yaml` at `0o600` permissions.
 
 ---
 
