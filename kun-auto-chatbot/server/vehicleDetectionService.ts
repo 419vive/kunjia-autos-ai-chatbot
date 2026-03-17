@@ -204,6 +204,37 @@ export interface DetectionResult {
 }
 
 /**
+ * Pre-built search index for fast vehicle lookups.
+ * Avoids repeated O(N) scans with .find() during detection.
+ */
+export interface VehicleIndex {
+  byBrandModel: Map<string, any>;     // "BRAND|MODEL" → vehicle
+  byModel: Map<string, any>;          // "MODEL" → vehicle (first match)
+  byBrand: Map<string, any[]>;        // "BRAND" → [vehicles]
+  all: any[];
+}
+
+export function buildVehicleIndex(vehicles: any[]): VehicleIndex {
+  const byBrandModel = new Map<string, any>();
+  const byModel = new Map<string, any>();
+  const byBrand = new Map<string, any[]>();
+
+  for (const v of vehicles) {
+    const brandUpper = v.brand.toUpperCase();
+    const modelUpper = v.model.toUpperCase();
+    byBrandModel.set(`${brandUpper}|${modelUpper}`, v);
+    if (modelUpper.length >= 2 && !byModel.has(modelUpper)) {
+      byModel.set(modelUpper, v);
+    }
+    const arr = byBrand.get(brandUpper) || [];
+    arr.push(v);
+    byBrand.set(brandUpper, arr);
+  }
+
+  return { byBrandModel, byModel, byBrand, all: vehicles };
+}
+
+/**
  * Normalize message for matching: expand aliases, handle case-insensitivity
  */
 function normalizeForMatching(message: string): string {
@@ -213,6 +244,44 @@ function normalizeForMatching(message: string): string {
     normalized = normalized.replace(new RegExp(alias, 'gi'), brand);
   }
   return normalized;
+}
+
+/**
+ * Fast indexed lookup: find vehicle by checking brand+model, model-only, or brand-only.
+ */
+function findVehicleFromNormalized(normalizedUpper: string, index: VehicleIndex, userMessage: string): any | null {
+  // Layer 1: brand + model (exact pair in message)
+  let found: any | null = null;
+  index.byBrandModel.forEach((v, key) => {
+    if (found) return;
+    const [brand, model] = key.split("|");
+    if (normalizedUpper.includes(brand) && normalizedUpper.includes(model)) found = v;
+  });
+  if (found) return found;
+
+  // Layer 2: model only
+  index.byModel.forEach((v, model) => {
+    if (found) return;
+    if (normalizedUpper.includes(model)) found = v;
+  });
+  if (found) return found;
+
+  // Layer 3: brand + car keywords
+  const carKeywords = /車|多少|價格|cc|排氣|配備|里程|油耗|還在|照片|看看|那台|這台|那個|這個|來看|去看|想看|要看|看車|預約|時間|方便|地址|在哪|店裡|店面|試駕|買|要買|想買|要|想要|嗜|感興趣|有興趣|下訂|訂車/;
+  if (carKeywords.test(userMessage)) {
+    index.byBrand.forEach((vehicles, brand) => {
+      if (found) return;
+      if (normalizedUpper.includes(brand) && vehicles.length > 0) found = vehicles[0];
+    });
+    if (found) return found;
+  }
+
+  // Layer 4: brand only if exactly one vehicle of that brand
+  index.byBrand.forEach((vehicles, brand) => {
+    if (found) return;
+    if (normalizedUpper.includes(brand) && vehicles.length === 1) found = vehicles[0];
+  });
+  return found;
 }
 
 // ============ CONTEXT-AWARE DETECTION (Conversation History) ============
@@ -297,11 +366,15 @@ export function extractVehicleFromHistory(
  * Find a vehicle from the message using multi-layer detection.
  * Now with context awareness: if no vehicle found in current message,
  * check conversation history for the most recently discussed vehicle.
+ *
+ * Pass an optional `vehicleIndex` (from `buildVehicleIndex`) to skip
+ * repeated O(N) scans. Falls back to linear search if index not provided.
  */
 export function detectVehicleFromMessage(
   userMessage: string,
   allVehicles: any[],
-  conversationHistory?: Array<{ role: string; content: string }>
+  conversationHistory?: Array<{ role: string; content: string }>,
+  vehicleIndex?: VehicleIndex
 ): DetectionResult {
   const questionType = detectQuestionType(userMessage);
   const normalized = normalizeForMatching(userMessage);
@@ -318,52 +391,41 @@ export function detectVehicleFromMessage(
     }) || allVehicles.find(v => {
       return nameStr.includes(v.brand) || nameStr.includes(v.model);
     });
-    
+
     const directAnswer = matchedVehicle ? getQuestionAnswer(matchedVehicle, questionType) : '';
     const termExplanation = matchedVehicle ? getTermExplanation(userMessage, matchedVehicle) : '';
     return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType, directAnswer, termExplanation };
   }
 
-  // ============ Layer 2: Brand + Model mention (case-insensitive) ============
-  // First try: both brand and model in message
-  let mentionedVehicle = allVehicles.find(v => {
-    const brandUpper = v.brand.toUpperCase();
-    const modelUpper = v.model.toUpperCase();
-    return normalizedUpper.includes(brandUpper) && normalizedUpper.includes(modelUpper);
-  });
-  
-  // Second try: model only (case-insensitive, min 2 chars)
-  if (!mentionedVehicle) {
+  // ============ Layer 2: Brand + Model mention (indexed or linear) ============
+  let mentionedVehicle: any | null = null;
+  if (vehicleIndex) {
+    mentionedVehicle = findVehicleFromNormalized(normalizedUpper, vehicleIndex, userMessage);
+  } else {
+    // Fallback: original linear scan (backward compat)
     mentionedVehicle = allVehicles.find(v => {
-      const modelUpper = v.model.toUpperCase();
-      return modelUpper.length >= 2 && normalizedUpper.includes(modelUpper);
-    });
-  }
-  
-  // Third try: brand only (if message also contains car-related keywords or demonstrative pronouns)
-  if (!mentionedVehicle) {
-    // Expanded keywords: car terms, demonstratives (那台/這台), viewing intent (看/去看), appointment (預約/時間), location (地址/在哪)
-    const carKeywords = /車|多少|價格|cc|排氣|配備|里程|油耗|還在|照片|看看|那台|這台|那個|這個|來看|去看|想看|要看|看車|預約|時間|方便|地址|在哪|店裡|店面|試駕|買|要買|想買|要|想要|嗜|感興趣|有興趣|下訂|訂車/;
-    if (carKeywords.test(userMessage)) {
-      mentionedVehicle = allVehicles.find(v => {
-        const brandUpper = v.brand.toUpperCase();
-        return normalizedUpper.includes(brandUpper);
-      });
-    }
-  }
-  
-  // Fourth try: brand only without keywords — if only ONE vehicle of that brand exists, it's unambiguous
-  if (!mentionedVehicle) {
-    const brandMatch = allVehicles.filter(v => {
       const brandUpper = v.brand.toUpperCase();
-      return normalizedUpper.includes(brandUpper);
-    });
-    // If exactly one vehicle matches the brand, use it (unambiguous)
-    if (brandMatch.length === 1) {
-      mentionedVehicle = brandMatch[0];
+      const modelUpper = v.model.toUpperCase();
+      return normalizedUpper.includes(brandUpper) && normalizedUpper.includes(modelUpper);
+    }) || null;
+    if (!mentionedVehicle) {
+      mentionedVehicle = allVehicles.find(v => {
+        const modelUpper = v.model.toUpperCase();
+        return modelUpper.length >= 2 && normalizedUpper.includes(modelUpper);
+      }) || null;
+    }
+    if (!mentionedVehicle) {
+      const carKeywords = /車|多少|價格|cc|排氣|配備|里程|油耗|還在|照片|看看|那台|這台|那個|這個|來看|去看|想看|要看|看車|預約|時間|方便|地址|在哪|店裡|店面|試駕|買|要買|想買|要|想要|嗜|感興趣|有興趣|下訂|訂車/;
+      if (carKeywords.test(userMessage)) {
+        mentionedVehicle = allVehicles.find(v => normalizedUpper.includes(v.brand.toUpperCase())) || null;
+      }
+    }
+    if (!mentionedVehicle) {
+      const brandMatch = allVehicles.filter(v => normalizedUpper.includes(v.brand.toUpperCase()));
+      if (brandMatch.length === 1) mentionedVehicle = brandMatch[0];
     }
   }
-  
+
   if (mentionedVehicle) {
     const directAnswer = getQuestionAnswer(mentionedVehicle, questionType);
     const termExplanation = getTermExplanation(userMessage, mentionedVehicle);
@@ -376,8 +438,6 @@ export function detectVehicleFromMessage(
   }
 
   // ============ Layer 4: Context-aware detection from conversation history ============
-  // If the current message has a question type but no vehicle mention,
-  // check if the user is asking a follow-up about a previously discussed vehicle.
   if (conversationHistory && conversationHistory.length > 0) {
     if (isFollowUpQuestion(userMessage, questionType)) {
       const historyVehicle = extractVehicleFromHistory(conversationHistory, allVehicles);

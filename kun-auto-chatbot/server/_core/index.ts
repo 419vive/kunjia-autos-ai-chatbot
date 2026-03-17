@@ -13,6 +13,7 @@ import { startSyncScheduler, sync8891 } from "../sync8891";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
 import { trackingRouter } from "../trackingApi";
 import { registerAdminAuthRoutes, seedAdminUser } from "./adminAuth";
+import { createSeoRouter } from "../seo";
 import mysql from "mysql2/promise";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -263,6 +264,9 @@ async function startServer() {
 
   // Admin local auth routes (login endpoint)
   registerAdminAuthRoutes(app);
+
+  // SEO: robots.txt, sitemap.xml (must be before SPA catch-all)
+  app.use(createSeoRouter());
 
   // Page view tracking API (lightweight, no auth required)
   app.use(trackingRouter);

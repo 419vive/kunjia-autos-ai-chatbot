@@ -932,7 +932,20 @@ export function buildFaqCarousel(): any {
 export function buildFollowWelcomeMessages(): any[] {
   const baseUrl = process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app";
 
-  // Message 1: Rich hero card with branding
+  // Message 1: Short friendly greeting
+  const greetingText = {
+    type: "text",
+    text: "你好！歡迎來到崑家汽車 🚗\n我是高雄阿家，很高興認識你！\n\n👇 下面這張圖教你怎麼快速找車、算貸款，超簡單的！",
+  };
+
+  // Message 2: Rich menu guide image — shows users how to operate the chatbot
+  const guideImage = {
+    type: "image",
+    originalContentUrl: `${baseUrl}/rich-menu-guide.png`,
+    previewImageUrl: `${baseUrl}/rich-menu-guide.png`,
+  };
+
+  // Message 3: Rich hero card with branding
   const heroBubble = {
     type: "flex",
     altText: "歡迎來到崑家汽車！高雄40年老口碑",
@@ -953,14 +966,14 @@ export function buildFollowWelcomeMessages(): any[] {
         contents: [
           {
             type: "text",
-            text: "人客你好！歡迎來到崑家汽車 🚗",
+            text: "崑家汽車｜高雄40年老口碑 🏆",
             weight: "bold",
             size: "lg",
             color: "#1B3A5C",
           },
           {
             type: "text",
-            text: "我是高雄阿家，在高雄車界40年了！\n很高興認識你 👋 有什麼需要儘管問！",
+            text: "第三方認證・超強貸款・免費接駁\n有什麼需要儘管問！",
             size: "sm",
             color: "#555555",
             wrap: true,
@@ -1007,7 +1020,7 @@ export function buildFollowWelcomeMessages(): any[] {
     },
   };
 
-  // Message 2: Text with quick reply buttons for deeper engagement
+  // Message 4: Text with quick reply buttons for deeper engagement
   const welcomeText = {
     type: "text",
     text: "請問你今天是想…？👇",
@@ -1066,7 +1079,7 @@ export function buildFollowWelcomeMessages(): any[] {
     },
   };
 
-  return [heroBubble, welcomeText];
+  return [greetingText, guideImage, heroBubble, welcomeText];
 }
 
 // ============ RICH MENU TRIGGER DETECTION ============

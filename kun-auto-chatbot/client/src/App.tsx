@@ -2,25 +2,34 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { initTracker } from "./lib/tracker";
+
+// Public routes — eagerly loaded (user-facing, must be fast)
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
-import Dashboard from "./pages/Dashboard";
-import Conversations from "./pages/Conversations";
-import VehicleManagement from "./pages/VehicleManagement";
-import LineSetup from "./pages/LineSetup";
-import Analytics from "./pages/Analytics";
-import AdminLogin from "./pages/AdminLogin";
-import LoanInquiries from "./pages/LoanInquiries";
-import Appointments from "./pages/Appointments";
 import SmartRedirect from "./pages/SmartRedirect";
-import VehicleLanding from "./pages/VehicleLanding";
-import LoanInquiry from "./pages/LoanInquiry";
-import BookVisit from "./pages/BookVisit";
-import DashboardLayout from "./components/DashboardLayout";
-import { initTracker } from "./lib/tracker";
+
+// Lazy-loaded routes — code-split to reduce initial bundle size
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Conversations = lazy(() => import("./pages/Conversations"));
+const VehicleManagement = lazy(() => import("./pages/VehicleManagement"));
+const LineSetup = lazy(() => import("./pages/LineSetup"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const LoanInquiries = lazy(() => import("./pages/LoanInquiries"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const VehicleLanding = lazy(() => import("./pages/VehicleLanding"));
+const LoanInquiry = lazy(() => import("./pages/LoanInquiry"));
+const BookVisit = lazy(() => import("./pages/BookVisit"));
+const BrandPage = lazy(() => import("./pages/BrandPage"));
+const PricePage = lazy(() => import("./pages/PricePage"));
+const BlogIndex = lazy(() => import("./pages/BlogIndex"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const FaqPage = lazy(() => import("./pages/FaqPage"));
+const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
@@ -35,6 +44,11 @@ function Router() {
       <Route path="/vehicle/:id" component={VehicleLanding} />
       <Route path="/loan-inquiry" component={LoanInquiry} />
       <Route path="/book-visit" component={BookVisit} />
+      <Route path="/brand/:brand" component={BrandPage} />
+      <Route path="/price/:range" component={PricePage} />
+      <Route path="/blog/:slug" component={BlogPost} />
+      <Route path="/blog" component={BlogIndex} />
+      <Route path="/faq" component={FaqPage} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
 
@@ -84,6 +98,14 @@ function Router() {
   );
 }
 
+function LazyFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
 function App() {
   useEffect(() => { initTracker(); }, []);
   return (
@@ -91,7 +113,9 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <Suspense fallback={<LazyFallback />}>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

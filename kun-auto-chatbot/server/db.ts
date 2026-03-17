@@ -60,12 +60,35 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// ============ VEHICLE QUERIES ============
+// ============ VEHICLE QUERIES (with TTL cache) ============
 
-export async function getAllVehicles() {
+// Cache vehicle list for 2 minutes — avoids repeated DB hits during chat bursts.
+// Vehicle data only changes on 8891 sync (every 6 hours), so this is very safe.
+let _vehicleCache: Awaited<ReturnType<typeof _fetchAllVehicles>> | null = null;
+let _vehicleCacheTime = 0;
+const VEHICLE_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+async function _fetchAllVehicles() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(vehicles).where(eq(vehicles.status, "available")).orderBy(asc(vehicles.brand), asc(vehicles.model));
+}
+
+export async function getAllVehicles() {
+  const now = Date.now();
+  if (_vehicleCache && now - _vehicleCacheTime < VEHICLE_CACHE_TTL_MS) {
+    return _vehicleCache;
+  }
+  const result = await _fetchAllVehicles();
+  _vehicleCache = result;
+  _vehicleCacheTime = now;
+  return result;
+}
+
+/** Invalidate the vehicle cache (call after sync or manual update). */
+export function invalidateVehicleCache() {
+  _vehicleCache = null;
+  _vehicleCacheTime = 0;
 }
 
 export async function getVehicleById(id: number) {

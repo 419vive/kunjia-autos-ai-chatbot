@@ -13,7 +13,7 @@ import { nanoid } from "nanoid";
 import { sync8891, getSyncStatus } from "./sync8891";
 import { deployRichMenu, getRichMenuStatus, cancelDefaultRichMenu } from "./lineRichMenu";
 import { sanitizeChatMessage, sanitizeSearchQuery, maskPhone, maskName, maskPIIInText, logSecurityEvent, getSecurityEvents } from "./security";
-import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
+import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 
 // ============ VEHICLE KNOWLEDGE BASE FOR LLM ============
@@ -510,9 +510,10 @@ export const appRouter = router({
         
         // ============ VEHICLE DETECTION v5: Context-aware detection ============
         const allVehiclesForDetection = await db.getAllVehicles();
+        const vIndex = buildVehicleIndex(allVehiclesForDetection);
         // Pass conversation history so follow-up questions can resolve to previously discussed vehicles
         const historyForDetection = history.map((m: any) => ({ role: m.role, content: m.content }));
-        const detectionWeb = detectVehicleFromMessage(input.message, allVehiclesForDetection, historyForDetection);
+        const detectionWeb = detectVehicleFromMessage(input.message, allVehiclesForDetection, historyForDetection, vIndex);
         console.log(`[WebChat VehicleDetection] type=${detectionWeb.type}, vehicle=${detectionWeb.vehicle?.brand || 'none'} ${detectionWeb.vehicle?.model || ''}, question=${detectionWeb.questionType}, answer=${detectionWeb.directAnswer}`);
         
         // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others

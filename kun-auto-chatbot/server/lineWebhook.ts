@@ -6,7 +6,7 @@ import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
 import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
-import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions } from "./vehicleDetectionService";
+import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 
@@ -772,11 +772,12 @@ async function processLineEvent(
   console.log(`[LINE] History: total=${allHistory.length}, using last ${history.length} messages`);
 
   const allVehicles = await db.getAllVehicles();
+  const vIndex = buildVehicleIndex(allVehicles);
 
   // ============ VEHICLE DETECTION v5: Context-aware detection ============
   // Pass conversation history so follow-up questions can resolve to previously discussed vehicles
   const historyForDetection = history.map(m => ({ role: m.role, content: m.content }));
-  const detection = detectVehicleFromMessage(userMessage, allVehicles, historyForDetection);
+  const detection = detectVehicleFromMessage(userMessage, allVehicles, historyForDetection, vIndex);
   console.log(`[VehicleDetection] type=${detection.type}, vehicle=${detection.vehicle?.brand || 'none'} ${detection.vehicle?.model || ''}, question=${detection.questionType}, answer=${detection.directAnswer}`);
 
   // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
