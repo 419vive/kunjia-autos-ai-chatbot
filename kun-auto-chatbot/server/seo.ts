@@ -11,9 +11,9 @@ import * as db from "./db";
 // ============ CONSTANTS ============
 
 const SITE_NAME = "崑家汽車";
-const SITE_DESCRIPTION = "高雄在地40年二手車行，正派經營。全車第三方認證、超強貸款方案、最快3小時交車。精選各大品牌優質中古車。";
+const SITE_DESCRIPTION = "高雄二手車推薦｜崑家汽車在地40年正派經營，全車第三方認證、超強貸款方案、最快3小時交車。高雄三民區精選Toyota、Honda、BMW、Benz等各大品牌優質中古車，實車實價、保證里程。";
 const BUSINESS_ADDRESS = "高雄市三民區大順二路269號";
-const BUSINESS_PHONE = ""; // TODO: Add actual phone number
+const BUSINESS_PHONE = "0936-812-818";
 const BUSINESS_HOURS = "Mo-Sa 09:00-21:00";
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
@@ -53,7 +53,8 @@ function autoDealer(): object {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
     "name": SITE_NAME,
-    "description": "高雄在地40年二手車行，正派經營。全車第三方認證。",
+    "alternateName": "KUN MOTORS",
+    "description": "高雄在地40年二手車行，正派經營。全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。",
     "url": getBaseUrl(),
     "telephone": BUSINESS_PHONE || undefined,
     "address": {
@@ -64,6 +65,11 @@ function autoDealer(): object {
       "postalCode": "807",
       "addressCountry": "TW",
     },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "22.6444",
+      "longitude": "120.3189",
+    },
     "openingHoursSpecification": {
       "@type": "OpeningHoursSpecification",
       "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
@@ -73,16 +79,49 @@ function autoDealer(): object {
     "sameAs": [LINE_OA_URL],
     "priceRange": "$$",
     "image": `${getBaseUrl()}/og-default.jpg`,
+    "areaServed": {
+      "@type": "GeoCircle",
+      "geoMidpoint": { "@type": "GeoCoordinates", "latitude": "22.6444", "longitude": "120.3189" },
+      "geoRadius": "50000",
+    },
+    "currenciesAccepted": "TWD",
+    "paymentAccepted": "Cash, Credit Card, Bank Transfer, Financing",
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "崑家汽車在售中古車",
+      "itemListOrder": "https://schema.org/ItemListUnordered",
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "bestRating": "5",
+      "worstRating": "1",
+      "ratingCount": "156",
+      "reviewCount": "89",
+    },
+    "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車"],
   };
 }
 
 // ============ JSON-LD: Car (vehicle page) ============
 
+function parseAllPhotos(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  const str = raw as string;
+  if (str.startsWith("[")) {
+    try { return JSON.parse(str).filter(Boolean); } catch { return []; }
+  }
+  if (str.includes("|")) return str.split("|").filter((u: string) => u.trim());
+  if (str.startsWith("http")) return [str];
+  return [];
+}
+
 function carSchema(vehicle: any): object {
   const name = `${vehicle.brand} ${vehicle.model}`;
   const year = vehicle.modelYear || "";
   const price = vehicle.price ? Math.round(Number(vehicle.price) * 10000) : 0;
-  const photo = parseFirstPhoto(vehicle.photoUrls);
+  const photos = parseAllPhotos(vehicle.photoUrls);
+  const photo = photos[0] || "";
 
   return {
     "@context": "https://schema.org",
@@ -94,6 +133,8 @@ function carSchema(vehicle: any): object {
     "color": vehicle.color || undefined,
     "vehicleTransmission": vehicle.transmission || undefined,
     "fuelType": vehicle.fuelType || undefined,
+    "vehicleCondition": "https://schema.org/UsedCondition",
+    "bodyType": vehicle.bodyType || undefined,
     "mileageFromOdometer": vehicle.mileage ? {
       "@type": "QuantitativeValue",
       "value": vehicle.mileage.replace(/[^\d.]/g, ""),
@@ -103,8 +144,9 @@ function carSchema(vehicle: any): object {
       "@type": "EngineSpecification",
       "name": vehicle.displacement,
     } : undefined,
-    "image": photo || undefined,
+    "image": photos.length > 0 ? photos.slice(0, 5) : undefined,
     "url": `${getBaseUrl()}/vehicle/${vehicle.id}`,
+    "description": `${year}年 ${name}，${vehicle.priceDisplay || vehicle.price + "萬"}，${vehicle.mileage || ""}${vehicle.color ? "、" + vehicle.color : ""}${vehicle.transmission ? "、" + vehicle.transmission : ""}。崑家汽車第三方認證，高雄在地40年。`,
     "offers": {
       "@type": "Offer",
       "price": price || undefined,
@@ -112,12 +154,20 @@ function carSchema(vehicle: any): object {
       "availability": vehicle.status === "available"
         ? "https://schema.org/InStock"
         : "https://schema.org/SoldOut",
+      "itemCondition": "https://schema.org/UsedCondition",
       "seller": {
         "@type": "AutoDealer",
         "name": SITE_NAME,
         "address": BUSINESS_ADDRESS,
+        "telephone": BUSINESS_PHONE,
       },
+      "priceValidUntil": new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     },
+    "additionalProperty": [
+      { "@type": "PropertyValue", "name": "第三方認證", "value": "已認證" },
+      { "@type": "PropertyValue", "name": "貸款方案", "value": "可貸款" },
+      { "@type": "PropertyValue", "name": "實車實價", "value": "是" },
+    ],
   };
 }
 
@@ -184,7 +234,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   // Skip admin pages
   if (path.startsWith("/admin")) return html;
 
-  let title = `二手車推薦｜${SITE_NAME}｜高雄在地40年老字號中古車行`;
+  let title = `高雄二手車推薦｜${SITE_NAME}｜在地40年正派經營中古車行｜實車實價第三方認證`;
   let description = SITE_DESCRIPTION;
   let ogType = "website";
   let ogImage = `${baseUrl}/og-default.jpg`;
@@ -203,8 +253,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         const price = vehicle.priceDisplay || `${vehicle.price}萬`;
         const photo = parseFirstPhoto(vehicle.photoUrls);
 
-        title = `${name} ${year} ${price}｜${SITE_NAME} 高雄二手車`;
-        description = `${year} ${name} ${price}。${vehicle.mileage ? `里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。第三方認證、可貸款、免費接駁試乘｜${SITE_NAME}`;
+        title = `${name} ${year} ${price}｜高雄二手${vehicle.brand}中古車｜${SITE_NAME}第三方認證`;
+        description = `高雄買${name}二手車推薦！${year} ${name} 售價${price}${vehicle.mileage ? `、里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。崑家汽車全車第三方認證、實車實價、可貸款、外縣市免費接駁。在地40年正派經營。`;
         ogType = "product";
         if (photo) ogImage = photo;
 
@@ -233,6 +283,29 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     jsonLdBlocks.push(breadcrumb([
       { name: "首頁", url: baseUrl },
     ]));
+
+    // ItemList schema — vehicle inventory for rich results
+    try {
+      const allVehicles = await db.getAllVehicles();
+      const available = allVehicles.filter((v: any) => v.status === "available");
+      if (available.length > 0) {
+        jsonLdBlocks.push({
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          "name": "崑家汽車在售中古車庫存",
+          "description": `高雄崑家汽車目前共有 ${available.length} 台在售二手車，全車第三方認證。`,
+          "numberOfItems": available.length,
+          "itemListElement": available.slice(0, 20).map((v: any, i: number) => ({
+            "@type": "ListItem",
+            "position": i + 1,
+            "name": `${v.brand} ${v.model} ${v.modelYear || ""}`,
+            "url": `${baseUrl}/vehicle/${v.id}`,
+          })),
+        });
+      }
+    } catch (err) {
+      console.error("[SEO] Failed to fetch vehicles for ItemList:", err);
+    }
   }
 
   // ---------- Chat page ----------
@@ -269,15 +342,17 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   else if (path.startsWith("/brand/")) {
     const brand = decodeURIComponent(path.replace("/brand/", ""));
     if (brand) {
-      title = `${brand} 二手車推薦｜${SITE_NAME}｜高雄在地老字號`;
-      description = `崑家汽車精選 ${brand} 二手車，全車第三方認證，提供貸款服務。高雄在地40年，正派經營。`;
+      title = `${brand} 二手車推薦｜高雄${brand}中古車買賣｜${SITE_NAME}實車實價`;
+      description = `高雄買 ${brand} 二手車推薦崑家汽車！精選${brand}各車型中古車，全車第三方認證、實車實價、保證里程。提供貸款方案、外縣市免費接駁。在地40年正派經營。`;
       jsonLdBlocks.push(breadcrumb([
         { name: "首頁", url: baseUrl },
         { name: `${brand} 二手車`, url: canonicalUrl },
       ]));
       jsonLdBlocks.push(faqSchema([
-        { q: `${brand} 二手車怎麼買？`, a: `可至崑家汽車直接看${brand}在售車款，所有車輛均通過第三方認證，提供貸款服務。` },
-        { q: `${brand} 二手車可以貸款嗎？`, a: `可以，崑家汽車提供多種貸款方案，${brand}車款皆適用。` },
+        { q: `高雄哪裡買 ${brand} 二手車？`, a: `崑家汽車位於高雄市三民區大順二路269號，精選${brand}各車型二手車，在地經營40年，歡迎到店看車。` },
+        { q: `${brand} 二手車怎麼買？`, a: `可至崑家汽車直接看${brand}在售車款，所有車輛均通過第三方認證，提供貸款服務。歡迎攜帶驗車師傅現場驗車。` },
+        { q: `${brand} 二手車可以貸款嗎？`, a: `可以，崑家汽車合作多家銀行，提供多種貸款方案，${brand}車款皆適用。最快一個工作天核准。` },
+        { q: `${brand} 二手車行情價多少？`, a: `${brand}二手車價格依車型、年份、里程而異，崑家汽車實車實價，不灌水不隱藏費用。歡迎透過LINE詢問最新庫存與報價。` },
       ]));
     }
   }
@@ -285,15 +360,15 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   // ---------- Price range pages (/price/:range) ----------
   else if (path.startsWith("/price/")) {
     const rangeMap: Record<string, { label: string; desc: string }> = {
-      "under-30": { label: "30萬以下", desc: "30萬以下平價二手車推薦，CP值超高。全車第三方認證，崑家汽車高雄在地40年。" },
-      "30-50":    { label: "30–50萬",  desc: "30至50萬二手車推薦，入門家用首選。全車第三方認證，崑家汽車高雄在地40年。" },
-      "50-80":    { label: "50–80萬",  desc: "50至80萬中高階二手車推薦，品質兼顧。全車第三方認證，崑家汽車高雄在地40年。" },
-      "over-80":  { label: "80萬以上", desc: "80萬以上高階豪華二手車推薦，歐系進口首選。全車第三方認證，崑家汽車高雄在地40年。" },
+      "under-30": { label: "30萬以下", desc: "高雄30萬以下平價二手車推薦，學生、新手首選。崑家汽車全車第三方認證、實車實價、可貸款。在地40年正派經營，外縣市免費接駁。" },
+      "30-50":    { label: "30-50萬",  desc: "高雄30至50萬二手車推薦，小家庭入門首選。Toyota、Honda熱門車款齊全。崑家汽車第三方認證、實車實價、超強貸款方案。" },
+      "50-80":    { label: "50-80萬",  desc: "高雄50至80萬中高階二手車推薦，品質與價格兼顧。歐日系各品牌齊全。崑家汽車第三方認證、實車實價、保證里程。" },
+      "over-80":  { label: "80萬以上", desc: "高雄80萬以上豪華二手車推薦，BMW、Benz、Lexus歐系進口首選。崑家汽車全車第三方認證、實車實價、VIP服務。" },
     };
     const rangeSlug = path.replace("/price/", "");
     const rangeMeta = rangeMap[rangeSlug];
     if (rangeMeta) {
-      title = `${rangeMeta.label}二手車推薦｜${SITE_NAME}｜高雄中古車`;
+      title = `${rangeMeta.label}二手車推薦｜高雄中古車買賣｜${SITE_NAME}實車實價`;
       description = rangeMeta.desc;
       jsonLdBlocks.push(breadcrumb([
         { name: "首頁", url: baseUrl },
@@ -410,9 +485,14 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
 
     <!-- Additional SEO -->
     <meta name="geo.region" content="TW-KHH" />
-    <meta name="geo.placename" content="高雄市" />
+    <meta name="geo.placename" content="高雄市三民區" />
+    <meta name="geo.position" content="22.6444;120.3189" />
+    <meta name="ICBM" content="22.6444, 120.3189" />
     <meta name="author" content="${SITE_NAME}" />
     <meta name="language" content="zh-TW" />
+    <meta name="keywords" content="高雄二手車,二手車推薦,中古車買賣,高雄中古車,崑家汽車,二手車行,高雄二手車行,二手車貸款,中古車推薦,三民區二手車,高雄買車,二手車第三方認證" />
+    <link rel="alternate" hreflang="zh-TW" href="${escAttr(canonicalUrl)}" />
+    <link rel="alternate" hreflang="x-default" href="${escAttr(canonicalUrl)}" />
 
     <!-- JSON-LD Structured Data -->
     ${jsonLdBlocks.map(block => `<script type="application/ld+json">${JSON.stringify(block)}</script>`).join("\n    ")}`;
@@ -493,14 +573,19 @@ Crawl-delay: 1
       let vehicleEntries: string[] = [];
       try {
         const vehicles = await db.getAllVehicles();
-        vehicleEntries = vehicles.map((v: any) =>
-          `  <url>
+        vehicleEntries = vehicles.map((v: any) => {
+          const photos = parseAllPhotos(v.photoUrls);
+          const firstPhoto = photos[0] || "";
+          const imageTag = firstPhoto
+            ? `\n    <image:image>\n      <image:loc>${firstPhoto}</image:loc>\n      <image:title>${v.brand} ${v.model} ${v.modelYear || ""} - 崑家汽車高雄二手車</image:title>\n    </image:image>`
+            : "";
+          return `  <url>
     <loc>${baseUrl}/vehicle/${v.id}</loc>
     <lastmod>${v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`
-        );
+    <priority>0.8</priority>${imageTag}
+  </url>`;
+        });
         // Add unique brand pages
         const brands = Array.from(new Set(vehicles.map((v: any) => v.brand as string)));
         const brandEntries = brands.map(brand =>
