@@ -7,6 +7,7 @@
 - [x] Install Superpowers (obra/superpowers) - hooks, skills, commands, agents
 - [x] Install Claude Mem (thedotmack/claude-mem) - persistent memory layer with worker service
 - [x] Install UI UX Pro Max Skill (nextlevelbuilder/ui-ux-pro-max-skill) - design system skill
+- [x] SEO Phase 3: Internal linking, SEO footer, FAQ page (/faq), cross-links on all pages
 
 ## Backlog (identified, not yet requested)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
