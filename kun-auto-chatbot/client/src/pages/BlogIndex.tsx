@@ -2,6 +2,7 @@ import { blogPosts } from "@/data/blogPosts";
 import { ChevronRight, BookOpen, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import SeoFooter from "@/components/SeoFooter";
 
 export default function BlogIndex() {
   return (
@@ -84,7 +85,24 @@ export default function BlogIndex() {
             加入 LINE 免費諮詢
           </a>
         </div>
+
+        {/* Internal links */}
+        <div className="mt-12 rounded-xl border bg-muted/30 p-6">
+          <h2 className="text-sm font-bold mb-4">找車？直接看庫存</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <a href="/price/under-30" className="text-xs text-primary hover:underline">30萬以下二手車</a>
+            <a href="/price/30-50" className="text-xs text-primary hover:underline">30-50萬二手車</a>
+            <a href="/price/50-80" className="text-xs text-primary hover:underline">50-80萬二手車</a>
+            <a href="/price/over-80" className="text-xs text-primary hover:underline">80萬以上二手車</a>
+          </div>
+          <div className="mt-3 flex gap-4">
+            <a href="/" className="text-xs text-primary hover:underline">全部在售車輛</a>
+            <a href="/faq" className="text-xs text-primary hover:underline">常見問題 FAQ</a>
+          </div>
+        </div>
       </main>
+
+      <SeoFooter />
     </div>
   );
 }

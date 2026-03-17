@@ -12,6 +12,7 @@ import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { useCompareList, CompareBar } from "@/components/VehicleCompare";
 import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
+import SeoFooter from "@/components/SeoFooter";
 import { nanoid } from "nanoid";
 
 function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
@@ -554,6 +555,8 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <SeoFooter />
 
       {/* Floating Chat Popup */}
       {chatOpen && (

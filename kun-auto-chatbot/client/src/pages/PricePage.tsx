@@ -5,6 +5,7 @@ import { Car, Gauge, Fuel, Calendar, ChevronRight } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
+import SeoFooter from "@/components/SeoFooter";
 
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
@@ -253,7 +254,27 @@ export default function PricePage() {
             ))}
           </div>
         )}
+
+        {/* Internal links section */}
+        <div className="mt-12 rounded-xl border bg-muted/30 p-6">
+          <h2 className="text-sm font-bold mb-4">其他預算區間</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {range !== "under-30" && <a href="/price/under-30" className="text-xs text-primary hover:underline">30萬以下二手車</a>}
+            {range !== "30-50" && <a href="/price/30-50" className="text-xs text-primary hover:underline">30-50萬二手車</a>}
+            {range !== "50-80" && <a href="/price/50-80" className="text-xs text-primary hover:underline">50-80萬二手車</a>}
+            {range !== "over-80" && <a href="/price/over-80" className="text-xs text-primary hover:underline">80萬以上二手車</a>}
+          </div>
+          <h2 className="text-sm font-bold mt-6 mb-4">延伸閱讀</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <a href="/blog/buy-used-car-guide" className="text-xs text-primary hover:underline">買二手車7大注意事項</a>
+            <a href="/blog/used-car-loan-guide" className="text-xs text-primary hover:underline">二手車貸款全攻略</a>
+            <a href="/faq" className="text-xs text-primary hover:underline">常見問題 FAQ</a>
+            <a href="/blog" className="text-xs text-primary hover:underline">更多購車攻略</a>
+          </div>
+        </div>
       </main>
+
+      <SeoFooter />
     </div>
   );
 }

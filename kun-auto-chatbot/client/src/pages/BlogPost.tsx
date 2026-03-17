@@ -3,6 +3,7 @@ import { getBlogPost, getRelatedPosts } from "@/data/blogPosts";
 import { ChevronRight, Calendar, User, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import SeoFooter from "@/components/SeoFooter";
 
 export default function BlogPost() {
   const [, params] = useRoute("/blog/:slug");
@@ -121,6 +122,12 @@ export default function BlogPost() {
               >
                 瀏覽在售車輛
               </a>
+              <a
+                href="/faq"
+                className="flex items-center justify-center gap-2 mt-2 rounded-lg border border-white/20 px-4 py-2 text-xs text-white/80 hover:bg-white/10 transition-colors w-full"
+              >
+                常見問題 FAQ
+              </a>
             </div>
 
             {/* Related posts */}
@@ -144,9 +151,22 @@ export default function BlogPost() {
                 </div>
               </div>
             )}
+
+            {/* Price range links */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">依預算找車</h3>
+              <div className="space-y-2">
+                <a href="/price/under-30" className="block text-xs text-primary hover:underline">30萬以下二手車</a>
+                <a href="/price/30-50" className="block text-xs text-primary hover:underline">30-50萬二手車</a>
+                <a href="/price/50-80" className="block text-xs text-primary hover:underline">50-80萬二手車</a>
+                <a href="/price/over-80" className="block text-xs text-primary hover:underline">80萬以上二手車</a>
+              </div>
+            </div>
           </aside>
         </div>
       </div>
+
+      <SeoFooter />
     </div>
   );
 }

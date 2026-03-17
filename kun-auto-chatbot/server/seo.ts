@@ -302,6 +302,24 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     }
   }
 
+  // ---------- FAQ page ----------
+  else if (path === "/faq") {
+    title = `常見問題 FAQ｜${SITE_NAME}｜高雄二手車`;
+    description = `買二手車常見問題一次解答：購車、貸款、認證、過戶、高雄二手車市場資訊。崑家汽車40年經驗為您解答。`;
+    jsonLdBlocks.push(breadcrumb([
+      { name: "首頁", url: baseUrl },
+      { name: "常見問題", url: canonicalUrl },
+    ]));
+    jsonLdBlocks.push(faqSchema([
+      ...HOMEPAGE_FAQS,
+      { q: "什麼是第三方認證？", a: "第三方認證是由獨立於買賣雙方的專業機構，對車輛進行全面檢查並出具書面報告，是保障買家權益最有效的方式。" },
+      { q: "二手車貸款成數是多少？", a: "一般二手車貸款成數為車價的50%-80%，依車齡和個人信用而定。崑家汽車合作多家銀行，可協助規劃貸款方案。" },
+      { q: "過戶流程怎麼走？", a: "準備文件→前往監理站→填寫異動申請書→繳交規費→領取新行照。崑家汽車提供代辦服務，1-2個工作天即可完成。" },
+      { q: "高雄哪裡買二手車比較好？", a: "高雄三民區大順路一帶是傳統汽車街，聚集數十家車行。崑家汽車位於三民區大順二路269號，在地40年老字號。" },
+      { q: "可以帶驗車師傅來嗎？", a: "非常歡迎！崑家汽車歡迎買家自行攜帶驗車師傅到場驗車，我們對每台車的車況有十足信心。" },
+    ]));
+  }
+
   // ---------- Blog index ----------
   else if (path === "/blog") {
     title = `二手車攻略｜${SITE_NAME}購車指南`;
@@ -441,6 +459,7 @@ Crawl-delay: 1
       // Static pages
       const staticPages = [
         { loc: "/",                              changefreq: "daily",   priority: "1.0" },
+        { loc: "/faq",                           changefreq: "monthly", priority: "0.8" },
         { loc: "/blog",                          changefreq: "weekly",  priority: "0.8" },
         { loc: "/blog/buy-used-car-guide",       changefreq: "monthly", priority: "0.7" },
         { loc: "/blog/used-car-loan-guide",      changefreq: "monthly", priority: "0.7" },

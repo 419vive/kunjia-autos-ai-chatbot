@@ -5,6 +5,7 @@ import { Car, Gauge, Fuel, Calendar, ChevronRight } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
+import SeoFooter from "@/components/SeoFooter";
 
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
@@ -215,7 +216,22 @@ export default function BrandPage() {
             ))}
           </div>
         )}
+
+        {/* Internal links section */}
+        <div className="mt-12 rounded-xl border bg-muted/30 p-6">
+          <h2 className="text-sm font-bold mb-4">其他找車方式</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <a href="/price/under-30" className="text-xs text-primary hover:underline">30萬以下二手車</a>
+            <a href="/price/30-50" className="text-xs text-primary hover:underline">30-50萬二手車</a>
+            <a href="/price/50-80" className="text-xs text-primary hover:underline">50-80萬二手車</a>
+            <a href="/price/over-80" className="text-xs text-primary hover:underline">80萬以上二手車</a>
+            <a href="/blog" className="text-xs text-primary hover:underline">購車攻略文章</a>
+            <a href="/faq" className="text-xs text-primary hover:underline">常見問題 FAQ</a>
+          </div>
+        </div>
       </main>
+
+      <SeoFooter />
     </div>
   );
 }
