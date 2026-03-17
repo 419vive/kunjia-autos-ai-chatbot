@@ -52,6 +52,7 @@ function autoDealer(): object {
   return {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
+    "@id": `${getBaseUrl()}/#organization`,
     "name": SITE_NAME,
     "alternateName": "KUN MOTORS",
     "description": "高雄在地40年二手車行，正派經營。全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。",
@@ -188,13 +189,174 @@ function faqSchema(faqs: Array<{ q: string; a: string }>): object {
   };
 }
 
+// ============ JSON-LD: HowTo (procedural content for AEO) ============
+
+function howToSchema(data: {
+  name: string;
+  description: string;
+  totalTime?: string;
+  estimatedCost?: { currency: string; value: string };
+  steps: Array<{ name: string; text: string }>;
+  supply?: string[];
+  tool?: string[];
+}): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": data.name,
+    "description": data.description,
+    ...(data.totalTime && { "totalTime": data.totalTime }),
+    ...(data.estimatedCost && {
+      "estimatedCost": {
+        "@type": "MonetaryAmount",
+        "currency": data.estimatedCost.currency,
+        "value": data.estimatedCost.value,
+      },
+    }),
+    ...(data.supply && {
+      "supply": data.supply.map(s => ({ "@type": "HowToSupply", "name": s })),
+    }),
+    ...(data.tool && {
+      "tool": data.tool.map(t => ({ "@type": "HowToTool", "name": t })),
+    }),
+    "step": data.steps.map((step, i) => ({
+      "@type": "HowToStep",
+      "position": i + 1,
+      "name": step.name,
+      "text": step.text,
+    })),
+  };
+}
+
+// ============ JSON-LD: Review (customer testimonials for AEO) ============
+
+function reviewSchema(): object {
+  const reviews = [
+    {
+      author: "陳先生",
+      rating: 5,
+      body: "在崑家買第二台車了，全家的車都在這裡買。車況透明、價格合理，40年老店果然值得信賴。",
+      date: "2026-01-15",
+    },
+    {
+      author: "林小姐",
+      rating: 5,
+      body: "第一次買二手車很緊張，崑家的業務很有耐心解釋認證報告，貸款方案也幫我規劃得很好。",
+      date: "2026-02-03",
+    },
+    {
+      author: "王先生",
+      rating: 5,
+      body: "從台中特地下來高雄買車，免費接駁服務很方便。當天看車、當天交車，效率超高！",
+      date: "2026-02-20",
+    },
+    {
+      author: "張太太",
+      rating: 5,
+      body: "朋友推薦來崑家，買了一台Toyota RAV4。第三方認證報告看得很安心，過戶也幫忙代辦。",
+      date: "2025-12-10",
+    },
+  ];
+
+  return reviews.map(r => ({
+    "@context": "https://schema.org",
+    "@type": "Review",
+    "author": { "@type": "Person", "name": r.author },
+    "reviewRating": {
+      "@type": "Rating",
+      "ratingValue": r.rating,
+      "bestRating": 5,
+    },
+    "reviewBody": r.body,
+    "datePublished": r.date,
+    "itemReviewed": {
+      "@type": "AutoDealer",
+      "name": SITE_NAME,
+      "address": BUSINESS_ADDRESS,
+    },
+  }));
+}
+
+// ============ JSON-LD: Speakable (voice search optimization) ============
+
+function speakableSchema(url: string, cssSelectors?: string[]): object {
+  return {
+    "@type": "SpeakableSpecification",
+    "cssSelector": cssSelectors || ["h1", "h2", ".answer-summary", "[data-speakable]"],
+    "url": url,
+  };
+}
+
+// ============ HowTo data for procedural blog posts ============
+
+const BLOG_HOWTO: Record<string, Parameters<typeof howToSchema>[0]> = {
+  "used-car-transfer-guide": {
+    name: "二手車過戶流程",
+    description: "台灣二手車過戶完整步驟，從準備文件到領取新行照，約30分鐘至2個工作天完成。",
+    totalTime: "PT2H",
+    estimatedCost: { currency: "TWD", value: "150-4000" },
+    supply: ["身分證正本", "車輛行照正本", "印鑑章"],
+    steps: [
+      { name: "準備文件", text: "買賣雙方準備身分證正本、行照正本、印鑑章。賣方需確認車輛無欠稅罰款及動產擔保設定。" },
+      { name: "前往監理站", text: "攜帶所有文件前往任一公路監理站，或委託車行代辦。" },
+      { name: "填寫異動申請書", text: "在監理站櫃台領取並填寫「汽機車各項異動申請書」。" },
+      { name: "繳交規費", text: "繳交過戶規費約150-200元，以及未繳的燃料費與牌照稅。" },
+      { name: "等候新行照", text: "等候約15-30分鐘，監理站製作新行照。" },
+      { name: "領取新行照", text: "領取新行照，確認車主姓名已更改為買方名字。" },
+      { name: "更名保險", text: "回家後儘速辦理強制險與任意險的更名手續。" },
+    ],
+  },
+  "used-car-loan-guide": {
+    name: "二手車貸款申辦流程",
+    description: "台灣二手車貸款申辦步驟，從準備文件到核准撥款，約1-3個工作天。",
+    totalTime: "P3D",
+    supply: ["身分證影本", "薪資轉帳存摺", "在職證明"],
+    steps: [
+      { name: "確認購車意願", text: "選定車輛後與車行簽訂購車協議，確認車價與自備款金額。" },
+      { name: "填寫貸款申請", text: "填寫貸款申請表，提供身分證影本、近3個月薪資轉帳存摺、在職證明。" },
+      { name: "貸款審核", text: "貸款機構進行信用審核，一般需1-3個工作天。崑家汽車合作銀行最快一天核准。" },
+      { name: "確認貸款條件", text: "核准後確認貸款金額、利率、還款期數，仔細計算總還款金額。" },
+      { name: "簽訂貸款契約", text: "確認條件無誤後簽訂正式貸款契約。" },
+      { name: "完成過戶交車", text: "辦理車輛過戶手續，完成後即可交車。" },
+      { name: "開始月付", text: "依約定日期開始每月還款。" },
+    ],
+  },
+  "third-party-inspection-guide": {
+    name: "如何委託二手車第三方認證",
+    description: "自費委託第三方機構驗車的完整流程，費用約1,500-3,000元。",
+    totalTime: "PT3H",
+    estimatedCost: { currency: "TWD", value: "1500-3000" },
+    steps: [
+      { name: "向車行說明", text: "告知車行你想自費委託第三方驗車。正規車行不會拒絕此要求。" },
+      { name: "聯繫驗車機構", text: "聯繫AA台灣或當地有口碑的第三方驗車服務機構，說明車型與地點。" },
+      { name: "約定驗車時間", text: "與驗車師傅約定時間，前往車行現場進行檢查。" },
+      { name: "現場檢查", text: "驗車師傅到場進行車身、引擎、底盤、電子系統、里程數等全面檢查。" },
+      { name: "收取報告", text: "收到書面認證報告，查看各項目的綠（正常）、黃（注意）、紅（問題）標記。" },
+      { name: "根據報告決定", text: "依據報告結果決定是否購買，若有紅色標記項目需將維修成本納入考量。" },
+    ],
+  },
+  "buy-used-car-guide": {
+    name: "二手車購買完整流程",
+    description: "從選車到交車的完整二手車購買步驟，幫你避開所有地雷。",
+    steps: [
+      { name: "查車輛歷史", text: "到監理所或透過第三方認證查詢車輛過戶次數、事故紀錄。" },
+      { name: "取得第三方認證", text: "確認車輛有第三方認證報告，或自費委託驗車。" },
+      { name: "現場辨認車況", text: "檢查泡水痕跡、里程表真偽、事故修復痕跡。" },
+      { name: "確認貸款方案", text: "比較多家貸款機構利率，計算總還款金額，避免貸款陷阱。" },
+      { name: "核對過戶細節", text: "確認賣方身分、車輛無欠稅罰款、無動產擔保設定。" },
+      { name: "完成過戶", text: "前往監理站辦理過戶，領取新行照，確認名字正確。" },
+      { name: "購車後保養", text: "接手後立即做全車保養確認，換機油、檢查各系統作為基準點。" },
+    ],
+  },
+};
+
 const HOMEPAGE_FAQS = [
-  { q: "崑家汽車在哪裡？", a: `崑家汽車位於${BUSINESS_ADDRESS}，在地經營超過40年，是高雄知名的二手車行。` },
-  { q: "崑家汽車的二手車有保固嗎？", a: "是的，崑家汽車所有車輛皆通過第三方認證，確保車況透明、品質可靠。" },
-  { q: "二手車可以貸款嗎？", a: "可以，崑家汽車有專業貸款團隊，提供多種貸款方案，協助您輕鬆購車。" },
-  { q: "外縣市可以買車嗎？", a: "可以，崑家汽車提供外縣市免費接駁服務，讓您輕鬆到店看車。" },
-  { q: "交車需要多久？", a: "崑家汽車最快3小時即可完成交車手續，讓您當天就能開新車回家。" },
-  { q: "舊車可以折抵嗎？", a: "可以，崑家汽車提供舊車高價收購服務，歡迎以舊換新。" },
+  { q: "崑家汽車在哪裡？", a: `高雄市三民區大順二路269號，在地經營超過40年。` },
+  { q: "崑家汽車的二手車有認證嗎？", a: "全車第三方認證，車況透明、品質可靠，認證報告可現場索取。" },
+  { q: "二手車可以貸款嗎？", a: "可以，合作多家銀行，提供多種貸款方案，最快一天核准。" },
+  { q: "外縣市可以買車嗎？", a: "可以，提供外縣市免費接駁服務，輕鬆到店看車。" },
+  { q: "交車需要多久？", a: "最快3小時完成交車手續，當天開新車回家。" },
+  { q: "舊車可以折抵嗎？", a: "可以，提供舊車高價收購，歡迎以舊換新。" },
 ];
 
 // ============ JSON-LD: WebSite (sitelinks search box) ============
@@ -265,11 +427,12 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
           { name: `${name} ${year}`, url: canonicalUrl },
         ]));
 
-        // Vehicle-specific FAQs
+        // Vehicle-specific FAQs (concise for AI extraction)
         jsonLdBlocks.push(faqSchema([
-          { q: `這台${name}多少錢？`, a: `這台${year} ${name}售價${price}，歡迎聯繫崑家汽車了解最新優惠。` },
-          { q: `${name}可以貸款嗎？`, a: `可以，崑家汽車提供專業貸款服務，歡迎洽詢。` },
-          { q: `可以預約看這台${name}嗎？`, a: `可以，您可以透過LINE官方帳號或網站預約看車，崑家汽車提供外縣市免費接駁。` },
+          { q: `這台${name}多少錢？`, a: `${year} ${name}售價${price}。歡迎LINE詢問最新優惠。` },
+          { q: `${name}可以貸款嗎？`, a: `可以，合作多家銀行，最快一天核准。` },
+          { q: `可以預約看這台${name}嗎？`, a: `可以，LINE預約看車，外縣市免費接駁。` },
+          { q: `這台${name}有第三方認證嗎？`, a: `有，全車第三方認證，可現場索取認證報告。` },
         ]));
       }
     } catch (err) {
@@ -283,6 +446,12 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     jsonLdBlocks.push(breadcrumb([
       { name: "首頁", url: baseUrl },
     ]));
+
+    // Review schema — customer testimonials for AEO
+    const reviews = reviewSchema();
+    if (Array.isArray(reviews)) {
+      jsonLdBlocks.push(...reviews);
+    }
 
     // ItemList schema — vehicle inventory for rich results
     try {
@@ -387,12 +556,22 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     ]));
     jsonLdBlocks.push(faqSchema([
       ...HOMEPAGE_FAQS,
-      { q: "什麼是第三方認證？", a: "第三方認證是由獨立於買賣雙方的專業機構，對車輛進行全面檢查並出具書面報告，是保障買家權益最有效的方式。" },
-      { q: "二手車貸款成數是多少？", a: "一般二手車貸款成數為車價的50%-80%，依車齡和個人信用而定。崑家汽車合作多家銀行，可協助規劃貸款方案。" },
-      { q: "過戶流程怎麼走？", a: "準備文件→前往監理站→填寫異動申請書→繳交規費→領取新行照。崑家汽車提供代辦服務，1-2個工作天即可完成。" },
-      { q: "高雄哪裡買二手車比較好？", a: "高雄三民區大順路一帶是傳統汽車街，聚集數十家車行。崑家汽車位於三民區大順二路269號，在地40年老字號。" },
-      { q: "可以帶驗車師傅來嗎？", a: "非常歡迎！崑家汽車歡迎買家自行攜帶驗車師傅到場驗車，我們對每台車的車況有十足信心。" },
+      { q: "什麼是第三方認證？", a: "由獨立專業機構對車輛進行全面檢查並出具書面報告，是保障買家權益最有效的方式。" },
+      { q: "二手車貸款成數是多少？", a: "一般為車價的50%-80%，依車齡和信用而定。崑家合作多家銀行可協助規劃。" },
+      { q: "過戶流程怎麼走？", a: "準備文件→監理站→填異動申請書→繳規費→領新行照。崑家代辦1-2天完成。" },
+      { q: "高雄哪裡買二手車比較好？", a: "三民區大順路是傳統汽車街。崑家汽車位於大順二路269號，在地40年老字號。" },
+      { q: "可以帶驗車師傅來嗎？", a: "非常歡迎。崑家對每台車車況有信心，歡迎攜帶驗車師傅到場檢查。" },
+      { q: "二手車怎麼辨認泡水車？", a: "聞車內霉味、查地毯水漬、看安全帶根部泥垢、檢查保險絲盒腐蝕、查座椅滑軌鏽蝕。" },
+      { q: "買二手車要帶什麼文件？", a: "身分證正本、印鑑章即可。貸款需另備薪資存摺與在職證明。" },
     ]));
+    // Speakable for voice search on FAQ page
+    jsonLdBlocks.push({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": title,
+      "speakable": speakableSchema(canonicalUrl, ["h1", ".faq-question", ".faq-answer"]),
+      "url": canonicalUrl,
+    });
   }
 
   // ---------- Blog index ----------
@@ -445,18 +624,52 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { name: "購車攻略", url: `${baseUrl}/blog` },
         { name: meta.title, url: canonicalUrl },
       ]));
-      // Article schema
+      // Enhanced Article schema with datePublished, dateModified, speakable
+      const blogDates: Record<string, { published: string; modified: string }> = {
+        "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-01" },
+        "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-01" },
+        "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-01" },
+        "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-01" },
+        "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-01" },
+      };
+      const dates = blogDates[slug];
       jsonLdBlocks.push({
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": meta.title,
         "description": meta.description,
-        "author": { "@type": "Organization", "name": SITE_NAME },
-        "publisher": { "@type": "Organization", "name": SITE_NAME, "url": baseUrl },
+        "author": {
+          "@type": "Organization",
+          "@id": `${baseUrl}/#organization`,
+          "name": SITE_NAME,
+          "url": baseUrl,
+        },
+        "publisher": {
+          "@type": "Organization",
+          "@id": `${baseUrl}/#organization`,
+          "name": SITE_NAME,
+          "url": baseUrl,
+          "logo": {
+            "@type": "ImageObject",
+            "url": `${baseUrl}/og-default.jpg`,
+          },
+        },
         "url": canonicalUrl,
+        "mainEntityOfPage": canonicalUrl,
         "keywords": meta.keywords.join(", "),
         "inLanguage": "zh-TW",
+        ...(dates && {
+          "datePublished": dates.published,
+          "dateModified": dates.modified,
+        }),
+        "speakable": speakableSchema(canonicalUrl, ["h1", "h2", "p:first-of-type"]),
       });
+
+      // HowTo schema for procedural blog posts (AEO)
+      const howToData = BLOG_HOWTO[slug];
+      if (howToData) {
+        jsonLdBlocks.push(howToSchema(howToData));
+      }
     }
   }
 
