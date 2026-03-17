@@ -132,11 +132,11 @@ function FaqAccordion({ item, isOpen, onToggle }: { item: FaqItem; isOpen: boole
       >
         <HelpCircle className={`h-4 w-4 mt-0.5 shrink-0 transition-colors ${isOpen ? "text-primary" : "text-muted-foreground"}`} />
         <div className="flex-1">
-          <h3 className={`text-sm font-medium ${isOpen ? "text-primary" : "text-foreground"}`}>
+          <h3 className={`faq-question text-sm font-medium ${isOpen ? "text-primary" : "text-foreground"}`} data-speakable>
             {item.question}
           </h3>
           {isOpen && (
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            <p className="faq-answer mt-2 text-sm text-muted-foreground leading-relaxed" data-speakable>
               {item.answer}
             </p>
           )}

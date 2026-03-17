@@ -77,7 +77,17 @@ function autoDealer(): object {
       "opens": "09:00",
       "closes": "21:00",
     },
-    "sameAs": [LINE_OA_URL],
+    "sameAs": [
+      LINE_OA_URL,
+      "https://maps.google.com/?cid=崑家汽車",
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": BUSINESS_PHONE,
+      "contactType": "sales",
+      "areaServed": "TW",
+      "availableLanguage": ["zh-TW"],
+    },
     "priceRange": "$$",
     "image": `${getBaseUrl()}/og-default.jpg`,
     "areaServed": {
@@ -101,6 +111,28 @@ function autoDealer(): object {
       "reviewCount": "89",
     },
     "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車"],
+    "makesOffer": [
+      {
+        "@type": "Offer",
+        "itemOffered": { "@type": "Service", "name": "二手車買賣", "description": "精選各大品牌優質中古車，全車第三方認證。" },
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": { "@type": "Service", "name": "汽車貸款服務", "description": "合作多家銀行，最快一天核准，提供多種方案。" },
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": { "@type": "Service", "name": "二手車過戶代辦", "description": "代辦過戶不收手續費，1-2個工作天完成。" },
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": { "@type": "Service", "name": "外縣市免費接駁", "description": "台中以南免費接駁到店看車服務。" },
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": { "@type": "Service", "name": "舊車收購", "description": "舊車高價收購，以舊換新降低成本。" },
+      },
+    ],
   };
 }
 
@@ -362,13 +394,16 @@ const HOMEPAGE_FAQS = [
 // ============ JSON-LD: WebSite (sitelinks search box) ============
 
 function websiteSchema(): object {
+  const baseUrl = getBaseUrl();
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${baseUrl}/#website`,
     "name": SITE_NAME,
-    "url": getBaseUrl(),
+    "url": baseUrl,
     "description": SITE_DESCRIPTION,
     "inLanguage": "zh-TW",
+    "publisher": { "@id": `${baseUrl}/#organization` },
   };
 }
 
@@ -453,6 +488,17 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       jsonLdBlocks.push(...reviews);
     }
 
+    // WebPage + Speakable for voice search on homepage
+    jsonLdBlocks.push({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": title,
+      "description": description,
+      "speakable": speakableSchema(`${baseUrl}/`, ["h1", ".answer-summary", "[data-speakable]"]),
+      "url": `${baseUrl}/`,
+      "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+    });
+
     // ItemList schema — vehicle inventory for rich results
     try {
       const allVehicles = await db.getAllVehicles();
@@ -518,10 +564,10 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { name: `${brand} 二手車`, url: canonicalUrl },
       ]));
       jsonLdBlocks.push(faqSchema([
-        { q: `高雄哪裡買 ${brand} 二手車？`, a: `崑家汽車位於高雄市三民區大順二路269號，精選${brand}各車型二手車，在地經營40年，歡迎到店看車。` },
-        { q: `${brand} 二手車怎麼買？`, a: `可至崑家汽車直接看${brand}在售車款，所有車輛均通過第三方認證，提供貸款服務。歡迎攜帶驗車師傅現場驗車。` },
-        { q: `${brand} 二手車可以貸款嗎？`, a: `可以，崑家汽車合作多家銀行，提供多種貸款方案，${brand}車款皆適用。最快一個工作天核准。` },
-        { q: `${brand} 二手車行情價多少？`, a: `${brand}二手車價格依車型、年份、里程而異，崑家汽車實車實價，不灌水不隱藏費用。歡迎透過LINE詢問最新庫存與報價。` },
+        { q: `高雄哪裡買 ${brand} 二手車？`, a: `崑家汽車，高雄三民區大順二路269號，在地40年，精選${brand}各車型。` },
+        { q: `${brand} 二手車有認證嗎？`, a: `有，全車第三方認證，歡迎攜帶驗車師傅現場驗車。` },
+        { q: `${brand} 二手車可以貸款嗎？`, a: `可以，合作多家銀行，${brand}車款皆適用，最快一天核准。` },
+        { q: `${brand} 二手車行情價多少？`, a: `依車型、年份、里程而異。實車實價，LINE詢問最新庫存報價。` },
       ]));
     }
   }
@@ -542,6 +588,12 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       jsonLdBlocks.push(breadcrumb([
         { name: "首頁", url: baseUrl },
         { name: `${rangeMeta.label}二手車`, url: canonicalUrl },
+      ]));
+      // Price range FAQ for AEO
+      jsonLdBlocks.push(faqSchema([
+        { q: `高雄${rangeMeta.label}二手車推薦哪裡買？`, a: `崑家汽車，三民區大順二路269號。${rangeMeta.label}價位車款齊全，全車第三方認證。` },
+        { q: `${rangeMeta.label}二手車可以貸款嗎？`, a: `可以，合作多家銀行，最快一天核准，多種方案可選。` },
+        { q: `${rangeMeta.label}二手車有哪些品牌？`, a: `Toyota、Honda、BMW、Benz、Mazda等品牌齊全，每週更新庫存。` },
       ]));
     }
   }
@@ -696,6 +748,9 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <meta name="twitter:description" content="${escAttr(description)}" />
     <meta name="twitter:image" content="${escAttr(ogImage)}" />
 
+    <!-- Freshness signal -->
+    <meta property="article:modified_time" content="${new Date().toISOString()}" />
+
     <!-- Additional SEO -->
     <meta name="geo.region" content="TW-KHH" />
     <meta name="geo.placename" content="高雄市三民區" />
@@ -722,11 +777,79 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
 export function createSeoRouter(): Router {
   const router = Router();
 
-  // robots.txt
+  // robots.txt — explicitly allow AI crawlers for AEO citation
   router.get("/robots.txt", (_req, res) => {
     const baseUrl = getBaseUrl();
     res.type("text/plain").send(
-`User-agent: *
+`# === AI Search Crawlers (Allow for AEO citations) ===
+# OpenAI
+User-agent: GPTBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Claude-User
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Google AI
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: GoogleOther
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Microsoft / Bing
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Meta AI
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# === Default crawler rules ===
+User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
@@ -737,7 +860,7 @@ Disallow: /book-visit
 # Sitemap
 Sitemap: ${baseUrl}/sitemap.xml
 
-# Crawl-delay
+# Crawl-delay (only for generic crawlers)
 Crawl-delay: 1
 `
     );

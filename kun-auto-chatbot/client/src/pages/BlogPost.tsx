@@ -69,7 +69,7 @@ export default function BlogPost() {
         <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-10">
           {/* Main content */}
           <article>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6 p-4 bg-muted/40 rounded-lg border-l-4 border-primary">
+            <p className="answer-summary text-sm text-muted-foreground leading-relaxed mb-6 p-4 bg-muted/40 rounded-lg border-l-4 border-primary" data-speakable>
               {post.description}
             </p>
 
