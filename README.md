@@ -936,13 +936,17 @@ A comprehensive code review was performed on all 30+ source files in the Agent R
 
 | # | Severity | Finding | Recommendation |
 |---|----------|---------|----------------|
-| 1 | **MEDIUM** | Cookie extraction (`cookie_extract.py`) reads browser cookies for Twitter, XiaoHongShu, Bilibili | Use `--from-browser` only on your own machine. Use dedicated/secondary accounts for cookie-based platforms |
-| 2 | **MEDIUM** | Cookies stored in plaintext YAML (`~/.agent-reach/config.yaml`) | File is 0o600 by default. Do not relax permissions. Consider encrypted credential store for production |
-| 3 | **LOW** | `sync-upstream.sh` clones from GitHub over HTTPS | Script is developer-only (not run during install). Verify upstream changes before merging |
-| 4 | **LOW** | Third-party Docker images for 小紅書/抖音 (`xpzouying/xiaohongshu-mcp`, `yzfly/douyin-mcp-server`) | Audit Docker images before running. Pin to specific versions |
-| 5 | **LOW** | Proxy credentials passed via CLI argument (`agent-reach configure proxy http://user:pass@ip:port`) | Credentials may appear in shell history. Use env vars or config file directly |
-| 6 | **INFO** | No dependency pinning (uses `>=` ranges in pyproject.toml) | For production, pin exact versions with lock file |
-| 7 | **INFO** | `feedparser` dependency pulls `sgmllib3k` which has legacy setuptools compatibility issues | Non-security issue, build environment workaround needed |
+| 1 | **HIGH** | Default install (`--env=auto` without `--safe`) silently extracts browser cookies for Twitter, XiaoHongShu, Bilibili without per-platform consent | **Always use `--safe` or `--dry-run` first.** We installed with `--safe` mode |
+| 2 | **HIGH** | Node.js auto-installer downloads and executes remote shell script from `deb.nodesource.com` — supply chain risk | Install Node.js through your package manager instead. Safe mode skips this |
+| 3 | **HIGH** | Uses `--break-system-packages` pip flag, bypassing PEP 668 protections on managed Python envs | Only triggered for WeChat deps. Safe mode skips it. Use venv for isolation |
+| 4 | **MEDIUM** | Cookie extraction (`cookie_extract.py`) reads browser cookies for Twitter, XiaoHongShu, Bilibili | Use `--from-browser` only on your own machine. Use dedicated/secondary accounts |
+| 5 | **MEDIUM** | Cookies stored in plaintext YAML (`~/.agent-reach/config.yaml`) | File is 0o600 by default. Do not relax permissions. Consider encrypted credential store for production |
+| 6 | **MEDIUM** | V2EX channel does not URL-encode `node_name`/`username` params — query string manipulation possible | Use `urllib.parse.quote()` for user input in URLs |
+| 7 | **LOW** | `sync-upstream.sh` clones from GitHub over HTTPS | Script is developer-only (not run during install). Verify upstream changes before merging |
+| 8 | **LOW** | Third-party Docker images for 小紅書/抖音 (`xpzouying/xiaohongshu-mcp`, `yzfly/douyin-mcp-server`) | Audit Docker images before running. Pin to specific versions |
+| 9 | **LOW** | Proxy credentials passed via CLI argument — visible in shell history and `/proc` | Use env vars or edit config file directly |
+| 10 | **LOW** | `Config.to_dict()` reveals first 8 chars of masked secrets | Short tokens could be partially reconstructed |
+| 11 | **INFO** | No dependency pinning (uses `>=` ranges in pyproject.toml) | For production, pin exact versions with lock file |
 
 ### Files Reviewed
 
@@ -961,7 +965,7 @@ docs/install.md             — Install guide with security boundaries
 
 ### Summary
 
-Agent Reach is a well-structured, transparent tool. It does not phone home, does not collect telemetry, and does not transmit credentials anywhere. All internet access happens through well-known upstream tools (yt-dlp, xreach, curl, mcporter) that the user can independently audit. The main security consideration is browser cookie handling — use dedicated accounts for cookie-based platforms and keep `~/.agent-reach/config.yaml` at `0o600` permissions.
+Agent Reach is a well-structured, transparent tool. It does not phone home, does not collect telemetry, and does not transmit credentials anywhere. All internet access happens through well-known upstream tools (yt-dlp, xreach, curl, mcporter) that the user can independently audit. **Critical: always use `--safe` mode** to prevent silent cookie extraction and remote script execution. We installed with safe mode enabled. Keep `~/.agent-reach/config.yaml` at `0o600` permissions and use dedicated accounts for cookie-based platforms.
 
 ---
 
