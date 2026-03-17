@@ -676,25 +676,38 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { name: "購車攻略", url: `${baseUrl}/blog` },
         { name: meta.title, url: canonicalUrl },
       ]));
-      // Enhanced Article schema with datePublished, dateModified, speakable
+      // Enhanced Article schema with datePublished, dateModified, speakable, E-E-A-T author
       const blogDates: Record<string, { published: string; modified: string }> = {
-        "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-01" },
-        "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-01" },
-        "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-01" },
-        "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-01" },
-        "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-01" },
+        "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-17" },
+        "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-17" },
+        "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-17" },
+        "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-17" },
+        "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-17" },
       };
       const dates = blogDates[slug];
+
+      // Person schema for author E-E-A-T (named expert > generic org = higher citation)
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": `${baseUrl}/#author-chen`,
+        "name": "陳崑家",
+        "jobTitle": "創辦人 / 資深二手車鑑定師",
+        "worksFor": { "@id": `${baseUrl}/#organization` },
+        "knowsAbout": ["二手車買賣", "中古車鑑定", "汽車貸款", "車輛過戶", "第三方認證"],
+        "description": "高雄崑家汽車創辦人，40年以上二手車買賣經驗，專精車輛鑑定與貸款規劃。",
+      });
+
       jsonLdBlocks.push({
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": meta.title,
         "description": meta.description,
         "author": {
-          "@type": "Organization",
-          "@id": `${baseUrl}/#organization`,
-          "name": SITE_NAME,
-          "url": baseUrl,
+          "@type": "Person",
+          "@id": `${baseUrl}/#author-chen`,
+          "name": "陳崑家",
+          "jobTitle": "創辦人 / 資深二手車鑑定師",
         },
         "publisher": {
           "@type": "Organization",
@@ -707,14 +720,18 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
           },
         },
         "url": canonicalUrl,
-        "mainEntityOfPage": canonicalUrl,
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": canonicalUrl,
+        },
         "keywords": meta.keywords.join(", "),
         "inLanguage": "zh-TW",
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
         ...(dates && {
           "datePublished": dates.published,
           "dateModified": dates.modified,
         }),
-        "speakable": speakableSchema(canonicalUrl, ["h1", "h2", "p:first-of-type"]),
+        "speakable": speakableSchema(canonicalUrl, ["h1", "h2", ".answer-summary", "[data-speakable]"]),
       });
 
       // HowTo schema for procedural blog posts (AEO)
@@ -862,6 +879,56 @@ Sitemap: ${baseUrl}/sitemap.xml
 
 # Crawl-delay (only for generic crawlers)
 Crawl-delay: 1
+`
+    );
+  });
+
+  // llms.txt — AI-readable site map for LLMs (proposed standard by Answer.AI)
+  router.get("/llms.txt", async (_req, res) => {
+    const baseUrl = getBaseUrl();
+    let vehicleSection = "";
+    try {
+      const vehicles = await db.getAllVehicles();
+      const available = vehicles.filter((v: any) => v.status === "available");
+      vehicleSection = available.slice(0, 15).map((v: any) =>
+        `- [${v.brand} ${v.model} ${v.modelYear || ""}](${baseUrl}/vehicle/${v.id}): ${v.priceDisplay || v.price + "萬"}${v.mileage ? "、" + v.mileage : ""}`
+      ).join("\n");
+    } catch { /* ignore */ }
+
+    res.type("text/plain; charset=utf-8").send(
+`# 崑家汽車 KUN MOTORS
+
+> 高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。提供Toyota、Honda、BMW、Benz等品牌優質中古車，貸款方案、外縣市免費接駁、最快3小時交車。位於高雄市三民區大順二路269號。
+
+崑家汽車（KUN MOTORS）是高雄市三民區的二手車經銷商，創立超過40年。所有車輛皆通過獨立第三方機構認證，提供書面認證報告。服務項目包含：二手車買賣、汽車貸款（合作多家銀行，最快一天核准）、過戶代辦（免手續費）、外縣市免費接駁、舊車高價收購。
+
+- 營業時間：週一至週六 09:00-21:00
+- 電話：${BUSINESS_PHONE}
+- LINE：${LINE_OA_URL}
+- 地址：${BUSINESS_ADDRESS}
+
+## 購車攻略（Blog）
+- [買二手車必看7大注意事項](${baseUrl}/blog/buy-used-car-guide): 車輛歷史查詢、第三方認證、泡水車辨認、里程表作假、貸款陷阱完整指南
+- [二手車貸款全攻略 2026](${baseUrl}/blog/used-car-loan-guide): 貸款成數、利率比較、申辦流程、所需文件
+- [高雄買二手車推薦：崑家汽車評價](${baseUrl}/blog/kaohsiung-used-car-guide): 高雄二手車市場、崑家汽車六大特色
+- [二手車第三方認證完整指南](${baseUrl}/blog/third-party-inspection-guide): 認證意義、檢查項目、費用、如何閱讀報告
+- [二手車過戶流程與費用 2026](${baseUrl}/blog/used-car-transfer-guide): 過戶步驟、所需文件、費用明細
+
+## 常見問題
+- [FAQ 常見問題](${baseUrl}/faq): 購車、貸款、認證、過戶、高雄二手車市場 21個常見問答
+
+## 依預算找車
+- [30萬以下二手車](${baseUrl}/price/under-30): 學生、新手首選平價車款
+- [30-50萬二手車](${baseUrl}/price/30-50): 小家庭入門首選
+- [50-80萬二手車](${baseUrl}/price/50-80): 品質與價格兼顧
+- [80萬以上二手車](${baseUrl}/price/over-80): BMW、Benz、Lexus豪華車款
+
+## 在售車輛
+${vehicleSection || "- 請訪問首頁查看最新庫存"}
+
+## Optional
+- [首頁](${baseUrl}/): 全部在售車輛一覽
+- [購車攻略列表](${baseUrl}/blog): 所有文章列表
 `
     );
   });

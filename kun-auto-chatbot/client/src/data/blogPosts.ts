@@ -16,7 +16,7 @@ export const blogPosts: BlogPost[] = [
     title: "買二手車必看！7大注意事項，避免踩雷完整指南",
     description: "買二手車前必看的7大注意事項，從車輛歷史查詢、第三方認證、泡水車辨認到貸款陷阱，完整教學幫你避開所有地雷。",
     publishedAt: "2026-01-15",
-    updatedAt: "2026-03-01",
+    updatedAt: "2026-03-17",
     author: "崑家汽車",
     category: "購車指南",
     keywords: ["買二手車", "二手車注意事項", "中古車注意事項", "二手車踩雷", "買車指南"],
@@ -26,6 +26,27 @@ export const blogPosts: BlogPost[] = [
 <h2>前言：買二手車為什麼容易踩雷？</h2>
 <p>二手車市場水很深。一台外觀漂亮、里程數低的車，可能藏著嚴重的機械問題、事故紀錄，甚至是泡水車。根據統計，台灣每年二手車糾紛案件超過數千件，大多數都是買家忽略了基本的檢查步驟。</p>
 <p>本篇指南整理了7大必看注意事項，不論你是第一次買車還是有經驗的老手，讀完這篇再去看車，保證少走很多冤枉路。</p>
+
+<h3>7大注意事項一覽表</h3>
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">項目</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">風險等級</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">檢查方式</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">費用</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">車輛歷史</td><td style="padding:8px;border:1px solid #e5e7eb;">高</td><td style="padding:8px;border:1px solid #e5e7eb;">監理所查詢/第三方報告</td><td style="padding:8px;border:1px solid #e5e7eb;">免費~300元</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">第三方認證</td><td style="padding:8px;border:1px solid #e5e7eb;">高</td><td style="padding:8px;border:1px solid #e5e7eb;">獨立機構檢測</td><td style="padding:8px;border:1px solid #e5e7eb;">1,500~3,000元</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">泡水車辨認</td><td style="padding:8px;border:1px solid #e5e7eb;">極高</td><td style="padding:8px;border:1px solid #e5e7eb;">聞味/看地毯/查保險絲</td><td style="padding:8px;border:1px solid #e5e7eb;">免費</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">里程表真偽</td><td style="padding:8px;border:1px solid #e5e7eb;">高</td><td style="padding:8px;border:1px solid #e5e7eb;">ECU讀取/保養紀錄</td><td style="padding:8px;border:1px solid #e5e7eb;">含認證費</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">事故車辨認</td><td style="padding:8px;border:1px solid #e5e7eb;">極高</td><td style="padding:8px;border:1px solid #e5e7eb;">鈑金漆面/焊接痕跡</td><td style="padding:8px;border:1px solid #e5e7eb;">含認證費</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">貸款條件</td><td style="padding:8px;border:1px solid #e5e7eb;">中</td><td style="padding:8px;border:1px solid #e5e7eb;">比較多家利率</td><td style="padding:8px;border:1px solid #e5e7eb;">免費</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">過戶細節</td><td style="padding:8px;border:1px solid #e5e7eb;">中</td><td style="padding:8px;border:1px solid #e5e7eb;">確認證件/欠稅/設定</td><td style="padding:8px;border:1px solid #e5e7eb;">150~200元</td></tr>
+  </tbody>
+</table>
 
 <h2>注意事項 1：一定要查車輛歷史紀錄</h2>
 <p>在台灣，你可以透過監理所或合法平台查詢車輛的過戶次數、事故紀錄、是否曾被查扣等資訊。<strong>過戶次數過多的車要特別小心</strong>，可能頻繁易手代表這台車有潛在問題。</p>
@@ -121,7 +142,7 @@ export const blogPosts: BlogPost[] = [
     title: "二手車貸款全攻略：利率、條件、申辦流程一次看懂（2026年最新）",
     description: "完整解析二手車貸款：貸款成數、利率比較、所需文件、申辦流程與注意事項。2026年最新資訊，幫你輕鬆規劃購車預算。",
     publishedAt: "2026-01-22",
-    updatedAt: "2026-03-01",
+    updatedAt: "2026-03-17",
     author: "崑家汽車",
     category: "財務規劃",
     keywords: ["二手車貸款", "中古車貸款", "二手車利率", "購車貸款", "中古車分期"],
@@ -170,12 +191,25 @@ export const blogPosts: BlogPost[] = [
 
 <h2>2026年二手車貸款利率行情</h2>
 <p>目前台灣主流的二手車貸款利率參考範圍如下（實際利率依個人信用與車況而定）：</p>
-<ul>
-  <li><strong>銀行車貸</strong>：年利率約 2.5%–5%（審核嚴格，信用要求高）</li>
-  <li><strong>車貸公司（如裕融、中租）</strong>：年利率約 4%–8%</li>
-  <li><strong>車行自辦貸款</strong>：年利率約 5%–10%（審核寬鬆，速度快）</li>
-</ul>
-<p><strong>注意：</strong>年利率超過 12% 屬於偏高，若有業者開出這樣的條件，建議多方比較再決定。</p>
+
+<h3>三大貸款管道比較表</h3>
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">貸款管道</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">年利率</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">審核嚴格度</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">核准速度</th>
+      <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">適合對象</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">銀行車貸</td><td style="padding:8px;border:1px solid #e5e7eb;">2.5%–5%</td><td style="padding:8px;border:1px solid #e5e7eb;">嚴格</td><td style="padding:8px;border:1px solid #e5e7eb;">3-5天</td><td style="padding:8px;border:1px solid #e5e7eb;">信用良好、有穩定收入</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">車貸公司（裕融、中租）</td><td style="padding:8px;border:1px solid #e5e7eb;">4%–8%</td><td style="padding:8px;border:1px solid #e5e7eb;">中等</td><td style="padding:8px;border:1px solid #e5e7eb;">1-3天</td><td style="padding:8px;border:1px solid #e5e7eb;">信用一般、自營業者</td></tr>
+    <tr><td style="padding:8px;border:1px solid #e5e7eb;">車行自辦貸款</td><td style="padding:8px;border:1px solid #e5e7eb;">5%–10%</td><td style="padding:8px;border:1px solid #e5e7eb;">寬鬆</td><td style="padding:8px;border:1px solid #e5e7eb;">當天</td><td style="padding:8px;border:1px solid #e5e7eb;">信用瑕疵、急需用車</td></tr>
+  </tbody>
+</table>
+<p><strong>注意：</strong>年利率超過 12% 屬於偏高，若有業者開出這樣的條件，建議多方比較再決定。崑家汽車合作多家銀行，可協助規劃最適合的方案，最快一天核准。</p>
 
 <h2>申辦二手車貸款所需文件</h2>
 <p>一般申辦時需準備：</p>
@@ -236,7 +270,7 @@ export const blogPosts: BlogPost[] = [
     title: "高雄買二手車推薦：在地40年崑家汽車，正派經營完整評價",
     description: "想在高雄買二手車？本文介紹高雄二手車市場生態、挑選車行的標準，以及在地40年的崑家汽車完整評價與服務特色。",
     publishedAt: "2026-02-01",
-    updatedAt: "2026-03-01",
+    updatedAt: "2026-03-17",
     author: "崑家汽車",
     category: "車行評價",
     keywords: ["高雄二手車", "高雄二手車行", "高雄中古車推薦", "高雄買車", "三民區二手車"],
@@ -318,7 +352,7 @@ export const blogPosts: BlogPost[] = [
     title: "二手車第三方認證是什麼？買中古車一定要看的完整指南",
     description: "詳解二手車第三方認證的意義、認證項目、如何閱讀認證報告，以及未認證車輛的潛在風險。買二手車前必讀。",
     publishedAt: "2026-02-10",
-    updatedAt: "2026-03-01",
+    updatedAt: "2026-03-17",
     author: "崑家汽車",
     category: "購車知識",
     keywords: ["二手車第三方認證", "中古車認證", "驗車", "二手車檢驗", "中古車保障"],
@@ -425,7 +459,7 @@ export const blogPosts: BlogPost[] = [
     title: "二手車過戶流程與費用：2026年最新完整指南",
     description: "完整解析2026年二手車過戶流程、所需文件、費用明細與注意事項。讓你輕鬆完成二手車過戶，不走冤枉路。",
     publishedAt: "2026-02-20",
-    updatedAt: "2026-03-01",
+    updatedAt: "2026-03-17",
     author: "崑家汽車",
     category: "過戶手續",
     keywords: ["二手車過戶", "中古車過戶流程", "過戶費用", "汽車過戶手續", "中古車手續"],

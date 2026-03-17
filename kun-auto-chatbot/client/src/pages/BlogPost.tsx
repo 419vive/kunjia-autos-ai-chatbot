@@ -86,8 +86,23 @@ export default function BlogPost() {
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
-            {/* Keywords */}
+            {/* Author Bio — E-E-A-T signal for AI citation */}
             <div className="mt-8 pt-6 border-t">
+              <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-[#303d4e] flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  陳
+                </div>
+                <div>
+                  <p className="font-semibold text-sm" data-speakable>陳崑家｜崑家汽車創辦人</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed" data-speakable>
+                    高雄在地超過40年二手車買賣經驗，專精車輛鑑定、貸款規劃與第三方認證制度。累計服務超過數千位車主，堅持實車實價、正派經營的理念。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Keywords */}
+            <div className="mt-6 pt-4 border-t">
               <p className="text-xs text-muted-foreground mb-2">相關關鍵字：</p>
               <div className="flex flex-wrap gap-2">
                 {post.keywords.map(k => (
