@@ -607,6 +607,9 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       { name: "常見問題", url: canonicalUrl },
     ]));
     jsonLdBlocks.push(faqSchema([
+      { q: "預約看車要付費嗎？", a: "完全免費，無任何費用或義務。來看車不滿意也沒關係。" },
+      { q: "預約後多快會有人聯絡我？", a: "一般1小時內，最慢當天營業時間內回電確認。" },
+      { q: "外縣市的客人可以預約嗎？", a: "可以，我們提供外縣市接駁服務，詳情請聯絡賴先生。" },
       ...HOMEPAGE_FAQS,
       { q: "什麼是第三方認證？", a: "由獨立專業機構對車輛進行全面檢查並出具書面報告，是保障買家權益最有效的方式。" },
       { q: "二手車貸款成數是多少？", a: "一般為車價的50%-80%，依車齡和信用而定。崑家合作多家銀行可協助規劃。" },

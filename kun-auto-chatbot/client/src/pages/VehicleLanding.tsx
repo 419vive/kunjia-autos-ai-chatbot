@@ -286,10 +286,15 @@ export default function VehicleLanding() {
           {/* Vehicle info */}
           <div className="px-5 py-4">
             <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
-            <p className="text-white/40 text-xs mb-3">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+            <p className="text-white/40 text-xs mb-2">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+
+            {/* Trust line — below title/price area */}
+            <p className="flex items-center gap-1 text-green-400 text-xs mb-3">
+              🔒 第三方認證 · 實車實價 · 支援貸款
+            </p>
 
             {/* Specs grid */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
               {specs.map((spec, i) => (
                 <div
                   key={i}
@@ -299,6 +304,12 @@ export default function VehicleLanding() {
                   {spec.text}
                 </div>
               ))}
+            </div>
+
+            {/* Urgency / social proof line */}
+            <div className="flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2 mb-3">
+              <span className="text-base leading-none">🔥</span>
+              <p className="text-orange-400 text-xs font-medium">近期詢問熱烈，建議盡早預約看車</p>
             </div>
 
             {/* Short compelling copy */}
