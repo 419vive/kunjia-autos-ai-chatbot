@@ -169,18 +169,9 @@ export default function BookVisit() {
             <button
               type="button"
               onClick={() => setTimeMode("flexible")}
-              className={`rounded-xl border-2 p-4 text-center transition-all ${
-                timeMode === "flexible"
-                  ? "border-primary bg-primary/5"
-                  : "border-muted hover:border-muted-foreground/30"
-              }`}
+              className="rounded-xl border-2 p-4 text-center transition-all border-muted hover:border-muted-foreground/30"
             >
-              <div className={`mx-auto mb-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                timeMode === "flexible" ? "border-primary bg-primary" : "border-muted-foreground/30"
-              }`}>
-                {timeMode === "flexible" && (
-                  <div className="h-2 w-2 rounded-full bg-white" />
-                )}
+              <div className="mx-auto mb-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-muted-foreground/30">
               </div>
               <p className="text-sm font-medium">暫不確定時間</p>
             </button>
