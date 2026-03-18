@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows, Expand } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
@@ -14,9 +14,14 @@ import { useCompareList, CompareBar } from "@/components/VehicleCompare";
 import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import SeoFooter from "@/components/SeoFooter";
 import StickyBookingBar from "@/components/StickyBookingBar";
+import WelcomeBack from "@/components/WelcomeBack";
+import { TodayActivity } from "@/components/SocialProof";
+import { useScrollReveal, revealClass, staggerDelay } from "@/hooks/useScrollReveal";
 import { nanoid } from "nanoid";
 
-function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
+const FullscreenGallery = lazy(() => import("@/components/FullscreenGallery"));
+
+function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void; onOpenGallery?: (photos: string[], index: number, alt: string) => void }) {
   const [, setLocation] = useLocation();
   const photos = useMemo(() => {
     if (!vehicle.photoUrls) return [];
@@ -163,12 +168,23 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; 
             </div>
           );
         })()}
-        {/* Photo count badge */}
-        {totalPhotos > 1 && (
-          <span className="absolute top-2 right-2 flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
-            📷 {totalPhotos}
-          </span>
-        )}
+        {/* Photo count + expand */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {totalPhotos > 1 && (
+            <span className="flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
+              📷 {totalPhotos}
+            </span>
+          )}
+          {photos.length > 0 && onOpenGallery && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenGallery(photos, currentPhoto, `${vehicle.brand} ${vehicle.model}`); }}
+              className="flex items-center justify-center w-6 h-6 rounded bg-black/50 text-white hover:bg-black/70 transition-colors"
+              aria-label="全螢幕瀏覽"
+            >
+              <Expand className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
       <CardContent className="p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
@@ -257,6 +273,8 @@ export default function Home() {
   const [priceRange, setPriceRange] = useState("all");
   const compare = useCompareList();
   const [recentlyViewed] = useState<RecentlyViewedItem[]>(() => getRecentlyViewed());
+  const [galleryState, setGalleryState] = useState<{ photos: string[]; index: number; alt: string } | null>(null);
+  const openGallery = useCallback((photos: string[], index: number, alt: string) => setGalleryState({ photos, index, alt }), []);
 
   // Inline chatbot state — persist across tab close with localStorage
   const [chatOpen, setChatOpen] = useState(false);
@@ -448,6 +466,9 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Smart Welcome Back Banner */}
+      <WelcomeBack />
+
       {/* Search & Filter */}
       <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container py-3">
@@ -552,7 +573,7 @@ export default function Home() {
 
       {/* Vehicle Grid */}
       <main className="container py-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">
             在售車輛
             {!isLoading && (
@@ -561,6 +582,7 @@ export default function Home() {
               </span>
             )}
           </h2>
+          <TodayActivity className="text-muted-foreground" />
         </div>
 
         {isLoading ? (
@@ -585,7 +607,7 @@ export default function Home() {
         ) : (
           <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((v) => (
-              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} />
+              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} onOpenGallery={openGallery} />
             ))}
           </div>
         )}
@@ -627,6 +649,18 @@ export default function Home() {
       <CompareBar ids={compare.ids} onClear={compare.clear} />
 
       <StickyBookingBar />
+
+      {/* Fullscreen Gallery Modal */}
+      {galleryState && (
+        <Suspense fallback={null}>
+          <FullscreenGallery
+            photos={galleryState.photos}
+            initialIndex={galleryState.index}
+            alt={galleryState.alt}
+            onClose={() => setGalleryState(null)}
+          />
+        </Suspense>
+      )}
 
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-3">

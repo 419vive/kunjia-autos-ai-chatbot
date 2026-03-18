@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
@@ -14,8 +14,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  Expand,
 } from "lucide-react";
 import StickyBookingBar from "@/components/StickyBookingBar";
+import { ViewingNow } from "@/components/SocialProof";
+import ProactiveChatTrigger from "@/components/ProactiveChatTrigger";
+
+const FullscreenGallery = lazy(() => import("@/components/FullscreenGallery"));
 
 type DeviceType = "mobile" | "desktop";
 
@@ -111,6 +116,7 @@ export default function VehicleLanding() {
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const totalPhotos = photos.length;
 
@@ -281,12 +287,26 @@ export default function VehicleLanding() {
               <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
               <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
             </div>
+
+            {/* Fullscreen expand button */}
+            {photos.length > 0 && (
+              <button
+                onClick={() => setGalleryOpen(true)}
+                className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                aria-label="全螢幕瀏覽照片"
+              >
+                <Expand className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Vehicle info */}
           <div className="px-5 py-4">
             <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
-            <p className="text-white/40 text-xs mb-2">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-white/40 text-xs">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+              {vehicleId && <ViewingNow vehicleId={vehicleId} className="text-green-400/80" />}
+            </div>
 
             {/* Trust line — below title/price area */}
             <p className="flex items-center gap-1 text-green-400 text-xs mb-3">
@@ -389,6 +409,21 @@ export default function VehicleLanding() {
       </div>
 
       <StickyBookingBar />
+
+      {/* Proactive chat nudge after 15s */}
+      <ProactiveChatTrigger vehicleName={name} delay={15000} />
+
+      {/* Fullscreen Gallery */}
+      {galleryOpen && photos.length > 0 && (
+        <Suspense fallback={null}>
+          <FullscreenGallery
+            photos={photos}
+            initialIndex={currentPhoto}
+            alt={name}
+            onClose={() => setGalleryOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

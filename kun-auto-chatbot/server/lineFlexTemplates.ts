@@ -1191,6 +1191,10 @@ export type ConversationContext = {
   hasContact: boolean;       // Customer already provided phone
   vehicleName?: string;      // e.g., "Toyota Corolla"
   vehicleExternalId?: string;
+  // Personalization fields
+  previousVehicles?: string[];   // Vehicles user asked about before
+  messageCount?: number;         // Total messages in conversation
+  leadScore?: number;            // Current lead score
 };
 
 /**
@@ -1272,38 +1276,49 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
     });
   } else {
     // General conversation → show discovery actions
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🚗 看車庫存",
-        text: "我想看車，有什麼車可以推薦？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "💰 50萬以下",
-        text: "50萬以下有什麼好車？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "📅 預約賞車",
-        text: "我想預約看車，什麼時候方便？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "📞 聯絡我們",
-        text: "可以給我你們的聯絡方式嗎？",
-      },
-    });
+    // Personalize based on engagement level
+    if (ctx.messageCount && ctx.messageCount > 5 && ctx.leadScore && ctx.leadScore >= 40) {
+      // Engaged user → push toward conversion
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "💰 算貸款", text: "我想了解貸款方案" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "uri", label: "📞 直接撥打", uri: "tel:0936812818" },
+      });
+    } else {
+      items.push({
+        type: "action",
+        action: { type: "message", label: "🚗 看車庫存", text: "我想看車，有什麼車可以推薦？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📅 預約賞車", text: "我想預約看車，什麼時候方便？" },
+      });
+    }
+
+    // If user previously asked about vehicles, show a "back to X" button
+    if (ctx.previousVehicles && ctx.previousVehicles.length > 0) {
+      const lastCar = ctx.previousVehicles[0];
+      items.push({
+        type: "action",
+        action: { type: "message", label: `🔙 再看${lastCar.slice(0, 6)}`, text: `我想了解 ${lastCar}` },
+      });
+    } else {
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📞 聯絡我們", text: "可以給我你們的聯絡方式嗎？" },
+      });
+    }
   }
 
   // Always add FAQ at the end (pick top 2 most useful)

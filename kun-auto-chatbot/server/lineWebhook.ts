@@ -164,7 +164,7 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
             content: [
               {
                 type: "text",
-                text: '這張圖片裡有車嗎？如果有，請辨識車輛的品牌(brand)和車型(model)。只回覆 JSON 格式：{"brand":"品牌","model":"車型"}。如果無法辨識或圖中沒有車，回覆 {"brand":"","model":""}。不要回覆其他文字。',
+                text: '這張圖片裡有車嗎？如果有，請辨識車輛的品牌(brand)、車型(model)、大約年份(year)、顏色(color)和車況觀察(condition)。只回覆 JSON 格式：{"brand":"品牌","model":"車型","year":"約2020","color":"白色","condition":"外觀良好"}。如果無法辨識某項就留空字串。如果圖中沒有車，回覆 {"brand":"","model":""}。不要回覆其他文字。如果是車牌照片，嘗試辨識車牌號碼放在plate欄位。如果是行照，辨識行照上的資訊。',
               },
               {
                 type: "image_url",
@@ -191,7 +191,12 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
 
     const parsed = JSON.parse(jsonMatch[0]);
     if (parsed.brand && parsed.model) {
-      return { brand: parsed.brand, model: parsed.model };
+      const result: any = { brand: parsed.brand, model: parsed.model };
+      if (parsed.year) result.year = parsed.year;
+      if (parsed.color) result.color = parsed.color;
+      if (parsed.condition) result.condition = parsed.condition;
+      if (parsed.plate) result.plate = parsed.plate;
+      return result;
     }
     return null;
   } catch (err) {
@@ -343,9 +348,11 @@ async function processLineEvent(
           }
         } catch {}
 
-        // Create conversation for the new follower
+        // Check if this is a RETURNING user (re-follow)
         const sessionId = `line-${userId}`;
         let conversation = await db.getConversationBySessionId(sessionId);
+        const isReturning = !!conversation;
+
         if (!conversation) {
           await db.createConversation({
             sessionId,
@@ -357,8 +364,41 @@ async function processLineEvent(
           });
         }
 
-        // Send welcome + FAQ progressive messages via push API (follow events have no replyToken)
-        const welcomeMessages = buildFollowWelcomeMessages();
+        // Build appropriate welcome based on returning vs new user
+        let welcomeMessages: any[];
+
+        if (isReturning && conversation) {
+          // RETURNING USER: personalized welcome back with context
+          const greeting = customerName ? getGenderGreeting(detectGenderFromName(customerName)) : "人客";
+          const messages = await db.getMessagesByConversation(conversation.id, 20);
+          // Find last vehicle they asked about
+          const vehicleRegex = /(?:詢問|看|了解|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/;
+          let lastVehicle: string | null = null;
+          for (const msg of messages.reverse()) {
+            const match = msg.content.match(vehicleRegex);
+            if (match) { lastVehicle = match[1]; break; }
+          }
+
+          const welcomeText = lastVehicle
+            ? `${greeting}你好！歡迎回來 🎉\n\n上次你問的 ${lastVehicle} 還在喔！要不要再看看？\n\n有什麼新的需求也儘管說，阿家隨時在！`
+            : `${greeting}你好！歡迎回來 🎉\n\n有段時間沒聊了，最近有想找什麼車嗎？\n阿家隨時在，有什麼需要儘管問！`;
+
+          welcomeMessages = [
+            { type: "text", text: welcomeText, quickReply: {
+              items: [
+                { type: "action", action: { type: "message", label: "🔍 看最新車輛", text: "我想看車，有什麼車可以推薦？" } },
+                { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
+                { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+                ...(lastVehicle ? [{ type: "action" as const, action: { type: "message" as const, label: `🚗 再看${lastVehicle.slice(0, 6)}`, text: `我想了解 ${lastVehicle}` } }] : []),
+                { type: "action", action: { type: "message", label: "💬 隨便問問", text: "你好，我想了解崑家汽車" } },
+              ],
+            }},
+          ];
+          console.log(`[LINE] 🔄 Returning user welcome sent (last vehicle: ${lastVehicle || "none"})`);
+        } else {
+          // NEW USER: standard welcome
+          welcomeMessages = buildFollowWelcomeMessages();
+        }
         const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
           method: "POST",
           headers: {
@@ -447,9 +487,15 @@ async function processLineEvent(
         );
 
         // Prepend a text message
+        // Build rich description from enhanced recognition
+        const extraInfo = [];
+        if ((identified as any).year) extraInfo.push(`約${(identified as any).year}`);
+        if ((identified as any).color) extraInfo.push(`${(identified as any).color}`);
+        const extraStr = extraInfo.length > 0 ? `（${extraInfo.join("・")}）` : "";
+
         const textMsg = {
           type: "text" as const,
-          text: `我看到你傳了一張 ${identified.brand} ${identified.model} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇`,
+          text: `我看到你傳了一張 ${identified.brand} ${identified.model}${extraStr} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇`,
         };
 
         // LINE reply max 5 messages
@@ -883,13 +929,24 @@ async function processLineEvent(
     content: replyText,
   });
 
-  // Build contextual quick reply based on conversation state
+  // Build contextual quick reply based on conversation state (personalized)
+  // Extract previously discussed vehicles from conversation history
+  const allMessages = await db.getMessagesByConversation(convId, 30);
+  const prevVehicles: string[] = [];
+  for (const msg of allMessages) {
+    const vMatch = msg.content.match(/(?:詢問|了解|看|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/);
+    if (vMatch && !prevVehicles.includes(vMatch[1])) prevVehicles.push(vMatch[1]);
+  }
+
   const quickReplyCtx: ConversationContext = {
     hasVehicle: detection.type !== 'none' && !!detection.vehicle,
     hasAppointment: customerIntents.includes('appointment'),
     hasContact: !!conversation!.customerContact,
     vehicleName: detection.vehicle ? `${detection.vehicle.brand} ${detection.vehicle.model}` : undefined,
     vehicleExternalId: detection.vehicle?.externalId ? String(detection.vehicle.externalId) : undefined,
+    previousVehicles: prevVehicles.slice(0, 3),
+    messageCount: allMessages.length,
+    leadScore: conversation!.leadScore || 0,
   };
   const quickReply = buildContextualQuickReply(quickReplyCtx);
 
@@ -1473,5 +1530,101 @@ async function sendHumanHandoffNotification(
     console.error("[LINE] Human handoff notification failed:", err);
   }
 }
+
+// ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
+// Sends a gentle follow-up to users who inquired but didn't book
+// Runs periodically (call from a cron job or interval)
+
+const followUpCooldown = new Map<number, number>(); // convId → last follow-up timestamp
+
+export async function sendFollowUpMessages() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  try {
+    // Find conversations with recent activity (last 24-48 hours) that haven't booked
+    const result = await db.listConversations();
+    const allConvs = result?.items || [];
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
+    for (const conv of allConvs) {
+      if (!conv.sessionId?.startsWith("line-")) continue;
+      if (conv.leadStatus === "converted" || conv.leadStatus === "lost") continue;
+      if ((conv.leadScore || 0) < 30) continue; // Only follow up engaged users
+
+      // Check cooldown (max once per 48h)
+      const lastFollowUp = followUpCooldown.get(conv.id) || 0;
+      if (now - lastFollowUp < 2 * ONE_DAY) continue;
+
+      // Check last message time
+      const messages = await db.getMessagesByConversation(conv.id, 5);
+      if (messages.length === 0) continue;
+      const lastMsg = messages[messages.length - 1];
+      const lastMsgTime = new Date(lastMsg.createdAt || 0).getTime();
+      const hoursSinceLastMsg = (now - lastMsgTime) / (60 * 60 * 1000);
+
+      // Follow up between 18-48 hours after last message
+      if (hoursSinceLastMsg < 18 || hoursSinceLastMsg > 48) continue;
+
+      const userId = conv.sessionId.replace("line-", "");
+      const greeting = conv.customerName ? getGenderGreeting(detectGenderFromName(conv.customerName)) : "人客";
+
+      // Find last vehicle they asked about
+      let lastVehicle: string | null = null;
+      for (const msg of [...messages].reverse()) {
+        const match = msg.content.match(/(?:詢問|看|了解)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/);
+        if (match) { lastVehicle = match[1]; break; }
+      }
+
+      const followUpText = lastVehicle
+        ? `${greeting}你好～ 昨天看的 ${lastVehicle} 今天有其他人在問喔！😊\n\n要不要先卡個位？預約看車完全免費，不滿意也沒關係 👇`
+        : `${greeting}你好～ 上次聊到一半不知道有沒有幫到你？😊\n\n如果還有任何疑問，隨時跟阿家說，或者直接預約來店看看 👇`;
+
+      try {
+        await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [{
+              type: "text",
+              text: followUpText,
+              quickReply: {
+                items: [
+                  { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+                  { type: "action", action: { type: "message", label: "💰 問貸款", text: "我想了解貸款方案" } },
+                  { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+                ],
+              },
+            }],
+          }),
+        });
+
+        followUpCooldown.set(conv.id, now);
+        console.log(`[LINE] 📩 Follow-up sent to conv ${conv.id} (${greeting})`);
+
+        // Save follow-up to conversation
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: `[系統自動跟進] ${followUpText}`,
+        });
+      } catch (err) {
+        console.error(`[LINE] Follow-up push failed for conv ${conv.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[LINE] Follow-up system error:", err);
+  }
+}
+
+// Run follow-up check every 2 hours
+setInterval(() => {
+  sendFollowUpMessages().catch((err) => console.error("[LINE] Follow-up interval error:", err));
+}, 2 * 60 * 60 * 1000);
 
 export { lineRouter };

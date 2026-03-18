@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
-import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2, Check, AlertCircle } from "lucide-react";
 
 type TimeMode = "flexible" | "specific";
 
@@ -17,6 +17,13 @@ export default function BookVisit() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  // Inline validation state
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = useCallback((field: string) => setTouched((t) => ({ ...t, [field]: true })), []);
+
+  const phoneValid = /^09\d{8}$/.test(phone.replace(/[\s-]/g, ""));
+  const nameValid = customerName.trim().length >= 2;
 
   const mutation = trpc.appointment.submit.useMutation({
     onSuccess: () => setSubmitted(true),
@@ -260,34 +267,60 @@ export default function BookVisit() {
             </div>
           )}
 
-          {/* Customer name */}
+          {/* Customer name — with inline validation */}
           <div>
             <label className="text-sm font-medium">
               您的姓名 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              required
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="請輸入您的姓名"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-            />
+            <div className="relative mt-1">
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                onBlur={() => markTouched("name")}
+                placeholder="請輸入您的姓名"
+                className={`w-full rounded-lg border bg-background px-3 py-3 pr-10 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                  touched.name && !nameValid ? "border-red-300 focus:ring-red-200 focus:border-red-400" : ""
+                } ${touched.name && nameValid ? "border-green-300" : ""}`}
+              />
+              {touched.name && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-300 ${nameValid ? "text-green-500 scale-100" : "text-red-400 scale-100"}`}>
+                  {nameValid ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                </span>
+              )}
+            </div>
+            {touched.name && !nameValid && (
+              <p className="mt-1 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">請輸入至少 2 個字的姓名</p>
+            )}
           </div>
 
-          {/* Phone */}
+          {/* Phone — with inline validation + formatting hint */}
           <div>
             <label className="text-sm font-medium">
               行動電話 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="請輸入您的手機號碼"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-            />
+            <div className="relative mt-1">
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => markTouched("phone")}
+                placeholder="0912-345-678"
+                className={`w-full rounded-lg border bg-background px-3 py-3 pr-10 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                  touched.phone && !phoneValid && phone.length > 0 ? "border-red-300 focus:ring-red-200 focus:border-red-400" : ""
+                } ${phoneValid ? "border-green-300" : ""}`}
+              />
+              {(touched.phone || phone.length > 3) && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-300 ${phoneValid ? "text-green-500 scale-100" : phone.length > 3 ? "text-red-400 scale-100" : "opacity-0 scale-75"}`}>
+                  {phoneValid ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                </span>
+              )}
+            </div>
+            {touched.phone && !phoneValid && phone.length > 0 && (
+              <p className="mt-1 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">請輸入有效的手機號碼（09 開頭，共 10 碼）</p>
+            )}
           </div>
 
           {/* Notes */}
@@ -305,8 +338,8 @@ export default function BookVisit() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={mutation.isPending || !customerName || !phone}
-            className="w-full rounded-lg bg-[#06C755] px-4 py-3 text-sm font-bold text-white hover:bg-[#05b04c] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            disabled={mutation.isPending || !nameValid || !phoneValid}
+            className="w-full rounded-lg bg-[#06C755] px-4 py-3 text-sm font-bold text-white hover:bg-[#05b04c] disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
             {mutation.isPending ? (
               <>
