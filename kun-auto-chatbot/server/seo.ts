@@ -8,6 +8,30 @@
 import { Router } from "express";
 import * as db from "./db";
 
+// ============ IndexNow: Instant URL notification to Bing/Yandex ============
+
+const INDEXNOW_KEY = "kun-auto-chatbot-indexnow-key-2026";
+
+export async function submitIndexNow(urls: string[]): Promise<void> {
+  if (urls.length === 0) return;
+  const baseUrl = getBaseUrl();
+  const host = new URL(baseUrl).host;
+  try {
+    await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host,
+        key: INDEXNOW_KEY,
+        keyLocation: `${baseUrl}/${INDEXNOW_KEY}.txt`,
+        urlList: urls.slice(0, 10000),
+      }),
+    });
+  } catch (err) {
+    console.error("[IndexNow] Submission failed:", err);
+  }
+}
+
 // ============ CONSTANTS ============
 
 const SITE_NAME = "崑家汽車";
@@ -79,8 +103,18 @@ function autoDealer(): object {
     },
     "sameAs": [
       LINE_OA_URL,
-      "https://maps.google.com/?cid=崑家汽車",
+      "https://www.facebook.com/hong0961/",
+      "https://www.sum.com.tw/storeinfo-71008.php",
+      "https://www.twcar.com.tw/store_web/?mode=car&SID=2487",
+      "https://www.abccar.com.tw/dealer/53764",
     ],
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${getBaseUrl()}/og-default.jpg`,
+      "width": 600,
+      "height": 60,
+    },
+    "foundingDate": "1986",
     "contactPoint": {
       "@type": "ContactPoint",
       "telephone": BUSINESS_PHONE,
@@ -303,8 +337,8 @@ function reviewSchema(): object {
     "datePublished": r.date,
     "itemReviewed": {
       "@type": "AutoDealer",
+      "@id": `${getBaseUrl()}/#organization`,
       "name": SITE_NAME,
-      "address": BUSINESS_ADDRESS,
     },
   }));
 }
@@ -569,6 +603,16 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { q: `${brand} 二手車可以貸款嗎？`, a: `可以，合作多家銀行，${brand}車款皆適用，最快一天核准。` },
         { q: `${brand} 二手車行情價多少？`, a: `依車型、年份、里程而異。實車實價，LINE詢問最新庫存報價。` },
       ]));
+      // Speakable for brand pages
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "speakable": speakableSchema(canonicalUrl),
+        "url": canonicalUrl,
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+      });
     }
   }
 
@@ -595,6 +639,16 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { q: `${rangeMeta.label}二手車可以貸款嗎？`, a: `可以，合作多家銀行，最快一天核准，多種方案可選。` },
         { q: `${rangeMeta.label}二手車有哪些品牌？`, a: `Toyota、Honda、BMW、Benz、Mazda等品牌齊全，每週更新庫存。` },
       ]));
+      // Speakable for price range pages
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "speakable": speakableSchema(canonicalUrl),
+        "url": canonicalUrl,
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+      });
     }
   }
 
@@ -680,6 +734,13 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { name: meta.title, url: canonicalUrl },
       ]));
       // Enhanced Article schema with datePublished, dateModified, speakable, E-E-A-T author
+      const blogWordCount: Record<string, number> = {
+        "buy-used-car-guide": 1773,
+        "used-car-loan-guide": 1117,
+        "kaohsiung-used-car-guide": 1148,
+        "third-party-inspection-guide": 1187,
+        "used-car-transfer-guide": 1125,
+      };
       const blogDates: Record<string, { published: string; modified: string }> = {
         "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-17" },
         "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-17" },
@@ -699,6 +760,10 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "worksFor": { "@id": `${baseUrl}/#organization` },
         "knowsAbout": ["二手車買賣", "中古車鑑定", "汽車貸款", "車輛過戶", "第三方認證"],
         "description": "高雄崑家汽車創辦人，40年以上二手車買賣經驗，專精車輛鑑定與貸款規劃。",
+        "url": `${baseUrl}/`,
+        "sameAs": [
+          "https://www.facebook.com/hong0961/",
+        ],
       });
 
       jsonLdBlocks.push({
@@ -730,6 +795,13 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "keywords": meta.keywords.join(", "),
         "inLanguage": "zh-TW",
         "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+        "image": {
+          "@type": "ImageObject",
+          "url": `${baseUrl}/og-default.jpg`,
+          "width": 1200,
+          "height": 630,
+        },
+        ...(blogWordCount[slug] && { "wordCount": blogWordCount[slug] }),
         ...(dates && {
           "datePublished": dates.published,
           "dateModified": dates.modified,
@@ -737,11 +809,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "speakable": speakableSchema(canonicalUrl, ["h1", "h2", ".answer-summary", "[data-speakable]"]),
       });
 
-      // HowTo schema for procedural blog posts (AEO)
-      const howToData = BLOG_HOWTO[slug];
-      if (howToData) {
-        jsonLdBlocks.push(howToSchema(howToData));
-      }
+      // HowTo schema removed — Google deprecated HowTo rich results in Sep 2023
     }
   }
 
@@ -807,66 +875,102 @@ User-agent: GPTBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Anthropic (Claude)
 User-agent: ClaudeBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Claude-SearchBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Claude-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Google AI
 User-agent: Google-Extended
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: GoogleOther
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Perplexity
 User-agent: PerplexityBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Perplexity-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Microsoft / Bing
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Meta AI
 User-agent: Meta-ExternalAgent
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # === Default crawler rules ===
 User-agent: *
@@ -884,6 +988,11 @@ Sitemap: ${baseUrl}/sitemap.xml
 Crawl-delay: 1
 `
     );
+  });
+
+  // IndexNow — instant URL submission to Bing/Yandex for faster indexing
+  router.get(`/${INDEXNOW_KEY}.txt`, (_req, res) => {
+    res.type("text/plain").send(INDEXNOW_KEY);
   });
 
   // llms.txt — AI-readable site map for LLMs (proposed standard by Answer.AI)
@@ -957,23 +1066,6 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
         { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
       ];
-
-      // Dynamic brand pages
-      let brandEntries: string[] = [];
-      try {
-        const vehicles = await db.getAllVehicles();
-        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand).filter(Boolean)));
-        brandEntries = brands.map((brand: string) =>
-          `  <url>
-    <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`
-        );
-      } catch (err) {
-        console.error("[SEO] Failed to fetch brands for sitemap:", err);
-      }
 
       // Dynamic vehicle pages + brand pages
       let vehicleEntries: string[] = [];

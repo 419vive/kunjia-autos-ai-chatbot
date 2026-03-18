@@ -179,7 +179,14 @@ async function startServer() {
     xContentTypeOptions: true, // nosniff
     xFrameOptions: { action: "deny" },
     xXssProtection: true,
+    permittedCrossDomainPolicies: { permittedPolicies: "none" },
   }));
+
+  // Permissions-Policy header for additional security
+  app.use((_req, res, next) => {
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=()");
+    next();
+  });
 
   // ============================================================
   // SECURITY LAYER 2: Rate Limiting
