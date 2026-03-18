@@ -1,12 +1,18 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "crypto";
+import bcrypt from "bcrypt";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 
 const ADMIN_OPEN_ID = "local-admin";
+const BCRYPT_ROUNDS = 12;
+const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+// In-memory store for admin password hash (computed once at startup)
+let adminPasswordHash: string | null = null;
 
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -16,12 +22,16 @@ function safeCompare(a: string, b: string): boolean {
 /**
  * Seed the local admin user in the database on startup.
  * Only runs when ADMIN_PASSWORD is configured.
+ * Hashes the admin password with bcrypt for secure comparison.
  */
 export async function seedAdminUser() {
   if (!ENV.adminPassword) {
     console.warn("[Auth] ADMIN_PASSWORD not set — admin login disabled");
     return;
   }
+
+  // Pre-hash the admin password at startup so login comparisons use bcrypt
+  adminPasswordHash = await bcrypt.hash(ENV.adminPassword, BCRYPT_ROUNDS);
 
   try {
     await db.upsertUser({
@@ -44,17 +54,21 @@ export function registerAdminAuthRoutes(app: Express) {
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     const { username, password } = req.body ?? {};
 
-    if (!ENV.adminPassword) {
+    if (!ENV.adminPassword || !adminPasswordHash) {
       res.status(403).json({ error: "Admin login is not configured. Set ADMIN_PASSWORD environment variable." });
       return;
     }
 
-    if (
-      typeof username !== "string" ||
-      typeof password !== "string" ||
-      !safeCompare(username, ENV.adminUsername) ||
-      !safeCompare(password, ENV.adminPassword)
-    ) {
+    if (typeof username !== "string" || typeof password !== "string") {
+      res.status(401).json({ error: "Invalid username or password" });
+      return;
+    }
+
+    // Timing-safe username check + bcrypt password verification
+    const usernameValid = safeCompare(username, ENV.adminUsername);
+    const passwordValid = await bcrypt.compare(password, adminPasswordHash);
+
+    if (!usernameValid || !passwordValid) {
       res.status(401).json({ error: "Invalid username or password" });
       return;
     }
@@ -62,11 +76,11 @@ export function registerAdminAuthRoutes(app: Express) {
     try {
       const sessionToken = await sdk.createSessionToken(ADMIN_OPEN_ID, {
         name: ENV.adminUsername,
-        expiresInMs: ONE_YEAR_MS,
+        expiresInMs: ADMIN_SESSION_TTL_MS,
       });
 
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ADMIN_SESSION_TTL_MS });
       res.json({ success: true });
     } catch (err) {
       console.error("[Auth] Login failed:", err);
