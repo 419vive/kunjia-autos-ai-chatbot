@@ -436,6 +436,18 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Trust Signal Strip */}
+      <div className="border-b bg-white">
+        <div className="container py-2.5">
+          <div className="grid grid-cols-2 gap-y-1.5 sm:flex sm:flex-row sm:flex-nowrap sm:items-center sm:justify-center sm:gap-x-6 text-xs sm:text-sm text-gray-600 text-center">
+            <span>✅ 累計服務 2,000+ 位車主</span>
+            <span>⭐ Google 評分 4.8</span>
+            <span>🔐 全車第三方認證</span>
+            <span>📍 高雄在地 40 年</span>
+          </div>
+        </div>
+      </div>
+
       {/* Search & Filter */}
       <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container py-3">

@@ -1193,13 +1193,29 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   const items: any[] = [];
 
   if (ctx.hasVehicle && ctx.vehicleName) {
-    // Customer is asking about a specific vehicle → show vehicle-specific actions
+    // Customer is asking about a specific vehicle → show booking-focused actions
     items.push({
       type: "action",
       action: {
         type: "message",
-        label: "💰 這台多少錢？",
-        text: `${ctx.vehicleName} 多少錢？有優惠嗎？`,
+        label: "📅 預約看車",
+        text: "我想預約看車",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💰 問貸款",
+        text: "我想了解貸款方案",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "uri",
+        label: "📞 直接撥打",
+        uri: "tel:0936812818",
       },
     });
     if (ctx.vehicleExternalId) {
@@ -1209,24 +1225,6 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
           type: "message",
           label: "📸 看照片",
           text: `看照片 ${ctx.vehicleExternalId}`,
-        },
-      });
-    }
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🚗 預約看這台車",
-        text: "我想預約看車，什麼時候方便？",
-      },
-    });
-    if (!ctx.hasContact) {
-      items.push({
-        type: "action",
-        action: {
-          type: "message",
-          label: "📞 直接聯繫",
-          text: "可以給我你們的聯絡方式嗎？",
         },
       });
     }
