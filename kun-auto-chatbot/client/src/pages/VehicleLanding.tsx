@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Shield,
 } from "lucide-react";
+import StickyBookingBar from "@/components/StickyBookingBar";
 
 type DeviceType = "mobile" | "desktop";
 
@@ -375,6 +376,8 @@ export default function VehicleLanding() {
           </a>
         </div>
       </div>
+
+      <StickyBookingBar />
     </div>
   );
 }

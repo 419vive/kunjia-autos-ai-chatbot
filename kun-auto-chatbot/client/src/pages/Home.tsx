@@ -13,6 +13,7 @@ import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { useCompareList, CompareBar } from "@/components/VehicleCompare";
 import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import SeoFooter from "@/components/SeoFooter";
+import StickyBookingBar from "@/components/StickyBookingBar";
 import { nanoid } from "nanoid";
 
 function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
@@ -140,6 +141,28 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; 
         <Badge className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs">
           {vehicle.status === "available" ? "在售" : vehicle.status === "reserved" ? "已預訂" : "已售出"}
         </Badge>
+        {/* Scarcity / social proof badges */}
+        {(() => {
+          const isNew = vehicle.createdAt
+            ? Date.now() - new Date(vehicle.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000
+            : false;
+          const isHot = Number(vehicle.price) < 50;
+          if (!isNew && !isHot) return null;
+          return (
+            <div className="absolute top-8 left-2 flex flex-col gap-1">
+              {isNew && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500 text-white leading-none">
+                  本週新到
+                </span>
+              )}
+              {isHot && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white leading-none">
+                  詢問熱烈
+                </span>
+              )}
+            </div>
+          );
+        })()}
         {/* Photo count badge */}
         {totalPhotos > 1 && (
           <span className="absolute top-2 right-2 flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
@@ -590,6 +613,8 @@ export default function Home() {
 
       {/* Vehicle Compare Bar */}
       <CompareBar ids={compare.ids} onClear={compare.clear} />
+
+      <StickyBookingBar />
 
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">

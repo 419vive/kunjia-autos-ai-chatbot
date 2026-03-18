@@ -55,15 +55,21 @@ export default function BookVisit() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
           </div>
-          <h1 className="text-xl font-bold">預約成功！</h1>
-          <p className="text-muted-foreground text-sm">
-            我們的銷售人員會盡快與您確認看車時間，請保持電話暢通。
-          </p>
+          <h1 className="text-xl font-bold">預約成功！🎉</h1>
           {vehicleName && (
             <p className="text-sm text-primary font-medium">
               預約車輛：{vehicleName}
             </p>
           )}
+          <div className="rounded-xl border bg-muted/30 p-4 text-left space-y-2">
+            <p className="text-sm font-semibold text-foreground">接下來會發生什麼？</p>
+            <ol className="text-sm text-muted-foreground space-y-1.5 list-none">
+              <li>1. 賴先生會在 1 小時內電話確認時間</li>
+              <li>2. 我們幫您保留看車位置</li>
+              <li>3. 看車當天帶身分證即可</li>
+            </ol>
+            <p className="text-sm text-green-700 font-medium pt-1">💡 來看車不需要付任何費用</p>
+          </div>
           <div className="pt-2 space-y-2">
             <a
               href="tel:0936812818"
@@ -139,9 +145,27 @@ export default function BookVisit() {
           )}
         </div>
 
+        {/* Trust strip */}
+        <div className="rounded-lg bg-green-50 px-4 py-3 mb-6 flex items-center justify-center gap-4 flex-wrap text-sm text-green-700 font-medium">
+          <span>🔒 資料保密</span>
+          <span>⚡ 1小時內回電</span>
+          <span>✅ 看車完全免費</span>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Time mode selector */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Flexible time checkbox shortcut */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={timeMode === "flexible"}
+              onChange={(e) => setTimeMode(e.target.checked ? "flexible" : "specific")}
+              className="h-4 w-4 rounded border-gray-300 text-primary accent-primary"
+            />
+            <span className="text-sm font-medium">我時間彈性，請電話聯絡安排</span>
+          </label>
+
+          {/* Time mode selector — only shown when not flexible */}
+          {timeMode === "specific" && <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setTimeMode("flexible")}
@@ -178,7 +202,7 @@ export default function BookVisit() {
               </div>
               <p className="text-sm font-medium">選擇到店時間</p>
             </button>
-          </div>
+          </div>}
 
           {/* Specific time fields — shown only when "選擇到店時間" is selected */}
           {timeMode === "specific" && (
@@ -291,7 +315,7 @@ export default function BookVisit() {
           <button
             type="submit"
             disabled={mutation.isPending || !customerName || !phone}
-            className="w-full rounded-lg bg-primary px-4 py-3.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full rounded-lg bg-[#06C755] px-4 py-3 text-sm font-bold text-white hover:bg-[#05b04c] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {mutation.isPending ? (
               <>
@@ -299,7 +323,7 @@ export default function BookVisit() {
                 提交中...
               </>
             ) : (
-              "提交預約"
+              "確認預約，等待回電"
             )}
           </button>
 
