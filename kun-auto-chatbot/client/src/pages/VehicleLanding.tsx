@@ -218,8 +218,8 @@ export default function VehicleLanding() {
     <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440]">
       {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-[#C4A265]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-[15%] right-[10%] w-80 h-80 bg-[#C4A265]/5 rounded-full blur-3xl" />
+        <div className="absolute top-[10%] left-[5%] w-40 h-40 sm:w-64 sm:h-64 bg-[#C4A265]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-[15%] right-[10%] w-48 h-48 sm:w-80 sm:h-80 bg-[#C4A265]/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative max-w-lg mx-auto px-4 py-6">
@@ -368,7 +368,7 @@ export default function VehicleLanding() {
 
         {/* Trust badges — mini version of 5 guarantees */}
         <div className="bg-white/[0.05] rounded-2xl border border-white/[0.06] px-4 py-3 mb-4">
-          <div className="flex items-center justify-between text-xs text-white/40">
+          <div className="flex items-center justify-between flex-wrap gap-y-1 text-xs text-white/40">
             <span>🛡️ 第三方認證</span>
             <span>💰 超強貸款</span>
             <span>🚗 免費接駁</span>

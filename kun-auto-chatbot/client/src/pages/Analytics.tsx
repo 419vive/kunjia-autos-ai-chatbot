@@ -242,7 +242,7 @@ function WebsiteTab({ dateParams }: { dateParams: { startDate?: string; endDate?
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
         <StatCard title="Page Views" value={summary.data?.pageViews ?? 0} icon={Eye} loading={summary.isLoading} />
         <StatCard title="Visitors" value={summary.data?.uniqueVisitors ?? 0} icon={Users} loading={summary.isLoading} />
         <StatCard
@@ -304,7 +304,7 @@ function WebsiteTab({ dateParams }: { dateParams: { startDate?: string; endDate?
       </div>
 
       {/* Three-column: Browser / OS / Device */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         <RankingTable
           title="Browsers"
           data={(browsers.data || []).map((b: any) => b)}
@@ -424,7 +424,7 @@ function ChatbotTab({ dateParams }: { dateParams: { startDate?: string; endDate?
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard title="總對話數" value={dashboard.data?.stats?.totalConversations ?? 0} icon={MessageSquare} loading={dashboard.isLoading} />
         <StatCard title="合格潛客" value={dashboard.data?.stats?.qualifiedLeads ?? 0} icon={Users} description="Lead Score >= 60" loading={dashboard.isLoading} />
         <StatCard title="高品質潛客" value={dashboard.data?.stats?.hotLeads ?? 0} icon={Flame} loading={dashboard.isLoading} />
@@ -624,7 +624,7 @@ function LineTab({ dateParams }: { dateParams: { startDate?: string; endDate?: s
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
         <StatCard
           title="新追蹤者"
           value={grouped["line_follow"]?.reduce((s, i) => s + i.count, 0) ?? 0}

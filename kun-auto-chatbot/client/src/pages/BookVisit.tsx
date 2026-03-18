@@ -206,7 +206,7 @@ export default function BookVisit() {
                   value={preferredDate}
                   min={today}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
 
@@ -217,7 +217,7 @@ export default function BookVisit() {
                   <button
                     type="button"
                     onClick={() => setAmPm("AM")}
-                    className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
+                    className={`rounded-lg border py-3 text-sm font-medium transition-all ${
                       amPm === "AM"
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-muted bg-background hover:border-muted-foreground/30"
@@ -228,7 +228,7 @@ export default function BookVisit() {
                   <button
                     type="button"
                     onClick={() => setAmPm("PM")}
-                    className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
+                    className={`rounded-lg border py-3 text-sm font-medium transition-all ${
                       amPm === "PM"
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-muted bg-background hover:border-muted-foreground/30"
@@ -253,7 +253,7 @@ export default function BookVisit() {
                     value={specificTime}
                     onChange={(e) => setSpecificTime(e.target.value)}
                     placeholder={amPm === "AM" ? "例如 10:00" : "例如 14:00"}
-                    className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    className="w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
                 </div>
               )}
@@ -271,7 +271,7 @@ export default function BookVisit() {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="請輸入您的姓名"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
             />
           </div>
 
@@ -286,7 +286,7 @@ export default function BookVisit() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="請輸入您的手機號碼"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
             />
           </div>
 
@@ -298,7 +298,7 @@ export default function BookVisit() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="有什麼特別需求可以寫在這裡..."
               rows={2}
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
+              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
             />
           </div>
 

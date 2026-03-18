@@ -462,7 +462,7 @@ export default function Home() {
               />
             </div>
             <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[120px] sm:w-[140px]">
                 <SelectValue placeholder="品牌" />
               </SelectTrigger>
               <SelectContent>
@@ -475,7 +475,7 @@ export default function Home() {
               </SelectContent>
             </Select>
             <Select value={priceRange} onValueChange={setPriceRange}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[120px] sm:w-[140px]">
                 <SelectValue placeholder="價格" />
               </SelectTrigger>
               <SelectContent>
@@ -564,7 +564,7 @@ export default function Home() {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="overflow-hidden">
                 <Skeleton className="aspect-[16/10]" />
@@ -583,7 +583,7 @@ export default function Home() {
             <p className="mt-1 text-sm">試試調整搜尋條件</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((v) => (
               <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} />
             ))}
@@ -595,7 +595,7 @@ export default function Home() {
 
       {/* Floating Chat Popup */}
       {chatOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border bg-background shadow-2xl flex flex-col" style={{ height: 'min(540px, calc(100vh - 7rem))' }}>
+        <div className="fixed bottom-36 md:bottom-24 right-6 z-50 w-full sm:w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border bg-background shadow-2xl flex flex-col" style={{ height: 'min(540px, calc(100vh - 7rem))' }}>
           {/* Chat header */}
           <div className="flex items-center justify-between bg-primary px-4 py-2.5 text-primary-foreground shrink-0">
             <div className="flex items-center gap-2">
@@ -629,7 +629,7 @@ export default function Home() {
       <StickyBookingBar />
 
       {/* Floating Chat Button with Tooltip */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+      <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-3">
         {!chatOpen && (
           <div className="rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
             <span>有問題？阿家線上回答你</span>
@@ -638,7 +638,7 @@ export default function Home() {
         )}
         <button
           onClick={() => setChatOpen((prev) => !prev)}
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-110 active:scale-95"
+          className="relative flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-110 active:scale-95"
           aria-label={chatOpen ? "關閉聊天" : "開始聊天"}
         >
           {chatOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}

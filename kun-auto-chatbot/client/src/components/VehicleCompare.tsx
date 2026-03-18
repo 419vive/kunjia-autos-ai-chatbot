@@ -44,7 +44,7 @@ export function CompareBar({ ids, onClear }: { ids: number[]; onClear: () => voi
   return (
     <>
       {/* Floating bar */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-full bg-primary px-5 py-2.5 text-primary-foreground shadow-xl">
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-full bg-primary px-5 py-2.5 text-primary-foreground shadow-xl">
         <span className="text-sm font-medium">{ids.length} 台車待比較</span>
         <button
           onClick={() => setOpen(true)}
@@ -91,7 +91,7 @@ function CompareModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-16 px-4 overflow-y-auto">
-      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-4xl mb-8">
+      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mb-8">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-bold flex items-center gap-2">
@@ -115,7 +115,7 @@ function CompareModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
                   {vehicles.map((v: any) => {
                     const photos = v.photoUrls?.split("|").filter((u: string) => u.trim()) || [];
                     return (
-                      <th key={v.id} className="p-3 align-top min-w-[160px]">
+                      <th key={v.id} className="p-3 align-top min-w-[120px] sm:min-w-[160px]">
                         <div className="rounded-xl overflow-hidden mb-2 aspect-[16/10] bg-muted">
                           {photos[0] ? (
                             <ProgressiveImage src={photos[0]} alt={`${v.brand} ${v.model}`} containerClassName="w-full h-full" aspectRatio="16/10" />

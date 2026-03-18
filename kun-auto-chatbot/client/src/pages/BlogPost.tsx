@@ -60,13 +60,13 @@ export default function BlogPost() {
             <ChevronRight className="h-3 w-3" />
             <a href="/blog" className="hover:text-foreground transition-colors">購車攻略</a>
             <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground truncate max-w-[200px]">{post.title}</span>
+            <span className="text-foreground truncate max-w-[150px] sm:max-w-[200px]">{post.title}</span>
           </nav>
         </div>
       </div>
 
       <div className="container py-8">
-        <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-10">
+        <div className="md:grid md:grid-cols-[1fr_260px] md:gap-6 lg:grid-cols-[1fr_300px] lg:gap-10">
           {/* Main content */}
           <article>
             <p className="answer-summary text-sm text-muted-foreground leading-relaxed mb-6 p-4 bg-muted/40 rounded-lg border-l-4 border-primary" data-speakable>
