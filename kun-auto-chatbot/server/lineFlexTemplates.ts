@@ -166,6 +166,14 @@ function buildVehicleBubble(v: Vehicle): any {
           ],
           margin: "md",
         },
+        {
+          type: "text",
+          text: "🔒 第三方認證 | 實車實價 | 支援貸款",
+          size: "xxs",
+          color: "#999999",
+          wrap: true,
+          margin: "sm",
+        },
       ],
     },
     footer: {
