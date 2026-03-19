@@ -14,6 +14,15 @@
 - Before closing, check for uncommitted changes and remind me to commit.
 - When the conversation reaches 70% of the context window, automatically rewrite ~/.claude/primer.md with the current state, then tell me to run /compact before continuing.
 
+## HINDSIGHT MEMORY (Layer 4)
+- If Hindsight MCP tools are available (retain, recall, reflect), use them:
+  - `retain`: Store corrections, preferences, and lessons learned mid-session
+  - `recall`: Query past session context when resuming work or debugging recurring issues
+  - `reflect`: Periodically synthesize patterns from accumulated memories
+- Before session end: retain a summary of what was done, decisions made, and next steps
+- On session start: the hook auto-recalls relevant patterns — apply them before working
+- If Hindsight is offline, fall back to primer.md and tasks/lessons.md (Layers 1-2)
+
 ## SELF-LEARNING
 - After any correction from me, immediately add an entry to tasks/lessons.md
 - Format: [date] | what went wrong | rule to follow next time

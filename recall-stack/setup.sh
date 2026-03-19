@@ -55,13 +55,43 @@ else
   echo "[+] settings.json installed with hook configuration"
 fi
 
-# --- Layer 4: Hindsight ---
+# --- Layer 4: Hindsight (MCP + Docker) ---
 echo ""
+
+# 4a: MCP server config (works in any project with .mcp.json)
+echo "[i] Layer 4: Hindsight MCP integration"
+if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/.mcp.json" ]; then
+  if grep -q "hindsight" "$REPO_ROOT/.mcp.json" 2>/dev/null; then
+    echo "[=] Hindsight MCP already in project .mcp.json"
+  else
+    echo "[!] Add Hindsight to $REPO_ROOT/.mcp.json:"
+    echo '    "hindsight": {'
+    echo '      "command": "npx",'
+    echo '      "args": ["-y", "@vectorize-io/hindsight-mcp"],'
+    echo '      "env": { "HINDSIGHT_API_URL": "http://localhost:8888" }'
+    echo '    }'
+  fi
+else
+  echo "[i] No .mcp.json found — MCP config skipped (add to your project manually)"
+fi
+
+# 4b: Docker backend
 if command -v docker &> /dev/null; then
   if docker info > /dev/null 2>&1; then
     if ! docker ps -a --format '{{.Names}}' | grep -q '^hindsight$'; then
-      if [ -z "$ANTHROPIC_API_KEY" ]; then
-        echo "[!] Layer 4: Set ANTHROPIC_API_KEY env var, then run:"
+      # Detect available API key (prefer Anthropic, fallback to OpenAI)
+      LLM_PROVIDER=""
+      LLM_KEY=""
+      if [ -n "$ANTHROPIC_API_KEY" ]; then
+        LLM_PROVIDER="anthropic"
+        LLM_KEY="$ANTHROPIC_API_KEY"
+      elif [ -n "$OPENAI_API_KEY" ]; then
+        LLM_PROVIDER="openai"
+        LLM_KEY="$OPENAI_API_KEY"
+      fi
+
+      if [ -z "$LLM_KEY" ]; then
+        echo "[!] Layer 4: Set ANTHROPIC_API_KEY or OPENAI_API_KEY, then run:"
         echo "    docker run -d --name hindsight --restart unless-stopped \\"
         echo "      -p 8888:8888 -p 9999:9999 \\"
         echo "      -e HINDSIGHT_API_LLM_PROVIDER=anthropic \\"
@@ -69,13 +99,14 @@ if command -v docker &> /dev/null; then
         echo "      -v hindsight-data:/home/hindsight/.pg0 \\"
         echo "      ghcr.io/vectorize-io/hindsight:latest"
       else
+        echo "[*] Starting Hindsight (provider: $LLM_PROVIDER)..."
         docker run -d \
           --name hindsight \
           --restart unless-stopped \
           -p 8888:8888 \
           -p 9999:9999 \
-          -e HINDSIGHT_API_LLM_PROVIDER=anthropic \
-          -e "HINDSIGHT_API_LLM_API_KEY=$ANTHROPIC_API_KEY" \
+          -e "HINDSIGHT_API_LLM_PROVIDER=$LLM_PROVIDER" \
+          -e "HINDSIGHT_API_LLM_API_KEY=$LLM_KEY" \
           -v hindsight-data:/home/hindsight/.pg0 \
           ghcr.io/vectorize-io/hindsight:latest
 
@@ -90,22 +121,31 @@ if command -v docker &> /dev/null; then
           echo -n "."
         done
 
-        # Create memory bank
+        # Create memory bank for Claude sessions
         curl -sf -X PUT http://localhost:8888/v1/default/banks/claude-sessions \
           -H 'Content-Type: application/json' \
           -d '{"name": "claude-sessions"}' > /dev/null 2>&1
 
-        echo "[+] Layer 4: Hindsight running (API: localhost:8888, UI: localhost:9999)"
+        echo "[+] Layer 4: Hindsight running (API: :8888, UI: :9999, MCP: via npx)"
+        echo "    Claude Code tools: retain, recall, reflect"
       fi
     else
-      echo "[=] Layer 4: Hindsight container already exists"
+      # Container exists — check if running
+      if docker ps --format '{{.Names}}' | grep -q '^hindsight$'; then
+        echo "[=] Layer 4: Hindsight container running"
+      else
+        docker start hindsight > /dev/null 2>&1
+        echo "[+] Layer 4: Hindsight container restarted"
+      fi
     fi
   else
-    echo "[!] Layer 4: Docker installed but not running. Start Docker Desktop first."
+    echo "[!] Layer 4: Docker installed but not running. Start Docker first."
+    echo "    Hooks will work without it (graceful fallback)."
   fi
 else
-  echo "[!] Layer 4: Docker not found. Install Docker Desktop for Hindsight."
-  echo "    Layers 1-3 and 5 work without it."
+  echo "[!] Layer 4: Docker not found. Install Docker for Hindsight."
+  echo "    Hooks and MCP will fall back gracefully without it."
+  echo "    Layers 1-3 and 5 work independently."
 fi
 
 # --- Layer 5: Obsidian ---
