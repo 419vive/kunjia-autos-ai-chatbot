@@ -186,6 +186,28 @@ export default function VehicleLanding() {
     );
   }
 
+  const isSold = vehicle.status === "sold" || vehicle.status === "reserved";
+
+  // Fetch similar vehicles when this one is sold
+  const { data: allVehicles } = trpc.vehicle.list.useQuery(undefined, {
+    enabled: isSold,
+  });
+
+  const similarVehicles = useMemo(() => {
+    if (!isSold || !allVehicles) return [];
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && v.brand === vehicle.brand)
+      .slice(0, 3);
+  }, [isSold, allVehicles, vehicle.id, vehicle.brand]);
+
+  const otherVehicles = useMemo(() => {
+    if (!isSold || !allVehicles || similarVehicles.length >= 3) return [];
+    const similarIds = new Set(similarVehicles.map((v: any) => v.id));
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && !similarIds.has(v.id))
+      .slice(0, 3 - similarVehicles.length);
+  }, [isSold, allVehicles, vehicle.id, similarVehicles]);
+
   const name = `${vehicle.brand} ${vehicle.model}`;
   const year = vehicle.modelYear ? `${vehicle.modelYear}年` : "";
   const price = vehicle.priceDisplay || `${vehicle.price}萬`;
@@ -219,6 +241,103 @@ export default function VehicleLanding() {
       window.location.href = chatUrl;
     }
   };
+
+  // Sold vehicle → show sold overlay + recommendations
+  if (isSold) {
+    const recommendations = [...similarVehicles, ...otherVehicles];
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440]">
+        <div className="relative max-w-lg mx-auto px-4 py-6">
+          <div className="text-center mb-4">
+            <p className="text-[#C4A265] text-xs font-medium tracking-widest uppercase">崑家汽車 · 40年老口碑</p>
+          </div>
+
+          {/* Sold banner */}
+          <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+            {/* Show first photo with sold overlay */}
+            <div className="relative aspect-[16/10] bg-black/30 overflow-hidden">
+              {photos.length > 0 ? (
+                <ProgressiveImage
+                  src={photos[0]}
+                  alt={`${name} - 已售出`}
+                  containerClassName="w-full h-full opacity-50"
+                  aspectRatio="16/10"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Car className="w-16 h-16 text-white/20" />
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="bg-red-600/90 px-6 py-2.5 rounded-xl text-white font-bold text-lg shadow-lg">
+                  已售出
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 text-center">
+              <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
+              <p className="text-white/40 text-xs mb-3">{year} · {price}</p>
+              <p className="text-white/60 text-sm">
+                這台車已經找到新主人了！
+                {recommendations.length > 0 ? "看看下面其他在售車輛：" : ""}
+              </p>
+            </div>
+          </div>
+
+          {/* Recommend similar vehicles */}
+          {recommendations.length > 0 && (
+            <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+              <div className="px-5 py-4">
+                <p className="text-white font-bold text-base mb-3">
+                  {similarVehicles.length > 0 ? `其他 ${vehicle.brand} 在售車輛` : "推薦在售車輛"}
+                </p>
+                <div className="space-y-3">
+                  {recommendations.map((v: any) => {
+                    const vPhoto = v.photoUrls ? String(v.photoUrls).split("|")[0]?.trim() : "";
+                    const vPrice = v.priceDisplay || `${v.price}萬`;
+                    return (
+                      <a
+                        key={v.id}
+                        href={`/vehicle/${v.id}`}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06] border border-white/10 hover:bg-white/[0.1] transition-all"
+                      >
+                        <div className="w-20 h-14 rounded-lg overflow-hidden bg-black/20 flex-shrink-0">
+                          {vPhoto ? (
+                            <img src={vPhoto} alt={`${v.brand} ${v.model}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Car className="w-6 h-6 text-white/20" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium text-sm truncate">{v.brand} {v.model}</p>
+                          <p className="text-white/40 text-xs">{v.modelYear ? `${v.modelYear}年` : ""} · {v.mileage || ""}</p>
+                        </div>
+                        <div className="text-[#C4A265] font-bold text-sm flex-shrink-0">{vPrice}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CTA to browse all */}
+          <div className="text-center">
+            <a
+              href="/"
+              className="inline-block px-6 py-3 bg-[#C4A265] text-white rounded-xl font-medium hover:bg-[#a8893e] transition-colors mb-4"
+            >
+              瀏覽所有在售車輛
+            </a>
+            <p className="text-white/25 text-xs">崑家汽車 · 高雄市三民區大順二路269號</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440]">

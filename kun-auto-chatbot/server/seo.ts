@@ -470,6 +470,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   let ogType = "website";
   let ogImage = `${baseUrl}/og-default.jpg`;
   let canonicalUrl = `${baseUrl}${path === "/" ? "" : path}`;
+  let robotsMeta = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
   const jsonLdBlocks: object[] = [autoDealer(), websiteSchema()];
 
   // ---------- Vehicle detail page ----------
@@ -483,9 +484,18 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         const year = vehicle.modelYear ? `${vehicle.modelYear}年` : "";
         const price = vehicle.priceDisplay || `${vehicle.price}萬`;
         const photo = parseFirstPhoto(vehicle.photoUrls);
+        const isSold = vehicle.status === "sold" || vehicle.status === "reserved";
 
-        title = `${name} ${year} ${price}｜高雄二手${vehicle.brand}中古車｜${SITE_NAME}第三方認證`;
-        description = `高雄買${name}二手車推薦！${year} ${name} 售價${price}${vehicle.mileage ? `、里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。崑家汽車全車第三方認證、實車實價、可貸款、外縣市免費接駁。在地40年正派經營。`;
+        if (isSold) {
+          // Sold vehicles: noindex to stop Google from indexing stale listings,
+          // but keep follow so link equity flows to other pages
+          robotsMeta = "noindex, follow";
+          title = `【已售出】${name} ${year}｜${SITE_NAME}高雄二手車`;
+          description = `此車輛已售出。崑家汽車高雄二手車行，在地40年正派經營，更多${vehicle.brand}二手車歡迎查看。`;
+        } else {
+          title = `${name} ${year} ${price}｜高雄二手${vehicle.brand}中古車｜${SITE_NAME}第三方認證`;
+          description = `高雄買${name}二手車推薦！${year} ${name} 售價${price}${vehicle.mileage ? `、里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。崑家汽車全車第三方認證、實車實價、可貸款、外縣市免費接駁。在地40年正派經營。`;
+        }
         ogType = "product";
         if (photo) ogImage = photo;
 
@@ -819,7 +829,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <title>${escAttr(title)}</title>
     <meta name="description" content="${escAttr(description)}" />
     <link rel="canonical" href="${escAttr(canonicalUrl)}" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="robots" content="${robotsMeta}" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="${escAttr(title)}" />
