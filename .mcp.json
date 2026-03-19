@@ -11,13 +11,6 @@
     "deepwiki": {
       "command": "npx",
       "args": ["-y", "deepwiki-mcp"]
-    },
-    "hindsight": {
-      "command": "npx",
-      "args": ["-y", "@vectorize-io/hindsight-mcp"],
-      "env": {
-        "HINDSIGHT_API_URL": "http://localhost:8888"
-      }
     }
   }
 }
