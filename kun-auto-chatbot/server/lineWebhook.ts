@@ -863,6 +863,9 @@ async function processLineEvent(
   });
   console.log(`[LINE] Saved user message: id=${savedMsg.id}, convId=${convId}`);
 
+  // Track conversation for short-term recovery nudges
+  updateConversationTracker(userId, userMessage);
+
   // ============ UPDATE CSAT STATE ============
   const currentCsat = csatState.get(userId) || { lastSurveyTime: 0, lastMessageTime: 0, messageCount: 0 };
   currentCsat.lastMessageTime = Date.now();
@@ -1796,6 +1799,148 @@ async function sendHumanHandoffNotification(
     console.error("[LINE] Human handoff notification failed:", err);
   }
 }
+
+// ============ SHORT-TERM CONVERSATION RECOVERY ============
+// Sends a gentle nudge when a user goes quiet mid-conversation (5-8 min)
+// Different from follow-up system which handles 18-48 hour gaps
+
+interface ConversationTrack {
+  lastMessageTime: number;
+  messageCount: number;
+  lastTopic: "vehicle_inquiry" | "loan" | "booking" | "general";
+  lastVehicle?: string; // brand + model
+  nudgeSent: boolean;
+}
+
+const conversationTracker = new Map<string, ConversationTrack>();
+
+function detectConversationTopic(message: string): ConversationTrack["lastTopic"] {
+  if (/預約|看車|賞車|試駕|到店|什麼時候|幾點|營業/i.test(message)) return "booking";
+  if (/貸款|分期|頭期|月付|利率|零利率|刷卡|匯款|付款方式/i.test(message)) return "loan";
+  if (/BMW|Toyota|Honda|Ford|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|什麼車|推薦|這台|那台|庫存|有沒有|幾年|里程|cc|排氣/i.test(message)) return "vehicle_inquiry";
+  return "general";
+}
+
+function detectVehicleNameFromMessage(message: string): string | undefined {
+  const match = message.match(/(Toyota|Honda|Ford|BMW|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|Mazda|Nissan|Lexus|Benz|Mercedes|Audi|Volvo)\s*([\w\-]+)/i);
+  if (match) return `${match[1]} ${match[2]}`;
+  return undefined;
+}
+
+export function updateConversationTracker(userId: string, message: string) {
+  const existing = conversationTracker.get(userId);
+  const topic = detectConversationTopic(message);
+  const vehicle = detectVehicleNameFromMessage(message);
+
+  conversationTracker.set(userId, {
+    lastMessageTime: Date.now(),
+    messageCount: (existing?.messageCount || 0) + 1,
+    lastTopic: topic !== "general" ? topic : (existing?.lastTopic || "general"),
+    lastVehicle: vehicle || existing?.lastVehicle,
+    nudgeSent: false, // Reset on new message
+  });
+}
+
+async function checkConversationRecovery() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  const now = Date.now();
+  const FIVE_MIN = 5 * 60 * 1000;
+  const EIGHT_MIN = 8 * 60 * 1000;
+  const THIRTY_MIN = 30 * 60 * 1000;
+
+  const entries = Array.from(conversationTracker.entries());
+  for (const [userId, track] of entries) {
+    const elapsed = now - track.lastMessageTime;
+
+    // Clean up stale entries (30+ min after nudge with no reply)
+    if (track.nudgeSent && elapsed > THIRTY_MIN) {
+      conversationTracker.delete(userId);
+      continue;
+    }
+
+    // Skip if already nudged, not enough messages, or outside the 5-8 min window
+    if (track.nudgeSent) continue;
+    if (track.messageCount < 2) continue;
+    if (elapsed < FIVE_MIN || elapsed > EIGHT_MIN) continue;
+
+    // Build contextual nudge message
+    let nudgeText: string;
+    const quickReplyItems: any[] = [];
+
+    if (track.lastTopic === "vehicle_inquiry" && track.lastVehicle) {
+      nudgeText = `剛剛聊到的 ${track.lastVehicle}，還有什麼想了解的嗎？😊 或者我幫你安排看車？`;
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: `我想預約看 ${track.lastVehicle}` } },
+        { type: "action", action: { type: "message", label: "💰 問價格", text: `${track.lastVehicle} 多少錢？` } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else if (track.lastTopic === "loan") {
+      nudgeText = "貸款的部分還有疑問嗎？需要的話我可以請專員幫你算方案 💰";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "💰 填貸款評估", text: "我想了解貸款方案" } },
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else if (track.lastTopic === "booking") {
+      nudgeText = "看車的時間有想到嗎？不用完全確定，我們電話再聊也可以 😊";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+        { type: "action", action: { type: "message", label: "🕐 時間彈性", text: "我時間彈性，你們幫我安排" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else {
+      nudgeText = "還有其他想了解的嗎？隨時都可以問喔！";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "🚗 看車輛", text: "我想看車，有什麼車可以推薦？" } },
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    }
+
+    // Send the nudge via LINE push
+    try {
+      await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [{
+            type: "text",
+            text: nudgeText,
+            quickReply: { items: quickReplyItems },
+          }],
+        }),
+      });
+
+      // Mark as nudged
+      track.nudgeSent = true;
+      console.log(`[LINE Recovery] Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
+
+      // Save to conversation history
+      const sessionId = `line-${userId}`;
+      const conversation = await db.getConversationBySessionId(sessionId);
+      if (conversation) {
+        await db.addMessage({
+          conversationId: conversation.id,
+          role: "assistant",
+          content: `[系統短期跟進] ${nudgeText}`,
+        });
+      }
+    } catch (err) {
+      console.error(`[LINE Recovery] Nudge failed for ${userId.slice(0, 8)}...:`, err);
+    }
+  }
+}
+
+// Run conversation recovery check every 60 seconds
+setInterval(() => {
+  checkConversationRecovery().catch((err) => console.error("[LINE Recovery] Check error:", err));
+}, 60 * 1000);
 
 // ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
 // Sends a gentle follow-up to users who inquired but didn't book

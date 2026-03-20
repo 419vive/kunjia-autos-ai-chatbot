@@ -81,6 +81,19 @@ function buildVehicleBubble(v: Vehicle): any {
     style: "secondary",
   });
 
+  // Add "看影片" button if vehicle has a videoUrl
+  if (v.videoUrl) {
+    footerButtons.push({
+      type: "button",
+      action: {
+        type: "uri",
+        label: "🎬 看影片",
+        uri: String(v.videoUrl),
+      },
+      style: "secondary",
+    });
+  }
+
   // Add "看所有照片" button if vehicle has more than 1 photo
   if (photoCount > 1) {
     footerButtons.push({

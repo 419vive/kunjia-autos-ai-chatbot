@@ -99,6 +99,19 @@ function buildLineDeepLink(message: string): string {
   return `${LINE_OA_URL}?openQrModal=1&body=${encoded}`;
 }
 
+/** Extract YouTube video ID from various YouTube URL formats */
+function getYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 export default function VehicleLanding() {
   const [, params] = useRoute("/vehicle/:id");
   const vehicleId = params?.id ? parseInt(params.id, 10) : null;
@@ -117,6 +130,22 @@ export default function VehicleLanding() {
     }
     return raw.split("|").filter((url: string) => url.trim());
   }, [vehicle?.photoUrls]);
+
+  // Parse video URL
+  const videoUrl = vehicle?.videoUrl as string | null | undefined;
+  const hasVideo = !!videoUrl?.trim();
+
+  // Parse 360 photos (pipe-separated)
+  const photos360 = useMemo(() => {
+    if (!vehicle?.photos360Urls) return [];
+    const raw = vehicle.photos360Urls as string;
+    return raw.split("|").filter((url: string) => url.trim());
+  }, [vehicle?.photos360Urls]);
+  const has360 = photos360.length > 0;
+
+  // Media tab state
+  type MediaTab = "photos" | "video" | "360";
+  const [activeMediaTab, setActiveMediaTab] = useState<MediaTab>("photos");
 
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -360,82 +389,174 @@ export default function VehicleLanding() {
 
         {/* Vehicle card */}
         <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
-          {/* Photo */}
-          <div
-            className="relative aspect-[16/10] bg-black/30 overflow-hidden"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {photos.length > 0 ? (
-              <>
-                <ProgressiveImage
-                  src={photos[currentPhoto]}
-                  alt={`${name} - 照片 ${currentPhoto + 1}`}
-                  containerClassName="w-full h-full"
-                  aspectRatio="16/10"
-                />
-                {totalPhotos > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPhoto((p) => (p + 1) % totalPhotos)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs">
-                      {currentPhoto + 1} / {totalPhotos}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Car className="w-16 h-16 text-white/20" />
-              </div>
-            )}
-
-            {/* Price badge */}
-            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg">
-              {price}
-            </div>
-
-            {/* Certification badge */}
-            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#1B3A5C]/80 backdrop-blur border border-[#C4A265]/30 flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
-              <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
-            </div>
-
-            {/* Wishlist button */}
-            <WishlistButton
-              vehicle={{
-                id: vehicle.id,
-                brand: vehicle.brand,
-                model: vehicle.model,
-                price,
-                photo: photos[0],
-              }}
-              size="md"
-              className="absolute bottom-3 left-3"
-            />
-
-            {/* Fullscreen expand button */}
-            {photos.length > 0 && (
+          {/* Media tabs (only show if multiple media types) */}
+          {(hasVideo || has360) && (
+            <div className="flex items-center gap-1 px-4 pt-3 pb-1">
               <button
-                onClick={() => setGalleryOpen(true)}
-                className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                aria-label="全螢幕瀏覽照片"
+                onClick={() => setActiveMediaTab("photos")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  activeMediaTab === "photos"
+                    ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                    : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                }`}
               >
-                <Expand className="w-4 h-4" />
+                <Camera className="w-3.5 h-3.5" />
+                照片
               </button>
-            )}
-          </div>
+              {hasVideo && (
+                <button
+                  onClick={() => setActiveMediaTab("video")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    activeMediaTab === "video"
+                      ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                      : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                  }`}
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  影片
+                </button>
+              )}
+              {has360 && (
+                <button
+                  onClick={() => setActiveMediaTab("360")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    activeMediaTab === "360"
+                      ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                      : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                  }`}
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  360°
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Media content area */}
+          {activeMediaTab === "photos" && (
+            <div
+              className="relative aspect-[16/10] bg-black/30 overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {photos.length > 0 ? (
+                <>
+                  <ProgressiveImage
+                    src={photos[currentPhoto]}
+                    alt={`${name} - 照片 ${currentPhoto + 1}`}
+                    containerClassName="w-full h-full"
+                    aspectRatio="16/10"
+                  />
+                  {totalPhotos > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPhoto((p) => (p + 1) % totalPhotos)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs">
+                        {currentPhoto + 1} / {totalPhotos}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Car className="w-16 h-16 text-white/20" />
+                </div>
+              )}
+
+              {/* Price badge */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg">
+                {price}
+              </div>
+
+              {/* Certification badge */}
+              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#1B3A5C]/80 backdrop-blur border border-[#C4A265]/30 flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
+                <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
+              </div>
+
+              {/* Wishlist button */}
+              <WishlistButton
+                vehicle={{
+                  id: vehicle.id,
+                  brand: vehicle.brand,
+                  model: vehicle.model,
+                  price,
+                  photo: photos[0],
+                }}
+                size="md"
+                className="absolute bottom-3 left-3"
+              />
+
+              {/* Fullscreen expand button */}
+              {photos.length > 0 && (
+                <button
+                  onClick={() => setGalleryOpen(true)}
+                  className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                  aria-label="全螢幕瀏覽照片"
+                >
+                  <Expand className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Video tab */}
+          {activeMediaTab === "video" && hasVideo && (
+            <div className="relative aspect-[16/10] bg-black/30 overflow-hidden">
+              {(() => {
+                const ytId = getYouTubeId(videoUrl!);
+                if (ytId) {
+                  return (
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0`}
+                      title={`${name} 影片`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  );
+                }
+                return (
+                  <video
+                    src={videoUrl!}
+                    controls
+                    className="w-full h-full object-contain bg-black"
+                    preload="metadata"
+                  >
+                    <track kind="captions" />
+                  </video>
+                );
+              })()}
+              {/* Price badge */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg pointer-events-none">
+                {price}
+              </div>
+            </div>
+          )}
+
+          {/* 360 tab */}
+          {activeMediaTab === "360" && has360 && (
+            <Suspense
+              fallback={
+                <div className="aspect-[16/10] bg-black/30 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-[#C4A265] border-t-transparent rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <Vehicle360Viewer photos={photos360} alt={name} />
+            </Suspense>
+          )}
 
           {/* Vehicle info */}
           <div className="px-5 py-4">

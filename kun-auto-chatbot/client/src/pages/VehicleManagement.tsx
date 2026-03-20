@@ -21,6 +21,11 @@ import {
   HandCoins,
   PackageCheck,
   Undo2,
+  Video,
+  RotateCw,
+  ChevronDown,
+  ChevronUp,
+  Save,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -118,10 +123,88 @@ function SyncStatusCard() {
   );
 }
 
+/** Inline media editor for video/360 URLs per vehicle */
+function VehicleMediaEditor({ vehicleId, currentVideoUrl, currentPhotos360Urls }: {
+  vehicleId: number;
+  currentVideoUrl: string | null;
+  currentPhotos360Urls: string | null;
+}) {
+  const [videoUrl, setVideoUrl] = useState(currentVideoUrl || "");
+  const [photos360, setPhotos360] = useState(
+    currentPhotos360Urls ? currentPhotos360Urls.split("|").join("\n") : ""
+  );
+  const utils = trpc.useUtils();
+  const updateMedia = trpc.admin.updateVehicleMedia.useMutation({
+    onSuccess: () => {
+      utils.admin.vehicles.invalidate();
+      toast.success("媒體資料已更新");
+    },
+    onError: (err) => toast.error(`更新失敗：${err.message}`),
+  });
+
+  const handleSave = () => {
+    const photos360Urls = photos360
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join("|") || null;
+    updateMedia.mutate({
+      id: vehicleId,
+      videoUrl: videoUrl.trim() || null,
+      photos360Urls,
+    });
+  };
+
+  return (
+    <div className="border-t px-3 py-3 space-y-3 bg-muted/30">
+      <div>
+        <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+          <Video className="h-3 w-3" />
+          影片連結
+        </label>
+        <input
+          type="text"
+          value={videoUrl}
+          onChange={(e) => setVideoUrl(e.target.value)}
+          placeholder="YouTube 或影片連結"
+          className="w-full px-2.5 py-1.5 text-xs rounded-md border bg-background"
+        />
+      </div>
+      <div>
+        <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+          <RotateCw className="h-3 w-3" />
+          360度照片連結
+        </label>
+        <textarea
+          value={photos360}
+          onChange={(e) => setPhotos360(e.target.value)}
+          placeholder="360度照片連結，每行一個"
+          rows={3}
+          className="w-full px-2.5 py-1.5 text-xs rounded-md border bg-background resize-y"
+        />
+      </div>
+      <Button
+        size="sm"
+        className="h-7 text-xs"
+        onClick={handleSave}
+        disabled={updateMedia.isPending}
+      >
+        {updateMedia.isPending ? (
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+        ) : (
+          <Save className="mr-1 h-3 w-3" />
+        )}
+        儲存媒體
+      </Button>
+    </div>
+  );
+}
+
 type StatusFilter = "all" | "available" | "reserved" | "sold";
 
 export default function VehicleManagement() {
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [expandedMediaId, setExpandedMediaId] = useState<number | null>(null);
   const { data: vehicles, isLoading } = trpc.admin.vehicles.useQuery();
   const utils = trpc.useUtils();
   const updateStatus = trpc.admin.updateVehicleStatus.useMutation({
@@ -314,9 +397,30 @@ export default function VehicleManagement() {
                           恢復在售
                         </Button>
                       )}
+                      {/* Media edit toggle */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground"
+                        onClick={() => setExpandedMediaId(expandedMediaId === v.id ? null : v.id)}
+                      >
+                        {expandedMediaId === v.id ? (
+                          <ChevronUp className="mr-1 h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="mr-1 h-3 w-3" />
+                        )}
+                        影片/360°
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
+                {expandedMediaId === v.id && (
+                  <VehicleMediaEditor
+                    vehicleId={v.id}
+                    currentVideoUrl={(v as any).videoUrl || null}
+                    currentPhotos360Urls={(v as any).photos360Urls || null}
+                  />
+                )}
               </Card>
             );
           })}
