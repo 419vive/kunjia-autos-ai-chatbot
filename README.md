@@ -25,6 +25,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Agent Reach — AI Agent Internet Access](#agent-reach--ai-agent-internet-access)
 - [Security Audit — Agent Reach](#security-audit--agent-reach)
 - [AI Agent Development Strategy](#ai-agent-development-strategy)
+  - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
 
 ---
 
@@ -1037,6 +1038,52 @@ The cost is coordination overhead and shared context consumption. They are the r
 ```
 
 > **Credit:** Strategy based on [@keshavsuki](https://github.com/keshavsuki)'s Sub-Agents vs Agent Teams guide.
+
+### The `/simplify` Plan Gate — Catching Over-Engineering Before It Ships
+
+Claude Code's Plan Mode has a known failure pattern: you give it a requirement, it produces a massive execution plan full of unfamiliar abstractions, unnecessary layers, and scope creep. The real danger is developer inertia — you skim the plan, think "looks thorough enough," hit approve, and let the AI turn a simple fix into an unmaintainable mess.
+
+The symptoms:
+
+- **Laziness:** The plan is clearly bloated, but breaking it down manually feels like work
+- **Scope blindness:** The plan introduces packages or patterns you don't know, but you skip the review to move faster
+- **Code smell you can't name:** Something feels off — "is this really necessary?" — but you can't pinpoint the problem
+- **Permission fatigue:** You end up blindly approving every step just to see results
+
+**The hack: use `/simplify` as a pre-execution plan reviewer.**
+
+`/simplify` is officially a post-code cleanup tool — it spawns three parallel review agents to catch duplicate logic, improve code quality, and auto-fix issues. But there's nothing stopping you from running it *on the plan itself* before any code is written.
+
+```
+# Step 1: Claude generates a plan in Plan Mode
+# Step 2: BEFORE approving, type:
+
+use /simplify to check if the plan is sound
+
+# Step 3: Three review agents audit the plan for:
+#   - Over-engineering and unnecessary abstraction layers
+#   - Scope creep beyond what was actually requested
+#   - Code smells and complexity that could be simplified
+#   - Unfamiliar dependencies that aren't truly needed
+```
+
+This forces the AI to review its own plan through fresh eyes. The review agents will:
+
+1. **Cut over-engineered steps** — remove abstraction layers that don't earn their complexity
+2. **Simplify exotic solutions** — replace unfamiliar patterns with straightforward approaches
+3. **Name the code smells** — articulate what felt "off" in human-readable terms
+
+**Recommended workflow:**
+
+```
+Plan Mode → /simplify (review plan) → Approve → Execute → /simplify (review code)
+```
+
+You run `/simplify` twice: once to gate the plan, once to clean the output. The first pass prevents bad architecture from ever being built. The second pass catches implementation-level issues.
+
+> **The core insight:** Use AI to defend against AI. You don't need to understand every abstraction in the plan — let the review agents do that work for you. The cost is one extra step; the payoff is code that stays simple and maintainable.
+>
+> **Credit:** Technique from [FinLab 財經實驗室](https://www.facebook.com/finaboratory)'s Claude Code tips series.
 
 ---
 
