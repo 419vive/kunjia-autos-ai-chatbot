@@ -57,33 +57,17 @@ function buildVehicleBubble(v: Vehicle): any {
       color: "#C4A265",
       height: "md",
     },
-  ];
-
-  // Video button elevated to #2 position (Fitt's Law: higher = more clicks)
-  // Links to vehicle detail page with video tab auto-opened
-  if (v.videoUrl) {
-    footerButtons.push({
+    {
       type: "button",
       action: {
-        type: "uri",
-        label: "🎬 看影片介紹",
-        uri: `${vehicleDetailUrl}?tab=video`,
+        type: "message",
+        label: "💬 LINE 問這台車",
+        text: lineInquiryText,
       },
       style: "primary",
-      color: "#FF4444",
-    });
-  }
-
-  footerButtons.push({
-    type: "button",
-    action: {
-      type: "message",
-      label: "💬 LINE 問這台車",
-      text: lineInquiryText,
+      color: "#06C755",
     },
-    style: "primary",
-    color: "#06C755",
-  });
+  ];
 
   // Appointment booking button
   const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
@@ -96,6 +80,19 @@ function buildVehicleBubble(v: Vehicle): any {
     },
     style: "secondary",
   });
+
+  // Add "看影片" button if vehicle has a videoUrl
+  if (v.videoUrl) {
+    footerButtons.push({
+      type: "button",
+      action: {
+        type: "uri",
+        label: "🎬 看影片",
+        uri: String(v.videoUrl),
+      },
+      style: "secondary",
+    });
+  }
 
   // Add "看所有照片" button if vehicle has more than 1 photo
   if (photoCount > 1) {
@@ -1207,8 +1204,6 @@ export type ConversationContext = {
   hasContact: boolean;       // Customer already provided phone
   vehicleName?: string;      // e.g., "Toyota Corolla"
   vehicleExternalId?: string;
-  vehicleId?: number;            // Vehicle DB id (for deep links)
-  vehicleVideoUrl?: string;      // If vehicle has a video, include URL
   // Personalization fields
   previousVehicles?: string[];   // Vehicles user asked about before
   messageCount?: number;         // Total messages in conversation
@@ -1224,18 +1219,6 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
 
   if (ctx.hasVehicle && ctx.vehicleName) {
     // Customer is asking about a specific vehicle → show booking-focused actions
-    // If vehicle has video, show video button first (curiosity trigger)
-    if (ctx.vehicleVideoUrl) {
-      const baseUrl = process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app";
-      items.push({
-        type: "action",
-        action: {
-          type: "uri",
-          label: "🎬 看影片介紹",
-          uri: `${baseUrl}/vehicle/${ctx.vehicleId}?tab=video`,
-        },
-      });
-    }
     items.push({
       type: "action",
       action: {

@@ -170,7 +170,7 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: {
             </div>
           );
         })()}
-        {/* Video badge + Photo count + expand + wishlist */}
+        {/* Photo count + expand + wishlist */}
         <div className="absolute top-2 right-2 flex items-center gap-1">
           {vehicle.status === "available" && (
             <WishlistButton
@@ -183,16 +183,6 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: {
               }}
               size="sm"
             />
-          )}
-          {vehicle.videoUrl && (
-            <a
-              href={`/vehicle/${vehicle.id}?tab=video`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-0.5 rounded bg-red-600/85 px-1.5 py-0.5 text-[10px] text-white font-medium hover:bg-red-600 transition-colors"
-              title="有影片介紹"
-            >
-              🎬 有影片
-            </a>
           )}
           {totalPhotos > 1 && (
             <span className="flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
