@@ -1198,6 +1198,12 @@ async function processLineEvent(
     content: replyText,
   });
 
+  // Proactive video mention: when discussing a vehicle that has a video, append a hint
+  if (detection.vehicle && detection.vehicle.videoUrl && !replyText.includes("影片")) {
+    const videoDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${detection.vehicle.id}?tab=video`;
+    replyText += `\n\n🎬 這台車有影片介紹喔！\n👉 ${videoDetailUrl}`;
+  }
+
   // Build contextual quick reply based on conversation state (personalized)
   // Extract previously discussed vehicles from conversation history
   const allMessages = await db.getMessagesByConversation(convId, 30);
@@ -1213,6 +1219,8 @@ async function processLineEvent(
     hasContact: !!conversation!.customerContact,
     vehicleName: detection.vehicle ? `${detection.vehicle.brand} ${detection.vehicle.model}` : undefined,
     vehicleExternalId: detection.vehicle?.externalId ? String(detection.vehicle.externalId) : undefined,
+    vehicleId: detection.vehicle?.id,
+    vehicleVideoUrl: detection.vehicle?.videoUrl ? String(detection.vehicle.videoUrl) : undefined,
     previousVehicles: prevVehicles.slice(0, 3),
     messageCount: allMessages.length,
     leadScore: conversation!.leadScore || 0,

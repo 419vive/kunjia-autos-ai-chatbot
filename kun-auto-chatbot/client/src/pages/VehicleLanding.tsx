@@ -143,14 +143,25 @@ export default function VehicleLanding() {
   }, [vehicle?.photos360Urls]);
   const has360 = photos360.length > 0;
 
-  // Media tab state
+  // Media tab state — auto-switch to video if ?tab=video and video exists
   type MediaTab = "photos" | "video" | "360";
-  const [activeMediaTab, setActiveMediaTab] = useState<MediaTab>("photos");
+  const [activeMediaTab, setActiveMediaTab] = useState<MediaTab>(() => {
+    if (urlTab === "video") return "video";
+    return "photos";
+  });
+
+  // Auto-switch to video tab if ?tab=video is in URL
+  const urlTab = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab");
+  }, []);
 
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [photoSwipeCount, setPhotoSwipeCount] = useState(0);
+  const [videoCtaDismissed, setVideoCtaDismissed] = useState(false);
 
   const totalPhotos = photos.length;
 
@@ -168,8 +179,10 @@ export default function VehicleLanding() {
     if (Math.abs(distance) >= 50) {
       if (distance > 0 && totalPhotos > 1) {
         setCurrentPhoto((prev) => (prev + 1) % totalPhotos);
+        setPhotoSwipeCount((c) => c + 1);
       } else if (distance < 0 && totalPhotos > 1) {
         setCurrentPhoto((prev) => (prev - 1 + totalPhotos) % totalPhotos);
+        setPhotoSwipeCount((c) => c + 1);
       }
     }
     setTouchStart(null);
@@ -451,13 +464,13 @@ export default function VehicleLanding() {
                   {totalPhotos > 1 && (
                     <>
                       <button
-                        onClick={() => setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos)}
+                        onClick={() => { setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos); setPhotoSwipeCount((c) => c + 1); }}
                         className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={() => setCurrentPhoto((p) => (p + 1) % totalPhotos)}
+                        onClick={() => { setCurrentPhoto((p) => (p + 1) % totalPhotos); setPhotoSwipeCount((c) => c + 1); }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -665,6 +678,27 @@ export default function VehicleLanding() {
           </a>
         </div>
       </div>
+
+      {/* Floating video CTA pill — appears after 2+ photo swipes (Curiosity Gap trigger) */}
+      {hasVideo && activeMediaTab === "photos" && photoSwipeCount >= 2 && !videoCtaDismissed && (
+        <div className="fixed bottom-36 md:bottom-24 left-4 z-50 animate-in slide-in-from-bottom-4 duration-500">
+          <button
+            onClick={() => { setActiveMediaTab("video"); setVideoCtaDismissed(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-600/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm hover:bg-red-600 transition-all hover:scale-105 active:scale-95 border border-red-500/30"
+          >
+            <span className="text-base">🎬</span>
+            <span>看影片介紹</span>
+            <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">▶</span>
+          </button>
+          <button
+            onClick={() => setVideoCtaDismissed(true)}
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80 transition-colors"
+            aria-label="關閉"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <StickyBookingBar />
 
