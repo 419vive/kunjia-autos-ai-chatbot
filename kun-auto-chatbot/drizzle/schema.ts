@@ -45,6 +45,8 @@ export const vehicles = mysqlTable("vehicles", {
   guarantees: text("guarantees"),
   photoUrls: text("photoUrls"),
   photoCount: int("photoCount").default(0),
+  videoUrl: text("videoUrl"),
+  photos360Urls: text("photos360Urls"),
   status: mysqlEnum("status", ["available", "sold", "reserved"]).default("available").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -15,12 +15,17 @@ import {
   ChevronRight,
   Shield,
   Expand,
+  Camera,
+  Video,
+  RotateCw,
 } from "lucide-react";
 import StickyBookingBar from "@/components/StickyBookingBar";
 import { ViewingNow } from "@/components/SocialProof";
 import ProactiveChatTrigger from "@/components/ProactiveChatTrigger";
+import WishlistButton from "@/components/WishlistButton";
 
 const FullscreenGallery = lazy(() => import("@/components/FullscreenGallery"));
+const Vehicle360Viewer = lazy(() => import("@/components/Vehicle360Viewer"));
 
 type DeviceType = "mobile" | "desktop";
 
@@ -406,6 +411,19 @@ export default function VehicleLanding() {
               <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
               <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
             </div>
+
+            {/* Wishlist button */}
+            <WishlistButton
+              vehicle={{
+                id: vehicle.id,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                price,
+                photo: photos[0],
+              }}
+              size="md"
+              className="absolute bottom-3 left-3"
+            />
 
             {/* Fullscreen expand button */}
             {photos.length > 0 && (

@@ -1013,6 +1013,25 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
         return { success: true };
       }),
 
+    updateVehicleMedia: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        videoUrl: z.string().nullable().optional(),
+        photos360Urls: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db2 = await db.getDb();
+        if (!db2) throw new Error("Database not available");
+        const { vehicles: vTable } = await import("../drizzle/schema");
+        const updates: Record<string, any> = {};
+        if (input.videoUrl !== undefined) updates.videoUrl = input.videoUrl;
+        if (input.photos360Urls !== undefined) updates.photos360Urls = input.photos360Urls;
+        if (Object.keys(updates).length > 0) {
+          await db2.update(vTable).set(updates).where(eq(vTable.id, input.id));
+        }
+        return { success: true };
+      }),
+
     // 8891 Sync endpoints
     syncStatus: adminProcedure.query(async () => {
       return getSyncStatus();

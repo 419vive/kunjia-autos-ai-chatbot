@@ -4,7 +4,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, type ConversationContext } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, buildCsatSurveyMessage, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -240,6 +240,132 @@ function isDuplicate(messageId: string): boolean {
   processedMessages.set(messageId, now);
   return false;
 }
+
+// ============ CSAT SATISFACTION SURVEY STATE ============
+// Track per-user conversation activity for CSAT survey timing
+
+interface CsatUserState {
+  lastSurveyTime: number;   // Timestamp of last CSAT survey sent
+  lastMessageTime: number;  // Timestamp of last user message
+  messageCount: number;     // Number of messages in current conversation window
+}
+
+const csatState = new Map<string, CsatUserState>();
+const CSAT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CSAT_INACTIVITY_MS = 5 * 60 * 1000;     // 5 minutes
+const CSAT_MIN_MESSAGES = 3;                    // Minimum messages before survey
+
+// ============ FRUSTRATION / EMOTION DETECTION ============
+
+// Track recent questions per user for repeat detection
+const recentQuestions = new Map<string, string[]>();
+
+export function detectFrustration(message: string, userId?: string): { frustrated: boolean; confidence: number } {
+  let confidence = 0;
+
+  // Direct frustration keywords (Chinese)
+  const frustrationPatterns = [
+    { pattern: /不滿|生氣|爛|很差|太差|廢物|騙人|騙子|浪費時間|沒有用|不想理|垃圾|白痴|笨/, weight: 0.4 },
+    { pattern: /轉真人|找真人|找人|不想跟機器人說|要真人|真人客服|人工客服/, weight: 0.5 },
+    { pattern: /[？]{3,}|[！]{3,}|[?]{3,}|[!]{3,}/, weight: 0.3 },
+    { pattern: /到底|究竟|為什麼|怎麼回事|搞什麼/, weight: 0.2 },
+  ];
+
+  for (const { pattern, weight } of frustrationPatterns) {
+    if (pattern.test(message)) {
+      confidence += weight;
+    }
+  }
+
+  // Repeated question detection: if user asked same thing 3+ times
+  if (userId) {
+    const questions = recentQuestions.get(userId) || [];
+    questions.push(message);
+    // Keep only last 10 messages
+    if (questions.length > 10) questions.shift();
+    recentQuestions.set(userId, questions);
+
+    // Count how many times the last message appears (fuzzy: same first 10 chars)
+    const msgPrefix = message.slice(0, 10);
+    const repeatCount = questions.filter(q => q.slice(0, 10) === msgPrefix).length;
+    if (repeatCount >= 3) {
+      confidence += 0.4;
+    }
+  }
+
+  // Cap confidence at 1.0
+  confidence = Math.min(confidence, 1.0);
+
+  return { frustrated: confidence > 0.6, confidence };
+}
+
+// ============ CSAT INACTIVITY CHECK TIMER ============
+// Periodically check for users who should receive CSAT surveys
+
+async function checkCsatInactivity() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  const now = Date.now();
+
+  for (const [userId, state] of Array.from(csatState.entries())) {
+    // Skip if not enough messages
+    if (state.messageCount < CSAT_MIN_MESSAGES) continue;
+
+    // Skip if last message was less than 5 minutes ago (still active)
+    if (now - state.lastMessageTime < CSAT_INACTIVITY_MS) continue;
+
+    // Skip if CSAT already sent in last 24 hours
+    if (state.lastSurveyTime > 0 && now - state.lastSurveyTime < CSAT_COOLDOWN_MS) continue;
+
+    // Send CSAT survey
+    try {
+      const csatMessage = buildCsatSurveyMessage();
+      const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [csatMessage],
+        }),
+      });
+      const pushBody = await pushRes.text();
+      console.log(`[CSAT] Survey sent to ${userId.slice(0, 8)}... Response: ${pushRes.status} ${pushBody}`);
+
+      // Update state
+      state.lastSurveyTime = now;
+      state.messageCount = 0; // Reset message count after survey
+
+      // Log analytics
+      const sessionId = `line-${userId}`;
+      const conv = await db.getConversationBySessionId(sessionId);
+      if (conv) {
+        db.addAnalyticsEvent({
+          conversationId: conv.id,
+          userId,
+          eventCategory: "csat",
+          eventAction: "survey_sent",
+          channel: "line",
+        });
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: "[系統自動] 已發送滿意度調查",
+        });
+      }
+    } catch (err) {
+      console.error(`[CSAT] Failed to send survey to ${userId.slice(0, 8)}...:`, err);
+    }
+  }
+}
+
+// Run CSAT inactivity check every 60 seconds
+setInterval(() => {
+  checkCsatInactivity().catch((err) => console.error("[CSAT] Inactivity check error:", err));
+}, 60 * 1000);
 
 const lineRouter = Router();
 
@@ -549,6 +675,119 @@ async function processLineEvent(
     return;
   }
 
+  // ============ POSTBACK EVENT: Handle CSAT score submission ============
+  if (event.type === "postback") {
+    const userId = event.source?.userId;
+    const postbackData = event.postback?.data || "";
+    const replyToken = event.replyToken;
+
+    console.log(`[LINE] Postback from ${userId ? userId.slice(0, 8) + '...' : 'unknown'}: ${postbackData}`);
+
+    // Handle CSAT score postback
+    const csatMatch = postbackData.match(/^csat_score=(\d)$/);
+    if (csatMatch && userId && replyToken) {
+      const score = parseInt(csatMatch[1], 10);
+      console.log(`[CSAT] Score received: ${score} from ${userId.slice(0, 8)}...`);
+
+      // Log to analytics
+      const sessionId = `line-${userId}`;
+      const conv = await db.getConversationBySessionId(sessionId);
+      db.addAnalyticsEvent({
+        conversationId: conv?.id ?? null,
+        userId,
+        eventCategory: "csat",
+        eventAction: "score",
+        eventLabel: String(score),
+        channel: "line",
+      });
+
+      // Build thank-you reply based on score
+      let thankYouText: string;
+      if (score >= 4) {
+        thankYouText = "謝謝你的肯定！有需要隨時找阿家 🙏";
+      } else if (score === 3) {
+        thankYouText = "感謝回饋！我們會繼續改進 💪";
+      } else {
+        thankYouText = "抱歉讓你不滿意 😥 阿家本人會盡快聯繫你了解情況";
+      }
+
+      // Reply with thank you
+      try {
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{ type: "text", text: thankYouText }],
+          }),
+        });
+      } catch (err) {
+        console.error("[CSAT] Reply failed:", err);
+      }
+
+      // For low scores (1-2), notify owner
+      if (score <= 2 && conv) {
+        const ownerUserId = process.env.LINE_OWNER_USER_ID;
+        const customerName = conv.customerName || "未知客戶";
+        await notifyOwner({
+          title: "😥 客戶不滿意通知",
+          content: `客戶 ${customerName} 給了 ${score} 分的評價。\n請盡快聯繫了解情況。`,
+        });
+
+        // Push notification to owner via LINE
+        const recipientIds: string[] = [];
+        if (ownerUserId) recipientIds.push(ownerUserId);
+        const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
+        if (additionalIds) {
+          const extras = additionalIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
+          for (const extraId of extras) {
+            if (!recipientIds.includes(extraId)) recipientIds.push(extraId);
+          }
+        }
+
+        for (const recipientId of recipientIds) {
+          try {
+            await fetch("https://api.line.me/v2/bot/message/push", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${channelAccessToken}`,
+              },
+              body: JSON.stringify({
+                to: recipientId,
+                messages: [{
+                  type: "text",
+                  text: `😥 客戶不滿意！\n客戶：${customerName}\n評分：${"⭐".repeat(score)}（${score}分）\n\n請盡快聯繫了解情況`,
+                }],
+              }),
+            });
+          } catch (pushErr) {
+            console.error("[CSAT] Owner notification push failed:", pushErr);
+          }
+        }
+      }
+
+      // Save to conversation
+      if (conv) {
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "user",
+          content: `[CSAT評分] ${"⭐".repeat(score)}（${score}分）`,
+        });
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: thankYouText,
+        });
+      }
+    }
+
+    return;
+  }
+
   if (event.type !== "message" || event.message?.type !== "text") {
     console.log(`[LINE] Skipping event type: ${event.type}, message type: ${event.message?.type}`);
     return;
@@ -623,6 +862,26 @@ async function processLineEvent(
     content: userMessage,
   });
   console.log(`[LINE] Saved user message: id=${savedMsg.id}, convId=${convId}`);
+
+  // ============ UPDATE CSAT STATE ============
+  const currentCsat = csatState.get(userId) || { lastSurveyTime: 0, lastMessageTime: 0, messageCount: 0 };
+  currentCsat.lastMessageTime = Date.now();
+  currentCsat.messageCount += 1;
+  csatState.set(userId, currentCsat);
+
+  // ============ FRUSTRATION DETECTION ============
+  const frustration = detectFrustration(userMessage, userId);
+  if (frustration.frustrated) {
+    console.log(`[LINE] Frustration detected (confidence: ${frustration.confidence.toFixed(2)}) from ${userId.slice(0, 8)}...`);
+    db.addAnalyticsEvent({
+      conversationId: convId,
+      userId,
+      eventCategory: "emotion",
+      eventAction: "frustration_detected",
+      eventLabel: `confidence=${frustration.confidence.toFixed(2)}`,
+      channel: "line",
+    });
+  }
 
   // ============ AUTO-DETECT PHONE NUMBER ============
   const detectedPhone = detectPhoneNumber(userMessage);
@@ -920,6 +1179,13 @@ async function processLineEvent(
     // Append human handoff message to the reply
     replyText += '\n\n🙋‍♂️ 我已經通知專人了，真人客服馬上就到！';
     console.log('[LINE] 🚨 HUMAN HANDOFF triggered (uncertainty detected in AI response).');
+  }
+
+  // ============ FRUSTRATION-TRIGGERED EMPATHETIC RESPONSE ============
+  if (frustration.frustrated && !isHumanHandoff) {
+    isHumanHandoff = true;
+    replyText = '不好意思讓您不方便了！我馬上幫您轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
+    console.log('[LINE] 😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
   }
 
   // Save assistant response

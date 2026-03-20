@@ -15,6 +15,8 @@ import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed
 import SeoFooter from "@/components/SeoFooter";
 import StickyBookingBar from "@/components/StickyBookingBar";
 import WelcomeBack from "@/components/WelcomeBack";
+import WishlistButton from "@/components/WishlistButton";
+import WishlistDrawer from "@/components/WishlistDrawer";
 import { TodayActivity } from "@/components/SocialProof";
 import { useScrollReveal, revealClass, staggerDelay } from "@/hooks/useScrollReveal";
 import { nanoid } from "nanoid";
@@ -168,8 +170,20 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: {
             </div>
           );
         })()}
-        {/* Photo count + expand */}
+        {/* Photo count + expand + wishlist */}
         <div className="absolute top-2 right-2 flex items-center gap-1">
+          {vehicle.status === "available" && (
+            <WishlistButton
+              vehicle={{
+                id: vehicle.id,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                price: vehicle.priceDisplay || `${vehicle.price}萬`,
+                photo: photos[0],
+              }}
+              size="sm"
+            />
+          )}
           {totalPhotos > 1 && (
             <span className="flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
               📷 {totalPhotos}
@@ -661,6 +675,9 @@ export default function Home() {
           />
         </Suspense>
       )}
+
+      {/* Wishlist Drawer */}
+      <WishlistDrawer />
 
       {/* Floating Chat Button with Tooltip */}
       <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-3">

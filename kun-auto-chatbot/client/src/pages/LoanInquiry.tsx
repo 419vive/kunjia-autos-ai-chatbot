@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Car, Phone, CheckCircle2, Loader2 } from "lucide-react";
+import { Car, Phone, CheckCircle2, Loader2, X } from "lucide-react";
+import { useFormAutosave } from "@/hooks/useFormAutosave";
 
 type FormData = {
   customerName: string;
@@ -77,9 +78,37 @@ export default function LoanInquiry() {
 
   const [form, setForm] = useState<FormData>(initialForm);
   const [submitted, setSubmitted] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
+  // Auto-save form data to sessionStorage
+  const autosaveData = useMemo(() => ({
+    ...form,
+    vehicleId: vehicleId || "",
+    vehicleName,
+  }), [form, vehicleId, vehicleName]);
+
+  const { restoredData, clearDraft } = useFormAutosave("kunjia_loan_draft", autosaveData);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (restoredData) {
+      const { vehicleId: _vid, vehicleName: _vn, ...formFields } = restoredData as Record<string, string>;
+      const restored: Partial<FormData> = {};
+      for (const key of Object.keys(initialForm) as (keyof FormData)[]) {
+        if (formFields[key]) restored[key] = formFields[key];
+      }
+      if (Object.keys(restored).length > 0) {
+        setForm((prev) => ({ ...prev, ...restored }));
+        setShowRestoreBanner(true);
+      }
+    }
+  }, [restoredData]);
 
   const mutation = trpc.loan.submit.useMutation({
-    onSuccess: () => setSubmitted(true),
+    onSuccess: () => {
+      clearDraft();
+      setSubmitted(true);
+    },
   });
 
   const update = (field: keyof FormData) => (value: string) => {
@@ -180,6 +209,21 @@ export default function LoanInquiry() {
           <span className="rounded-full bg-muted px-2.5 py-1">✅ 免費評估</span>
           <span className="rounded-full bg-muted px-2.5 py-1">⚡ 快速回覆</span>
         </div>
+
+        {/* Draft restored banner */}
+        {showRestoreBanner && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 mb-4 flex items-center justify-between text-sm text-blue-700 animate-in slide-in-from-top-2 duration-300">
+            <span>已恢復上次填寫的資料 ✓</span>
+            <button
+              type="button"
+              onClick={() => setShowRestoreBanner(false)}
+              className="ml-2 p-0.5 rounded hover:bg-blue-100 transition-colors"
+              aria-label="關閉"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}

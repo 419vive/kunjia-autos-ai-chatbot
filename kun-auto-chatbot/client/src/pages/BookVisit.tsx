@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2, Check, AlertCircle } from "lucide-react";
+import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2, Check, AlertCircle, X } from "lucide-react";
+import { useFormAutosave } from "@/hooks/useFormAutosave";
 
 type TimeMode = "flexible" | "specific";
 
@@ -17,6 +18,30 @@ export default function BookVisit() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
+  // Auto-save form data to sessionStorage
+  const formData = useMemo(() => ({
+    timeMode, preferredDate, amPm, specificTime,
+    customerName, phone, notes,
+    vehicleId: vehicleId || "", vehicleName,
+  }), [timeMode, preferredDate, amPm, specificTime, customerName, phone, notes, vehicleId, vehicleName]);
+
+  const { restoredData, clearDraft, hasDraft } = useFormAutosave("kunjia_bookvisit_draft", formData);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (restoredData) {
+      if (restoredData.customerName) setCustomerName(restoredData.customerName as string);
+      if (restoredData.phone) setPhone(restoredData.phone as string);
+      if (restoredData.notes) setNotes(restoredData.notes as string);
+      if (restoredData.timeMode) setTimeMode(restoredData.timeMode as TimeMode);
+      if (restoredData.preferredDate) setPreferredDate(restoredData.preferredDate as string);
+      if (restoredData.amPm) setAmPm(restoredData.amPm as "" | "AM" | "PM");
+      if (restoredData.specificTime) setSpecificTime(restoredData.specificTime as string);
+      setShowRestoreBanner(true);
+    }
+  }, [restoredData]);
 
   // Inline validation state
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -26,7 +51,10 @@ export default function BookVisit() {
   const nameValid = customerName.trim().length >= 2;
 
   const mutation = trpc.appointment.submit.useMutation({
-    onSuccess: () => setSubmitted(true),
+    onSuccess: () => {
+      clearDraft();
+      setSubmitted(true);
+    },
   });
 
   // Build today's date string for min attribute
@@ -158,6 +186,21 @@ export default function BookVisit() {
           <span>⚡ 1小時內回電</span>
           <span>✅ 看車完全免費</span>
         </div>
+
+        {/* Draft restored banner */}
+        {showRestoreBanner && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 mb-4 flex items-center justify-between text-sm text-blue-700 animate-in slide-in-from-top-2 duration-300">
+            <span>已恢復上次填寫的資料 ✓</span>
+            <button
+              type="button"
+              onClick={() => setShowRestoreBanner(false)}
+              className="ml-2 p-0.5 rounded hover:bg-blue-100 transition-colors"
+              aria-label="關閉"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Flexible time checkbox shortcut */}
