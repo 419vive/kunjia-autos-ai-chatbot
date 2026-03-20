@@ -10,7 +10,7 @@ export default function BookVisit() {
   const vehicleId = params.get("vehicleId");
   const vehicleName = params.get("vehicle") || "";
 
-  const [timeMode, setTimeMode] = useState<TimeMode>("flexible");
+  const [timeMode, setTimeMode] = useState<TimeMode>("specific");
   const [preferredDate, setPreferredDate] = useState("");
   const [amPm, setAmPm] = useState<"" | "AM" | "PM">("");
   const [specificTime, setSpecificTime] = useState("");
