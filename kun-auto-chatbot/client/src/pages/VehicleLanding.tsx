@@ -122,6 +122,13 @@ export default function VehicleLanding() {
     { enabled: vehicleId !== null && !isNaN(vehicleId) }
   );
 
+  const isSold = vehicle?.status === "sold" || vehicle?.status === "reserved";
+
+  // Fetch similar vehicles when this one is sold (must be before early returns)
+  const { data: allVehicles } = trpc.vehicle.list.useQuery(undefined, {
+    enabled: !!isSold,
+  });
+
   const photos = useMemo(() => {
     if (!vehicle?.photoUrls) return [];
     const raw = vehicle.photoUrls as string;
@@ -153,6 +160,21 @@ export default function VehicleLanding() {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const totalPhotos = photos.length;
+
+  const similarVehicles = useMemo(() => {
+    if (!isSold || !allVehicles || !vehicle) return [];
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && v.brand === vehicle.brand)
+      .slice(0, 3);
+  }, [isSold, allVehicles, vehicle]);
+
+  const otherVehicles = useMemo(() => {
+    if (!isSold || !allVehicles || !vehicle || similarVehicles.length >= 3) return [];
+    const similarIds = new Set(similarVehicles.map((v: any) => v.id));
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && !similarIds.has(v.id))
+      .slice(0, 3 - similarVehicles.length);
+  }, [isSold, allVehicles, vehicle, similarVehicles]);
 
   // Touch swipe for photo gallery
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -219,28 +241,6 @@ export default function VehicleLanding() {
       </div>
     );
   }
-
-  const isSold = vehicle.status === "sold" || vehicle.status === "reserved";
-
-  // Fetch similar vehicles when this one is sold
-  const { data: allVehicles } = trpc.vehicle.list.useQuery(undefined, {
-    enabled: isSold,
-  });
-
-  const similarVehicles = useMemo(() => {
-    if (!isSold || !allVehicles) return [];
-    return allVehicles
-      .filter((v: any) => v.id !== vehicle.id && v.brand === vehicle.brand)
-      .slice(0, 3);
-  }, [isSold, allVehicles, vehicle.id, vehicle.brand]);
-
-  const otherVehicles = useMemo(() => {
-    if (!isSold || !allVehicles || similarVehicles.length >= 3) return [];
-    const similarIds = new Set(similarVehicles.map((v: any) => v.id));
-    return allVehicles
-      .filter((v: any) => v.id !== vehicle.id && !similarIds.has(v.id))
-      .slice(0, 3 - similarVehicles.length);
-  }, [isSold, allVehicles, vehicle.id, similarVehicles]);
 
   const name = `${vehicle.brand} ${vehicle.model}`;
   const year = vehicle.modelYear ? `${vehicle.modelYear}年` : "";
