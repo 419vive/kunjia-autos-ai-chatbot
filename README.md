@@ -24,6 +24,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Deployment](#deployment)
 - [Agent Reach — AI Agent Internet Access](#agent-reach--ai-agent-internet-access)
 - [Security Audit — Agent Reach](#security-audit--agent-reach)
+- [AI Agent Development Strategy](#ai-agent-development-strategy)
 
 ---
 
@@ -966,6 +967,76 @@ docs/install.md             — Install guide with security boundaries
 ### Summary
 
 Agent Reach is a well-structured, transparent tool. It does not phone home, does not collect telemetry, and does not transmit credentials anywhere. All internet access happens through well-known upstream tools (yt-dlp, xreach, curl, mcporter) that the user can independently audit. **Critical: always use `--safe` mode** to prevent silent cookie extraction and remote script execution. We installed with safe mode enabled. Keep `~/.agent-reach/config.yaml` at `0o600` permissions and use dedicated accounts for cookie-based platforms.
+
+---
+
+## AI Agent Development Strategy
+
+This project uses Claude Code's sub-agent and agent team patterns strategically. Choosing the wrong one costs time, money, and clean context.
+
+### Sub-agents = Contractors (90% of tasks)
+
+A sub-agent gets **one focused task**. It spins up in its own isolated context window, does the work, and returns a result. It has no awareness of your main session, no shared state with other agents, and no ongoing relationship.
+
+**This isolation is the feature.** Sub-agents keep the main session clean. Heavy work gets done in parallel without polluting the context you're actively thinking in.
+
+```
+# Spawn three independent sub-agents at the same time.
+# Each runs in its own context. None blocks the others.
+claude --worktree fix-auth-bug
+claude --worktree update-test-suite
+claude --worktree write-api-docs
+
+# Your main session stays free the entire time.
+```
+
+**Use sub-agents when:**
+- Tasks are independent and can run in parallel
+- You need isolated file editing (worktree isolation)
+- Research tasks that shouldn't pollute main context
+- Bug fixes, test updates, docs — each gets its own agent
+- Any task where one agent's output doesn't shape another's next action
+
+**Examples from this project:**
+- 5 parallel GEO audit agents (schema, technical, content, crawlers, platform)
+- Separate agents for SEO meta injection, blog content, FAQ page
+- Independent security audit agents for different repos
+- Parallel responsive design fixes across components
+
+### Agent Teams = Employees (10% of tasks)
+
+Agent teams are **long-running**. They share context with each other and coordinate in real time. You have a lead agent directing working agents, with shared task state across the team.
+
+The cost is coordination overhead and shared context consumption. They are the right tool **only when one agent's output must directly shape another agent's next action in real time**.
+
+**Use agent teams when:**
+- Step 1's output dynamically determines step 2's approach
+- Real-time coordination is needed between agents
+- The dependency between steps can't be pre-planned
+- Sequential decision-making with shared state
+
+**Examples:**
+- Research agent finds API breaking change → implementation agent adapts approach mid-flight
+- Code review agent identifies pattern → refactor agent applies fix across codebase using findings
+
+### The Decision Rule
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Can the tasks run independently?                        │
+│                                                          │
+│  YES ──▶ Sub-agents (isolated, parallel, 90% of work)   │
+│                                                          │
+│  NO  ──▶ Does step 1's output dynamically shape step 2? │
+│           │                                              │
+│           YES ──▶ Agent team (shared context, real-time) │
+│           NO  ──▶ Sub-agents, run sequentially           │
+│                                                          │
+│  UNSURE ──▶ Sub-agents. Always default to sub-agents.    │
+└─────────────────────────────────────────────────────────┘
+```
+
+> **Credit:** Strategy based on [@keshavsuki](https://github.com/keshavsuki)'s Sub-Agents vs Agent Teams guide.
 
 ---
 
