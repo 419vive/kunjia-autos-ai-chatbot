@@ -620,7 +620,7 @@ async function processLineEvent(
         if ((identified as any).color) extraInfo.push(`${(identified as any).color}`);
         const extraStr = extraInfo.length > 0 ? `（${extraInfo.join("・")}）` : "";
         const priceNote = (identified as any).price
-          ? `\n你看到的那台售價 ${(identified as any).price}，來比較看看我們的價格 💪`
+          ? `\n你看到的那台售價 ${(identified as any).price}，馬上幫你查詳細資訊 👇`
           : "";
 
         const textMsg = {
