@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
@@ -14,7 +14,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  Expand,
+  Camera,
+  Video,
+  RotateCw,
 } from "lucide-react";
+import StickyBookingBar from "@/components/StickyBookingBar";
+import { ViewingNow } from "@/components/SocialProof";
+import ProactiveChatTrigger from "@/components/ProactiveChatTrigger";
+import WishlistButton from "@/components/WishlistButton";
+
+const FullscreenGallery = lazy(() => import("@/components/FullscreenGallery"));
+const Vehicle360Viewer = lazy(() => import("@/components/Vehicle360Viewer"));
 
 type DeviceType = "mobile" | "desktop";
 
@@ -88,6 +99,19 @@ function buildLineDeepLink(message: string): string {
   return `${LINE_OA_URL}?openQrModal=1&body=${encoded}`;
 }
 
+/** Extract YouTube video ID from various YouTube URL formats */
+function getYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 export default function VehicleLanding() {
   const [, params] = useRoute("/vehicle/:id");
   const vehicleId = params?.id ? parseInt(params.id, 10) : null;
@@ -98,6 +122,13 @@ export default function VehicleLanding() {
     { enabled: vehicleId !== null && !isNaN(vehicleId) }
   );
 
+  const isSold = vehicle?.status === "sold" || vehicle?.status === "reserved";
+
+  // Fetch similar vehicles when this one is sold (must be before early returns)
+  const { data: allVehicles } = trpc.vehicle.list.useQuery(undefined, {
+    enabled: !!isSold,
+  });
+
   const photos = useMemo(() => {
     if (!vehicle?.photoUrls) return [];
     const raw = vehicle.photoUrls as string;
@@ -107,11 +138,43 @@ export default function VehicleLanding() {
     return raw.split("|").filter((url: string) => url.trim());
   }, [vehicle?.photoUrls]);
 
+  // Parse video URL
+  const videoUrl = vehicle?.videoUrl as string | null | undefined;
+  const hasVideo = !!videoUrl?.trim();
+
+  // Parse 360 photos (pipe-separated)
+  const photos360 = useMemo(() => {
+    if (!vehicle?.photos360Urls) return [];
+    const raw = vehicle.photos360Urls as string;
+    return raw.split("|").filter((url: string) => url.trim());
+  }, [vehicle?.photos360Urls]);
+  const has360 = photos360.length > 0;
+
+  // Media tab state
+  type MediaTab = "photos" | "video" | "360";
+  const [activeMediaTab, setActiveMediaTab] = useState<MediaTab>("photos");
+
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const totalPhotos = photos.length;
+
+  const similarVehicles = useMemo(() => {
+    if (!isSold || !allVehicles || !vehicle) return [];
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && v.brand === vehicle.brand)
+      .slice(0, 3);
+  }, [isSold, allVehicles, vehicle]);
+
+  const otherVehicles = useMemo(() => {
+    if (!isSold || !allVehicles || !vehicle || similarVehicles.length >= 3) return [];
+    const similarIds = new Set(similarVehicles.map((v: any) => v.id));
+    return allVehicles
+      .filter((v: any) => v.id !== vehicle.id && !similarIds.has(v.id))
+      .slice(0, 3 - similarVehicles.length);
+  }, [isSold, allVehicles, vehicle, similarVehicles]);
 
   // Touch swipe for photo gallery
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -213,12 +276,109 @@ export default function VehicleLanding() {
     }
   };
 
+  // Sold vehicle → show sold overlay + recommendations
+  if (isSold) {
+    const recommendations = [...similarVehicles, ...otherVehicles];
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440]">
+        <div className="relative max-w-lg mx-auto px-4 py-6">
+          <div className="text-center mb-4">
+            <p className="text-[#C4A265] text-xs font-medium tracking-widest uppercase">崑家汽車 · 40年老口碑</p>
+          </div>
+
+          {/* Sold banner */}
+          <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+            {/* Show first photo with sold overlay */}
+            <div className="relative aspect-[16/10] bg-black/30 overflow-hidden">
+              {photos.length > 0 ? (
+                <ProgressiveImage
+                  src={photos[0]}
+                  alt={`${name} - 已售出`}
+                  containerClassName="w-full h-full opacity-50"
+                  aspectRatio="16/10"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Car className="w-16 h-16 text-white/20" />
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="bg-red-600/90 px-6 py-2.5 rounded-xl text-white font-bold text-lg shadow-lg">
+                  已售出
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 text-center">
+              <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
+              <p className="text-white/40 text-xs mb-3">{year} · {price}</p>
+              <p className="text-white/60 text-sm">
+                這台車已經找到新主人了！
+                {recommendations.length > 0 ? "看看下面其他在售車輛：" : ""}
+              </p>
+            </div>
+          </div>
+
+          {/* Recommend similar vehicles */}
+          {recommendations.length > 0 && (
+            <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+              <div className="px-5 py-4">
+                <p className="text-white font-bold text-base mb-3">
+                  {similarVehicles.length > 0 ? `其他 ${vehicle.brand} 在售車輛` : "推薦在售車輛"}
+                </p>
+                <div className="space-y-3">
+                  {recommendations.map((v: any) => {
+                    const vPhoto = v.photoUrls ? String(v.photoUrls).split("|")[0]?.trim() : "";
+                    const vPrice = v.priceDisplay || `${v.price}萬`;
+                    return (
+                      <a
+                        key={v.id}
+                        href={`/vehicle/${v.id}`}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06] border border-white/10 hover:bg-white/[0.1] transition-all"
+                      >
+                        <div className="w-20 h-14 rounded-lg overflow-hidden bg-black/20 flex-shrink-0">
+                          {vPhoto ? (
+                            <img src={vPhoto} alt={`${v.brand} ${v.model}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Car className="w-6 h-6 text-white/20" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium text-sm truncate">{v.brand} {v.model}</p>
+                          <p className="text-white/40 text-xs">{v.modelYear ? `${v.modelYear}年` : ""} · {v.mileage || ""}</p>
+                        </div>
+                        <div className="text-[#C4A265] font-bold text-sm flex-shrink-0">{vPrice}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CTA to browse all */}
+          <div className="text-center">
+            <a
+              href="/"
+              className="inline-block px-6 py-3 bg-[#C4A265] text-white rounded-xl font-medium hover:bg-[#a8893e] transition-colors mb-4"
+            >
+              瀏覽所有在售車輛
+            </a>
+            <p className="text-white/25 text-xs">崑家汽車 · 高雄市三民區大順二路269號</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] via-[#1B3A5C] to-[#0f2440]">
       {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-[#C4A265]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-[15%] right-[10%] w-80 h-80 bg-[#C4A265]/5 rounded-full blur-3xl" />
+        <div className="absolute top-[10%] left-[5%] w-40 h-40 sm:w-64 sm:h-64 bg-[#C4A265]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-[15%] right-[10%] w-48 h-48 sm:w-80 sm:h-80 bg-[#C4A265]/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative max-w-lg mx-auto px-4 py-6">
@@ -229,66 +389,190 @@ export default function VehicleLanding() {
 
         {/* Vehicle card */}
         <div className="bg-white/[0.08] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden mb-4">
-          {/* Photo */}
-          <div
-            className="relative aspect-[16/10] bg-black/30 overflow-hidden"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {photos.length > 0 ? (
-              <>
-                <ProgressiveImage
-                  src={photos[currentPhoto]}
-                  alt={`${name} - 照片 ${currentPhoto + 1}`}
-                  containerClassName="w-full h-full"
-                  aspectRatio="16/10"
-                />
-                {totalPhotos > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPhoto((p) => (p + 1) % totalPhotos)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs">
-                      {currentPhoto + 1} / {totalPhotos}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Car className="w-16 h-16 text-white/20" />
+          {/* Media tabs (only show if multiple media types) */}
+          {(hasVideo || has360) && (
+            <div className="flex items-center gap-1 px-4 pt-3 pb-1">
+              <button
+                onClick={() => setActiveMediaTab("photos")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  activeMediaTab === "photos"
+                    ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                    : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                照片
+              </button>
+              {hasVideo && (
+                <button
+                  onClick={() => setActiveMediaTab("video")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    activeMediaTab === "video"
+                      ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                      : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                  }`}
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  影片
+                </button>
+              )}
+              {has360 && (
+                <button
+                  onClick={() => setActiveMediaTab("360")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    activeMediaTab === "360"
+                      ? "bg-[#C4A265]/20 text-[#C4A265] border border-[#C4A265]/30"
+                      : "bg-white/[0.06] text-white/50 border border-white/10 hover:bg-white/[0.1]"
+                  }`}
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  360°
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Media content area */}
+          {activeMediaTab === "photos" && (
+            <div
+              className="relative aspect-[16/10] bg-black/30 overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {photos.length > 0 ? (
+                <>
+                  <ProgressiveImage
+                    src={photos[currentPhoto]}
+                    alt={`${name} - 照片 ${currentPhoto + 1}`}
+                    containerClassName="w-full h-full"
+                    aspectRatio="16/10"
+                  />
+                  {totalPhotos > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentPhoto((p) => (p - 1 + totalPhotos) % totalPhotos)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPhoto((p) => (p + 1) % totalPhotos)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-white text-xs">
+                        {currentPhoto + 1} / {totalPhotos}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Car className="w-16 h-16 text-white/20" />
+                </div>
+              )}
+
+              {/* Price badge */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg">
+                {price}
               </div>
-            )}
 
-            {/* Price badge */}
-            <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg">
-              {price}
-            </div>
+              {/* Certification badge */}
+              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#1B3A5C]/80 backdrop-blur border border-[#C4A265]/30 flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
+                <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
+              </div>
 
-            {/* Certification badge */}
-            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#1B3A5C]/80 backdrop-blur border border-[#C4A265]/30 flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-[#C4A265]" />
-              <span className="text-[#C4A265] text-xs font-medium">第三方認證</span>
+              {/* Wishlist button */}
+              <WishlistButton
+                vehicle={{
+                  id: vehicle.id,
+                  brand: vehicle.brand,
+                  model: vehicle.model,
+                  price,
+                  photo: photos[0],
+                }}
+                size="md"
+                className="absolute bottom-3 left-3"
+              />
+
+              {/* Fullscreen expand button */}
+              {photos.length > 0 && (
+                <button
+                  onClick={() => setGalleryOpen(true)}
+                  className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                  aria-label="全螢幕瀏覽照片"
+                >
+                  <Expand className="w-4 h-4" />
+                </button>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Video tab */}
+          {activeMediaTab === "video" && hasVideo && (
+            <div className="relative aspect-[16/10] bg-black/30 overflow-hidden">
+              {(() => {
+                const ytId = getYouTubeId(videoUrl!);
+                if (ytId) {
+                  return (
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0`}
+                      title={`${name} 影片`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  );
+                }
+                return (
+                  <video
+                    src={videoUrl!}
+                    controls
+                    className="w-full h-full object-contain bg-black"
+                    preload="metadata"
+                  >
+                    <track kind="captions" />
+                  </video>
+                );
+              })()}
+              {/* Price badge */}
+              <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C4A265] to-[#a8893e] text-white font-bold text-lg shadow-lg pointer-events-none">
+                {price}
+              </div>
+            </div>
+          )}
+
+          {/* 360 tab */}
+          {activeMediaTab === "360" && has360 && (
+            <Suspense
+              fallback={
+                <div className="aspect-[16/10] bg-black/30 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-[#C4A265] border-t-transparent rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <Vehicle360Viewer photos={photos360} alt={name} />
+            </Suspense>
+          )}
 
           {/* Vehicle info */}
           <div className="px-5 py-4">
             <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
-            <p className="text-white/40 text-xs mb-3">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-white/40 text-xs">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
+              {vehicleId && <ViewingNow vehicleId={vehicleId} className="text-green-400/80" />}
+            </div>
+
+            {/* Trust line — below title/price area */}
+            <p className="flex items-center gap-1 text-green-400 text-xs mb-3">
+              🔒 第三方認證 · 實車實價 · 支援貸款
+            </p>
 
             {/* Specs grid */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
               {specs.map((spec, i) => (
                 <div
                   key={i}
@@ -298,6 +582,12 @@ export default function VehicleLanding() {
                   {spec.text}
                 </div>
               ))}
+            </div>
+
+            {/* Urgency / social proof line */}
+            <div className="flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2 mb-3">
+              <span className="text-base leading-none">🔥</span>
+              <p className="text-orange-400 text-xs font-medium">近期詢問熱烈，建議盡早預約看車</p>
             </div>
 
             {/* Short compelling copy */}
@@ -356,7 +646,7 @@ export default function VehicleLanding() {
 
         {/* Trust badges — mini version of 5 guarantees */}
         <div className="bg-white/[0.05] rounded-2xl border border-white/[0.06] px-4 py-3 mb-4">
-          <div className="flex items-center justify-between text-xs text-white/40">
+          <div className="flex items-center justify-between flex-wrap gap-y-1 text-xs text-white/40">
             <span>🛡️ 第三方認證</span>
             <span>💰 超強貸款</span>
             <span>🚗 免費接駁</span>
@@ -375,6 +665,23 @@ export default function VehicleLanding() {
           </a>
         </div>
       </div>
+
+      <StickyBookingBar />
+
+      {/* Proactive chat nudge after 15s */}
+      <ProactiveChatTrigger vehicleName={name} delay={15000} />
+
+      {/* Fullscreen Gallery */}
+      {galleryOpen && photos.length > 0 && (
+        <Suspense fallback={null}>
+          <FullscreenGallery
+            photos={photos}
+            initialIndex={currentPhoto}
+            alt={name}
+            onClose={() => setGalleryOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

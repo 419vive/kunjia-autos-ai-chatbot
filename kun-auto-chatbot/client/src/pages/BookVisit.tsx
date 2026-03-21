@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Car, Phone, MapPin, Clock, CheckCircle2, Loader2, Check, AlertCircle, X } from "lucide-react";
+import { useFormAutosave } from "@/hooks/useFormAutosave";
 
 type TimeMode = "flexible" | "specific";
 
@@ -9,7 +10,7 @@ export default function BookVisit() {
   const vehicleId = params.get("vehicleId");
   const vehicleName = params.get("vehicle") || "";
 
-  const [timeMode, setTimeMode] = useState<TimeMode>("flexible");
+  const [timeMode, setTimeMode] = useState<TimeMode>("specific");
   const [preferredDate, setPreferredDate] = useState("");
   const [amPm, setAmPm] = useState<"" | "AM" | "PM">("");
   const [specificTime, setSpecificTime] = useState("");
@@ -17,9 +18,43 @@ export default function BookVisit() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
+  // Auto-save form data to sessionStorage
+  const formData = useMemo(() => ({
+    timeMode, preferredDate, amPm, specificTime,
+    customerName, phone, notes,
+    vehicleId: vehicleId || "", vehicleName,
+  }), [timeMode, preferredDate, amPm, specificTime, customerName, phone, notes, vehicleId, vehicleName]);
+
+  const { restoredData, clearDraft, hasDraft } = useFormAutosave("kunjia_bookvisit_draft", formData);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (restoredData) {
+      if (restoredData.customerName) setCustomerName(restoredData.customerName as string);
+      if (restoredData.phone) setPhone(restoredData.phone as string);
+      if (restoredData.notes) setNotes(restoredData.notes as string);
+      if (restoredData.timeMode) setTimeMode(restoredData.timeMode as TimeMode);
+      if (restoredData.preferredDate) setPreferredDate(restoredData.preferredDate as string);
+      if (restoredData.amPm) setAmPm(restoredData.amPm as "" | "AM" | "PM");
+      if (restoredData.specificTime) setSpecificTime(restoredData.specificTime as string);
+      setShowRestoreBanner(true);
+    }
+  }, [restoredData]);
+
+  // Inline validation state
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = useCallback((field: string) => setTouched((t) => ({ ...t, [field]: true })), []);
+
+  const phoneValid = /^09\d{8}$/.test(phone.replace(/[\s-]/g, ""));
+  const nameValid = customerName.trim().length >= 2;
 
   const mutation = trpc.appointment.submit.useMutation({
-    onSuccess: () => setSubmitted(true),
+    onSuccess: () => {
+      clearDraft();
+      setSubmitted(true);
+    },
   });
 
   // Build today's date string for min attribute
@@ -55,15 +90,21 @@ export default function BookVisit() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
           </div>
-          <h1 className="text-xl font-bold">預約成功！</h1>
-          <p className="text-muted-foreground text-sm">
-            我們的銷售人員會盡快與您確認看車時間，請保持電話暢通。
-          </p>
+          <h1 className="text-xl font-bold">預約成功！🎉</h1>
           {vehicleName && (
             <p className="text-sm text-primary font-medium">
               預約車輛：{vehicleName}
             </p>
           )}
+          <div className="rounded-xl border bg-muted/30 p-4 text-left space-y-2">
+            <p className="text-sm font-semibold text-foreground">接下來會發生什麼？</p>
+            <ol className="text-sm text-muted-foreground space-y-1.5 list-none">
+              <li>1. 賴先生會在 1 小時內電話確認時間</li>
+              <li>2. 我們幫您保留看車位置</li>
+              <li>3. 看車當天帶身分證即可</li>
+            </ol>
+            <p className="text-sm text-green-700 font-medium pt-1">💡 來看車不需要付任何費用</p>
+          </div>
           <div className="pt-2 space-y-2">
             <a
               href="tel:0936812818"
@@ -139,24 +180,48 @@ export default function BookVisit() {
           )}
         </div>
 
+        {/* Trust strip */}
+        <div className="rounded-lg bg-green-50 px-4 py-3 mb-6 flex items-center justify-center gap-4 flex-wrap text-sm text-green-700 font-medium">
+          <span>🔒 資料保密</span>
+          <span>⚡ 1小時內回電</span>
+          <span>✅ 看車完全免費</span>
+        </div>
+
+        {/* Draft restored banner */}
+        {showRestoreBanner && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 mb-4 flex items-center justify-between text-sm text-blue-700 animate-in slide-in-from-top-2 duration-300">
+            <span>已恢復上次填寫的資料 ✓</span>
+            <button
+              type="button"
+              onClick={() => setShowRestoreBanner(false)}
+              className="ml-2 p-0.5 rounded hover:bg-blue-100 transition-colors"
+              aria-label="關閉"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Time mode selector */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Flexible time checkbox shortcut */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={timeMode === "flexible"}
+              onChange={(e) => setTimeMode(e.target.checked ? "flexible" : "specific")}
+              className="h-4 w-4 rounded border-gray-300 text-primary accent-primary"
+            />
+            <span className="text-sm font-medium">我時間彈性，請電話聯絡安排</span>
+          </label>
+
+          {/* Time mode selector — only shown when not flexible */}
+          {timeMode === "specific" && <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setTimeMode("flexible")}
-              className={`rounded-xl border-2 p-4 text-center transition-all ${
-                timeMode === "flexible"
-                  ? "border-primary bg-primary/5"
-                  : "border-muted hover:border-muted-foreground/30"
-              }`}
+              className="rounded-xl border-2 p-4 text-center transition-all border-muted hover:border-muted-foreground/30"
             >
-              <div className={`mx-auto mb-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                timeMode === "flexible" ? "border-primary bg-primary" : "border-muted-foreground/30"
-              }`}>
-                {timeMode === "flexible" && (
-                  <div className="h-2 w-2 rounded-full bg-white" />
-                )}
+              <div className="mx-auto mb-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-muted-foreground/30">
               </div>
               <p className="text-sm font-medium">暫不確定時間</p>
             </button>
@@ -178,7 +243,7 @@ export default function BookVisit() {
               </div>
               <p className="text-sm font-medium">選擇到店時間</p>
             </button>
-          </div>
+          </div>}
 
           {/* Specific time fields — shown only when "選擇到店時間" is selected */}
           {timeMode === "specific" && (
@@ -191,7 +256,7 @@ export default function BookVisit() {
                   value={preferredDate}
                   min={today}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
 
@@ -202,7 +267,7 @@ export default function BookVisit() {
                   <button
                     type="button"
                     onClick={() => setAmPm("AM")}
-                    className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
+                    className={`rounded-lg border py-3 text-sm font-medium transition-all ${
                       amPm === "AM"
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-muted bg-background hover:border-muted-foreground/30"
@@ -213,7 +278,7 @@ export default function BookVisit() {
                   <button
                     type="button"
                     onClick={() => setAmPm("PM")}
-                    className={`rounded-lg border py-2.5 text-sm font-medium transition-all ${
+                    className={`rounded-lg border py-3 text-sm font-medium transition-all ${
                       amPm === "PM"
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-muted bg-background hover:border-muted-foreground/30"
@@ -238,41 +303,67 @@ export default function BookVisit() {
                     value={specificTime}
                     onChange={(e) => setSpecificTime(e.target.value)}
                     placeholder={amPm === "AM" ? "例如 10:00" : "例如 14:00"}
-                    className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    className="w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
                 </div>
               )}
             </div>
           )}
 
-          {/* Customer name */}
+          {/* Customer name — with inline validation */}
           <div>
             <label className="text-sm font-medium">
               您的姓名 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              required
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="請輸入您的姓名"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-            />
+            <div className="relative mt-1">
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                onBlur={() => markTouched("name")}
+                placeholder="請輸入您的姓名"
+                className={`w-full rounded-lg border bg-background px-3 py-3 pr-10 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                  touched.name && !nameValid ? "border-red-300 focus:ring-red-200 focus:border-red-400" : ""
+                } ${touched.name && nameValid ? "border-green-300" : ""}`}
+              />
+              {touched.name && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-300 ${nameValid ? "text-green-500 scale-100" : "text-red-400 scale-100"}`}>
+                  {nameValid ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                </span>
+              )}
+            </div>
+            {touched.name && !nameValid && (
+              <p className="mt-1 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">請輸入至少 2 個字的姓名</p>
+            )}
           </div>
 
-          {/* Phone */}
+          {/* Phone — with inline validation + formatting hint */}
           <div>
             <label className="text-sm font-medium">
               行動電話 <span className="text-red-500">*</span>
             </label>
-            <input
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="請輸入您的手機號碼"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-            />
+            <div className="relative mt-1">
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => markTouched("phone")}
+                placeholder="0912-345-678"
+                className={`w-full rounded-lg border bg-background px-3 py-3 pr-10 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                  touched.phone && !phoneValid && phone.length > 0 ? "border-red-300 focus:ring-red-200 focus:border-red-400" : ""
+                } ${phoneValid ? "border-green-300" : ""}`}
+              />
+              {(touched.phone || phone.length > 3) && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-300 ${phoneValid ? "text-green-500 scale-100" : phone.length > 3 ? "text-red-400 scale-100" : "opacity-0 scale-75"}`}>
+                  {phoneValid ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                </span>
+              )}
+            </div>
+            {touched.phone && !phoneValid && phone.length > 0 && (
+              <p className="mt-1 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">請輸入有效的手機號碼（09 開頭，共 10 碼）</p>
+            )}
           </div>
 
           {/* Notes */}
@@ -283,15 +374,15 @@ export default function BookVisit() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="有什麼特別需求可以寫在這裡..."
               rows={2}
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
+              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-none"
             />
           </div>
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={mutation.isPending || !customerName || !phone}
-            className="w-full rounded-lg bg-primary px-4 py-3.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            disabled={mutation.isPending || !nameValid || !phoneValid}
+            className="w-full rounded-lg bg-[#06C755] px-4 py-3 text-sm font-bold text-white hover:bg-[#05b04c] disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
             {mutation.isPending ? (
               <>
@@ -299,7 +390,7 @@ export default function BookVisit() {
                 提交中...
               </>
             ) : (
-              "提交預約"
+              "確認預約，等待回電"
             )}
           </button>
 

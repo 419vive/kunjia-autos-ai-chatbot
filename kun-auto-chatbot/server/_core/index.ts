@@ -179,7 +179,14 @@ async function startServer() {
     xContentTypeOptions: true, // nosniff
     xFrameOptions: { action: "deny" },
     xXssProtection: true,
+    permittedCrossDomainPolicies: { permittedPolicies: "none" },
   }));
+
+  // Permissions-Policy header for additional security
+  app.use((_req, res, next) => {
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=()");
+    next();
+  });
 
   // ============================================================
   // SECURITY LAYER 2: Rate Limiting
@@ -227,7 +234,27 @@ async function startServer() {
     legacyHeaders: false,
   });
 
+  // Login-specific rate limit (strict: 5 attempts per 15 minutes)
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      logSecurityEvent({
+        eventType: "suspicious_activity",
+        severity: "high",
+        source: "admin_login",
+        details: `Login rate limit exceeded from IP: ${req.ip}`,
+        ip: req.ip,
+      });
+      res.status(429).json({ error: "登入嘗試過於頻繁，請15分鐘後再試。" });
+    },
+  });
+
   // Apply rate limiters
+  app.use("/api/auth/login", loginLimiter);
   app.use("/api/trpc/chat", chatLimiter);
   app.use("/api/line/webhook", lineWebhookLimiter);
   app.use("/api/", generalLimiter);

@@ -81,6 +81,19 @@ function buildVehicleBubble(v: Vehicle): any {
     style: "secondary",
   });
 
+  // Add "看影片" button if vehicle has a videoUrl
+  if (v.videoUrl) {
+    footerButtons.push({
+      type: "button",
+      action: {
+        type: "uri",
+        label: "🎬 看影片",
+        uri: String(v.videoUrl),
+      },
+      style: "secondary",
+    });
+  }
+
   // Add "看所有照片" button if vehicle has more than 1 photo
   if (photoCount > 1) {
     footerButtons.push({
@@ -165,6 +178,14 @@ function buildVehicleBubble(v: Vehicle): any {
             },
           ],
           margin: "md",
+        },
+        {
+          type: "text",
+          text: "🔒 第三方認證 | 實車實價 | 支援貸款",
+          size: "xxs",
+          color: "#999999",
+          wrap: true,
+          margin: "sm",
         },
       ],
     },
@@ -1183,6 +1204,10 @@ export type ConversationContext = {
   hasContact: boolean;       // Customer already provided phone
   vehicleName?: string;      // e.g., "Toyota Corolla"
   vehicleExternalId?: string;
+  // Personalization fields
+  previousVehicles?: string[];   // Vehicles user asked about before
+  messageCount?: number;         // Total messages in conversation
+  leadScore?: number;            // Current lead score
 };
 
 /**
@@ -1193,13 +1218,29 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   const items: any[] = [];
 
   if (ctx.hasVehicle && ctx.vehicleName) {
-    // Customer is asking about a specific vehicle → show vehicle-specific actions
+    // Customer is asking about a specific vehicle → show booking-focused actions
     items.push({
       type: "action",
       action: {
         type: "message",
-        label: "💰 這台多少錢？",
-        text: `${ctx.vehicleName} 多少錢？有優惠嗎？`,
+        label: "📅 預約看車",
+        text: "我想預約看車",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💰 問貸款",
+        text: "我想了解貸款方案",
+      },
+    });
+    items.push({
+      type: "action",
+      action: {
+        type: "uri",
+        label: "📞 直接撥打",
+        uri: "tel:0936812818",
       },
     });
     if (ctx.vehicleExternalId) {
@@ -1209,24 +1250,6 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
           type: "message",
           label: "📸 看照片",
           text: `看照片 ${ctx.vehicleExternalId}`,
-        },
-      });
-    }
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🚗 預約看這台車",
-        text: "我想預約看車，什麼時候方便？",
-      },
-    });
-    if (!ctx.hasContact) {
-      items.push({
-        type: "action",
-        action: {
-          type: "message",
-          label: "📞 直接聯繫",
-          text: "可以給我你們的聯絡方式嗎？",
         },
       });
     }
@@ -1266,38 +1289,49 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
     });
   } else {
     // General conversation → show discovery actions
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🚗 看車庫存",
-        text: "我想看車，有什麼車可以推薦？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "💰 50萬以下",
-        text: "50萬以下有什麼好車？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "📅 預約賞車",
-        text: "我想預約看車，什麼時候方便？",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "📞 聯絡我們",
-        text: "可以給我你們的聯絡方式嗎？",
-      },
-    });
+    // Personalize based on engagement level
+    if (ctx.messageCount && ctx.messageCount > 5 && ctx.leadScore && ctx.leadScore >= 40) {
+      // Engaged user → push toward conversion
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "💰 算貸款", text: "我想了解貸款方案" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "uri", label: "📞 直接撥打", uri: "tel:0936812818" },
+      });
+    } else {
+      items.push({
+        type: "action",
+        action: { type: "message", label: "🚗 看車庫存", text: "我想看車，有什麼車可以推薦？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" },
+      });
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📅 預約賞車", text: "我想預約看車，什麼時候方便？" },
+      });
+    }
+
+    // If user previously asked about vehicles, show a "back to X" button
+    if (ctx.previousVehicles && ctx.previousVehicles.length > 0) {
+      const lastCar = ctx.previousVehicles[0];
+      items.push({
+        type: "action",
+        action: { type: "message", label: `🔙 再看${lastCar.slice(0, 6)}`, text: `我想了解 ${lastCar}` },
+      });
+    } else {
+      items.push({
+        type: "action",
+        action: { type: "message", label: "📞 聯絡我們", text: "可以給我你們的聯絡方式嗎？" },
+      });
+    }
   }
 
   // Always add FAQ at the end (pick top 2 most useful)
@@ -1319,6 +1353,96 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   });
 
   return { items };
+}
+
+// ============ CSAT SATISFACTION SURVEY ============
+// Sends a satisfaction survey after conversation winds down
+
+export function buildCsatSurveyMessage(): any {
+  const starButtons = [1, 2, 3, 4, 5].map((score) => ({
+    type: "button",
+    action: {
+      type: "postback",
+      label: "⭐".repeat(score),
+      data: `csat_score=${score}`,
+      displayText: `${"⭐".repeat(score)} ${score}分`,
+    },
+    style: "secondary" as const,
+    height: "sm" as const,
+  }));
+
+  return {
+    type: "flex",
+    altText: "感謝您的諮詢！請幫我們評個分 😊",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "感謝您的諮詢！",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: "#1B3A5C",
+        paddingAll: "16px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "請幫我們評個分，讓服務更好 😊",
+            size: "sm",
+            color: "#333333",
+            wrap: true,
+            align: "center",
+          },
+          {
+            type: "separator",
+            margin: "md",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            margin: "md",
+            contents: starButtons,
+          },
+        ],
+        paddingAll: "16px",
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "有什麼建議也歡迎告訴我們 💬",
+            size: "xs",
+            color: "#AAAAAA",
+            align: "center",
+          },
+          {
+            type: "text",
+            text: "您的回饋是我們進步的動力",
+            size: "xs",
+            color: "#AAAAAA",
+            align: "center",
+            margin: "sm",
+          },
+        ],
+        paddingAll: "12px",
+      },
+    },
+  };
 }
 
 // Backward compat: single message version

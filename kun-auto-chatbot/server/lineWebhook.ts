@@ -4,7 +4,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, type ConversationContext } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, buildCsatSurveyMessage, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -164,7 +164,7 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
             content: [
               {
                 type: "text",
-                text: '這張圖片裡有車嗎？如果有，請辨識車輛的品牌(brand)和車型(model)。只回覆 JSON 格式：{"brand":"品牌","model":"車型"}。如果無法辨識或圖中沒有車，回覆 {"brand":"","model":""}。不要回覆其他文字。',
+                text: '請分析這張圖片，找出任何車輛相關資訊。可能的情境包括：\n1. 直接的車輛照片 → 從外觀辨識品牌、車型\n2. 社群媒體貼文截圖（Facebook、IG等）→ 從貼文文字中擷取車輛資訊\n3. 車輛刊登/廣告截圖 → 從文字內容擷取品牌、車型、價格\n4. 車牌照片 → 辨識車牌號碼\n5. 行照 → 辨識行照上的資訊\n\n不管是哪種情境，只要能找到車輛品牌和車型，就回覆 JSON：\n{"brand":"品牌","model":"車型","year":"約2020","color":"白色","condition":"外觀良好","price":"69.8萬","plate":"ABC-1234"}\n\n重要：如果圖中的文字提到車輛品牌和車型（例如「Corolla Cross」、「Toyota RAV4」），即使圖片本身沒有車，也要從文字擷取並回覆。\n如果無法辨識某項就留空字串。如果完全找不到任何車輛資訊，回覆 {"brand":"","model":""}。不要回覆其他文字。',
               },
               {
                 type: "image_url",
@@ -191,7 +191,13 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
 
     const parsed = JSON.parse(jsonMatch[0]);
     if (parsed.brand && parsed.model) {
-      return { brand: parsed.brand, model: parsed.model };
+      const result: any = { brand: parsed.brand, model: parsed.model };
+      if (parsed.year) result.year = parsed.year;
+      if (parsed.color) result.color = parsed.color;
+      if (parsed.condition) result.condition = parsed.condition;
+      if (parsed.plate) result.plate = parsed.plate;
+      if (parsed.price) result.price = parsed.price;
+      return result;
     }
     return null;
   } catch (err) {
@@ -235,6 +241,132 @@ function isDuplicate(messageId: string): boolean {
   processedMessages.set(messageId, now);
   return false;
 }
+
+// ============ CSAT SATISFACTION SURVEY STATE ============
+// Track per-user conversation activity for CSAT survey timing
+
+interface CsatUserState {
+  lastSurveyTime: number;   // Timestamp of last CSAT survey sent
+  lastMessageTime: number;  // Timestamp of last user message
+  messageCount: number;     // Number of messages in current conversation window
+}
+
+const csatState = new Map<string, CsatUserState>();
+const CSAT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CSAT_INACTIVITY_MS = 5 * 60 * 1000;     // 5 minutes
+const CSAT_MIN_MESSAGES = 3;                    // Minimum messages before survey
+
+// ============ FRUSTRATION / EMOTION DETECTION ============
+
+// Track recent questions per user for repeat detection
+const recentQuestions = new Map<string, string[]>();
+
+export function detectFrustration(message: string, userId?: string): { frustrated: boolean; confidence: number } {
+  let confidence = 0;
+
+  // Direct frustration keywords (Chinese)
+  const frustrationPatterns = [
+    { pattern: /不滿|生氣|爛|很差|太差|廢物|騙人|騙子|浪費時間|沒有用|不想理|垃圾|白痴|笨/, weight: 0.4 },
+    { pattern: /轉真人|找真人|找人|不想跟機器人說|要真人|真人客服|人工客服/, weight: 0.5 },
+    { pattern: /[？]{3,}|[！]{3,}|[?]{3,}|[!]{3,}/, weight: 0.3 },
+    { pattern: /到底|究竟|為什麼|怎麼回事|搞什麼/, weight: 0.2 },
+  ];
+
+  for (const { pattern, weight } of frustrationPatterns) {
+    if (pattern.test(message)) {
+      confidence += weight;
+    }
+  }
+
+  // Repeated question detection: if user asked same thing 3+ times
+  if (userId) {
+    const questions = recentQuestions.get(userId) || [];
+    questions.push(message);
+    // Keep only last 10 messages
+    if (questions.length > 10) questions.shift();
+    recentQuestions.set(userId, questions);
+
+    // Count how many times the last message appears (fuzzy: same first 10 chars)
+    const msgPrefix = message.slice(0, 10);
+    const repeatCount = questions.filter(q => q.slice(0, 10) === msgPrefix).length;
+    if (repeatCount >= 3) {
+      confidence += 0.4;
+    }
+  }
+
+  // Cap confidence at 1.0
+  confidence = Math.min(confidence, 1.0);
+
+  return { frustrated: confidence > 0.6, confidence };
+}
+
+// ============ CSAT INACTIVITY CHECK TIMER ============
+// Periodically check for users who should receive CSAT surveys
+
+async function checkCsatInactivity() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  const now = Date.now();
+
+  for (const [userId, state] of Array.from(csatState.entries())) {
+    // Skip if not enough messages
+    if (state.messageCount < CSAT_MIN_MESSAGES) continue;
+
+    // Skip if last message was less than 5 minutes ago (still active)
+    if (now - state.lastMessageTime < CSAT_INACTIVITY_MS) continue;
+
+    // Skip if CSAT already sent in last 24 hours
+    if (state.lastSurveyTime > 0 && now - state.lastSurveyTime < CSAT_COOLDOWN_MS) continue;
+
+    // Send CSAT survey
+    try {
+      const csatMessage = buildCsatSurveyMessage();
+      const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [csatMessage],
+        }),
+      });
+      const pushBody = await pushRes.text();
+      console.log(`[CSAT] Survey sent to ${userId.slice(0, 8)}... Response: ${pushRes.status} ${pushBody}`);
+
+      // Update state
+      state.lastSurveyTime = now;
+      state.messageCount = 0; // Reset message count after survey
+
+      // Log analytics
+      const sessionId = `line-${userId}`;
+      const conv = await db.getConversationBySessionId(sessionId);
+      if (conv) {
+        db.addAnalyticsEvent({
+          conversationId: conv.id,
+          userId,
+          eventCategory: "csat",
+          eventAction: "survey_sent",
+          channel: "line",
+        });
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: "[系統自動] 已發送滿意度調查",
+        });
+      }
+    } catch (err) {
+      console.error(`[CSAT] Failed to send survey to ${userId.slice(0, 8)}...:`, err);
+    }
+  }
+}
+
+// Run CSAT inactivity check every 60 seconds
+setInterval(() => {
+  checkCsatInactivity().catch((err) => console.error("[CSAT] Inactivity check error:", err));
+}, 60 * 1000);
 
 const lineRouter = Router();
 
@@ -343,9 +475,11 @@ async function processLineEvent(
           }
         } catch {}
 
-        // Create conversation for the new follower
+        // Check if this is a RETURNING user (re-follow)
         const sessionId = `line-${userId}`;
         let conversation = await db.getConversationBySessionId(sessionId);
+        const isReturning = !!conversation;
+
         if (!conversation) {
           await db.createConversation({
             sessionId,
@@ -357,8 +491,41 @@ async function processLineEvent(
           });
         }
 
-        // Send welcome + FAQ progressive messages via push API (follow events have no replyToken)
-        const welcomeMessages = buildFollowWelcomeMessages();
+        // Build appropriate welcome based on returning vs new user
+        let welcomeMessages: any[];
+
+        if (isReturning && conversation) {
+          // RETURNING USER: personalized welcome back with context
+          const greeting = customerName ? getGenderGreeting(detectGenderFromName(customerName)) : "人客";
+          const messages = await db.getMessagesByConversation(conversation.id, 20);
+          // Find last vehicle they asked about
+          const vehicleRegex = /(?:詢問|看|了解|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/;
+          let lastVehicle: string | null = null;
+          for (const msg of messages.reverse()) {
+            const match = msg.content.match(vehicleRegex);
+            if (match) { lastVehicle = match[1]; break; }
+          }
+
+          const welcomeText = lastVehicle
+            ? `${greeting}你好！歡迎回來 🎉\n\n上次你問的 ${lastVehicle} 還在喔！要不要再看看？\n\n有什麼新的需求也儘管說，阿家隨時在！`
+            : `${greeting}你好！歡迎回來 🎉\n\n有段時間沒聊了，最近有想找什麼車嗎？\n阿家隨時在，有什麼需要儘管問！`;
+
+          welcomeMessages = [
+            { type: "text", text: welcomeText, quickReply: {
+              items: [
+                { type: "action", action: { type: "message", label: "🔍 看最新車輛", text: "我想看車，有什麼車可以推薦？" } },
+                { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
+                { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+                ...(lastVehicle ? [{ type: "action" as const, action: { type: "message" as const, label: `🚗 再看${lastVehicle.slice(0, 6)}`, text: `我想了解 ${lastVehicle}` } }] : []),
+                { type: "action", action: { type: "message", label: "💬 隨便問問", text: "你好，我想了解崑家汽車" } },
+              ],
+            }},
+          ];
+          console.log(`[LINE] 🔄 Returning user welcome sent (last vehicle: ${lastVehicle || "none"})`);
+        } else {
+          // NEW USER: standard welcome
+          welcomeMessages = buildFollowWelcomeMessages();
+        }
         const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
           method: "POST",
           headers: {
@@ -447,9 +614,18 @@ async function processLineEvent(
         );
 
         // Prepend a text message
+        // Build rich description from enhanced recognition
+        const extraInfo = [];
+        if ((identified as any).year) extraInfo.push(`約${(identified as any).year}`);
+        if ((identified as any).color) extraInfo.push(`${(identified as any).color}`);
+        const extraStr = extraInfo.length > 0 ? `（${extraInfo.join("・")}）` : "";
+        const priceNote = (identified as any).price
+          ? `\n你看到的那台售價 ${(identified as any).price}，馬上幫你查詳細資訊 👇`
+          : "";
+
         const textMsg = {
           type: "text" as const,
-          text: `我看到你傳了一張 ${identified.brand} ${identified.model} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇`,
+          text: `我看到你傳了一張 ${identified.brand} ${identified.model}${extraStr} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇${priceNote}`,
         };
 
         // LINE reply max 5 messages
@@ -500,6 +676,119 @@ async function processLineEvent(
     } catch (err) {
       console.error("[LINE Image] Processing error:", err);
     }
+    return;
+  }
+
+  // ============ POSTBACK EVENT: Handle CSAT score submission ============
+  if (event.type === "postback") {
+    const userId = event.source?.userId;
+    const postbackData = event.postback?.data || "";
+    const replyToken = event.replyToken;
+
+    console.log(`[LINE] Postback from ${userId ? userId.slice(0, 8) + '...' : 'unknown'}: ${postbackData}`);
+
+    // Handle CSAT score postback
+    const csatMatch = postbackData.match(/^csat_score=(\d)$/);
+    if (csatMatch && userId && replyToken) {
+      const score = parseInt(csatMatch[1], 10);
+      console.log(`[CSAT] Score received: ${score} from ${userId.slice(0, 8)}...`);
+
+      // Log to analytics
+      const sessionId = `line-${userId}`;
+      const conv = await db.getConversationBySessionId(sessionId);
+      db.addAnalyticsEvent({
+        conversationId: conv?.id ?? null,
+        userId,
+        eventCategory: "csat",
+        eventAction: "score",
+        eventLabel: String(score),
+        channel: "line",
+      });
+
+      // Build thank-you reply based on score
+      let thankYouText: string;
+      if (score >= 4) {
+        thankYouText = "謝謝你的肯定！有需要隨時找阿家 🙏";
+      } else if (score === 3) {
+        thankYouText = "感謝回饋！我們會繼續改進 💪";
+      } else {
+        thankYouText = "抱歉讓你不滿意 😥 阿家本人會盡快聯繫你了解情況";
+      }
+
+      // Reply with thank you
+      try {
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{ type: "text", text: thankYouText }],
+          }),
+        });
+      } catch (err) {
+        console.error("[CSAT] Reply failed:", err);
+      }
+
+      // For low scores (1-2), notify owner
+      if (score <= 2 && conv) {
+        const ownerUserId = process.env.LINE_OWNER_USER_ID;
+        const customerName = conv.customerName || "未知客戶";
+        await notifyOwner({
+          title: "😥 客戶不滿意通知",
+          content: `客戶 ${customerName} 給了 ${score} 分的評價。\n請盡快聯繫了解情況。`,
+        });
+
+        // Push notification to owner via LINE
+        const recipientIds: string[] = [];
+        if (ownerUserId) recipientIds.push(ownerUserId);
+        const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
+        if (additionalIds) {
+          const extras = additionalIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
+          for (const extraId of extras) {
+            if (!recipientIds.includes(extraId)) recipientIds.push(extraId);
+          }
+        }
+
+        for (const recipientId of recipientIds) {
+          try {
+            await fetch("https://api.line.me/v2/bot/message/push", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${channelAccessToken}`,
+              },
+              body: JSON.stringify({
+                to: recipientId,
+                messages: [{
+                  type: "text",
+                  text: `😥 客戶不滿意！\n客戶：${customerName}\n評分：${"⭐".repeat(score)}（${score}分）\n\n請盡快聯繫了解情況`,
+                }],
+              }),
+            });
+          } catch (pushErr) {
+            console.error("[CSAT] Owner notification push failed:", pushErr);
+          }
+        }
+      }
+
+      // Save to conversation
+      if (conv) {
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "user",
+          content: `[CSAT評分] ${"⭐".repeat(score)}（${score}分）`,
+        });
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: thankYouText,
+        });
+      }
+    }
+
     return;
   }
 
@@ -577,6 +866,29 @@ async function processLineEvent(
     content: userMessage,
   });
   console.log(`[LINE] Saved user message: id=${savedMsg.id}, convId=${convId}`);
+
+  // Track conversation for short-term recovery nudges
+  updateConversationTracker(userId, userMessage);
+
+  // ============ UPDATE CSAT STATE ============
+  const currentCsat = csatState.get(userId) || { lastSurveyTime: 0, lastMessageTime: 0, messageCount: 0 };
+  currentCsat.lastMessageTime = Date.now();
+  currentCsat.messageCount += 1;
+  csatState.set(userId, currentCsat);
+
+  // ============ FRUSTRATION DETECTION ============
+  const frustration = detectFrustration(userMessage, userId);
+  if (frustration.frustrated) {
+    console.log(`[LINE] Frustration detected (confidence: ${frustration.confidence.toFixed(2)}) from ${userId.slice(0, 8)}...`);
+    db.addAnalyticsEvent({
+      conversationId: convId,
+      userId,
+      eventCategory: "emotion",
+      eventAction: "frustration_detected",
+      eventLabel: `confidence=${frustration.confidence.toFixed(2)}`,
+      channel: "line",
+    });
+  }
 
   // ============ AUTO-DETECT PHONE NUMBER ============
   const detectedPhone = detectPhoneNumber(userMessage);
@@ -876,6 +1188,13 @@ async function processLineEvent(
     console.log('[LINE] 🚨 HUMAN HANDOFF triggered (uncertainty detected in AI response).');
   }
 
+  // ============ FRUSTRATION-TRIGGERED EMPATHETIC RESPONSE ============
+  if (frustration.frustrated && !isHumanHandoff) {
+    isHumanHandoff = true;
+    replyText = '不好意思讓您不方便了！我馬上幫您轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
+    console.log('[LINE] 😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
+  }
+
   // Save assistant response
   await db.addMessage({
     conversationId: convId,
@@ -883,13 +1202,24 @@ async function processLineEvent(
     content: replyText,
   });
 
-  // Build contextual quick reply based on conversation state
+  // Build contextual quick reply based on conversation state (personalized)
+  // Extract previously discussed vehicles from conversation history
+  const allMessages = await db.getMessagesByConversation(convId, 30);
+  const prevVehicles: string[] = [];
+  for (const msg of allMessages) {
+    const vMatch = msg.content.match(/(?:詢問|了解|看|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/);
+    if (vMatch && !prevVehicles.includes(vMatch[1])) prevVehicles.push(vMatch[1]);
+  }
+
   const quickReplyCtx: ConversationContext = {
     hasVehicle: detection.type !== 'none' && !!detection.vehicle,
     hasAppointment: customerIntents.includes('appointment'),
     hasContact: !!conversation!.customerContact,
     vehicleName: detection.vehicle ? `${detection.vehicle.brand} ${detection.vehicle.model}` : undefined,
     vehicleExternalId: detection.vehicle?.externalId ? String(detection.vehicle.externalId) : undefined,
+    previousVehicles: prevVehicles.slice(0, 3),
+    messageCount: allMessages.length,
+    leadScore: conversation!.leadScore || 0,
   };
   const quickReply = buildContextualQuickReply(quickReplyCtx);
 
@@ -1473,5 +1803,243 @@ async function sendHumanHandoffNotification(
     console.error("[LINE] Human handoff notification failed:", err);
   }
 }
+
+// ============ SHORT-TERM CONVERSATION RECOVERY ============
+// Sends a gentle nudge when a user goes quiet mid-conversation (5-8 min)
+// Different from follow-up system which handles 18-48 hour gaps
+
+interface ConversationTrack {
+  lastMessageTime: number;
+  messageCount: number;
+  lastTopic: "vehicle_inquiry" | "loan" | "booking" | "general";
+  lastVehicle?: string; // brand + model
+  nudgeSent: boolean;
+}
+
+const conversationTracker = new Map<string, ConversationTrack>();
+
+function detectConversationTopic(message: string): ConversationTrack["lastTopic"] {
+  if (/預約|看車|賞車|試駕|到店|什麼時候|幾點|營業/i.test(message)) return "booking";
+  if (/貸款|分期|頭期|月付|利率|零利率|刷卡|匯款|付款方式/i.test(message)) return "loan";
+  if (/BMW|Toyota|Honda|Ford|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|什麼車|推薦|這台|那台|庫存|有沒有|幾年|里程|cc|排氣/i.test(message)) return "vehicle_inquiry";
+  return "general";
+}
+
+function detectVehicleNameFromMessage(message: string): string | undefined {
+  const match = message.match(/(Toyota|Honda|Ford|BMW|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|Mazda|Nissan|Lexus|Benz|Mercedes|Audi|Volvo)\s*([\w\-]+)/i);
+  if (match) return `${match[1]} ${match[2]}`;
+  return undefined;
+}
+
+export function updateConversationTracker(userId: string, message: string) {
+  const existing = conversationTracker.get(userId);
+  const topic = detectConversationTopic(message);
+  const vehicle = detectVehicleNameFromMessage(message);
+
+  conversationTracker.set(userId, {
+    lastMessageTime: Date.now(),
+    messageCount: (existing?.messageCount || 0) + 1,
+    lastTopic: topic !== "general" ? topic : (existing?.lastTopic || "general"),
+    lastVehicle: vehicle || existing?.lastVehicle,
+    nudgeSent: false, // Reset on new message
+  });
+}
+
+async function checkConversationRecovery() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  const now = Date.now();
+  const FIVE_MIN = 5 * 60 * 1000;
+  const EIGHT_MIN = 8 * 60 * 1000;
+  const THIRTY_MIN = 30 * 60 * 1000;
+
+  const entries = Array.from(conversationTracker.entries());
+  for (const [userId, track] of entries) {
+    const elapsed = now - track.lastMessageTime;
+
+    // Clean up stale entries (30+ min after nudge with no reply)
+    if (track.nudgeSent && elapsed > THIRTY_MIN) {
+      conversationTracker.delete(userId);
+      continue;
+    }
+
+    // Skip if already nudged, not enough messages, or outside the 5-8 min window
+    if (track.nudgeSent) continue;
+    if (track.messageCount < 2) continue;
+    if (elapsed < FIVE_MIN || elapsed > EIGHT_MIN) continue;
+
+    // Build contextual nudge message
+    let nudgeText: string;
+    const quickReplyItems: any[] = [];
+
+    if (track.lastTopic === "vehicle_inquiry" && track.lastVehicle) {
+      nudgeText = `剛剛聊到的 ${track.lastVehicle}，還有什麼想了解的嗎？😊 或者我幫你安排看車？`;
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: `我想預約看 ${track.lastVehicle}` } },
+        { type: "action", action: { type: "message", label: "💰 問價格", text: `${track.lastVehicle} 多少錢？` } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else if (track.lastTopic === "loan") {
+      nudgeText = "貸款的部分還有疑問嗎？需要的話我可以請專員幫你算方案 💰";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "💰 填貸款評估", text: "我想了解貸款方案" } },
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else if (track.lastTopic === "booking") {
+      nudgeText = "看車的時間有想到嗎？不用完全確定，我們電話再聊也可以 😊";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+        { type: "action", action: { type: "message", label: "🕐 時間彈性", text: "我時間彈性，你們幫我安排" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    } else {
+      nudgeText = "還有其他想了解的嗎？隨時都可以問喔！";
+      quickReplyItems.push(
+        { type: "action", action: { type: "message", label: "🚗 看車輛", text: "我想看車，有什麼車可以推薦？" } },
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+        { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+      );
+    }
+
+    // Send the nudge via LINE push
+    try {
+      await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [{
+            type: "text",
+            text: nudgeText,
+            quickReply: { items: quickReplyItems },
+          }],
+        }),
+      });
+
+      // Mark as nudged
+      track.nudgeSent = true;
+      console.log(`[LINE Recovery] Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
+
+      // Save to conversation history
+      const sessionId = `line-${userId}`;
+      const conversation = await db.getConversationBySessionId(sessionId);
+      if (conversation) {
+        await db.addMessage({
+          conversationId: conversation.id,
+          role: "assistant",
+          content: `[系統短期跟進] ${nudgeText}`,
+        });
+      }
+    } catch (err) {
+      console.error(`[LINE Recovery] Nudge failed for ${userId.slice(0, 8)}...:`, err);
+    }
+  }
+}
+
+// Run conversation recovery check every 60 seconds
+setInterval(() => {
+  checkConversationRecovery().catch((err) => console.error("[LINE Recovery] Check error:", err));
+}, 60 * 1000);
+
+// ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
+// Sends a gentle follow-up to users who inquired but didn't book
+// Runs periodically (call from a cron job or interval)
+
+const followUpCooldown = new Map<number, number>(); // convId → last follow-up timestamp
+
+export async function sendFollowUpMessages() {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) return;
+
+  try {
+    // Find conversations with recent activity (last 24-48 hours) that haven't booked
+    const result = await db.listConversations();
+    const allConvs = result?.items || [];
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
+    for (const conv of allConvs) {
+      if (!conv.sessionId?.startsWith("line-")) continue;
+      if (conv.leadStatus === "converted" || conv.leadStatus === "lost") continue;
+      if ((conv.leadScore || 0) < 30) continue; // Only follow up engaged users
+
+      // Check cooldown (max once per 48h)
+      const lastFollowUp = followUpCooldown.get(conv.id) || 0;
+      if (now - lastFollowUp < 2 * ONE_DAY) continue;
+
+      // Check last message time
+      const messages = await db.getMessagesByConversation(conv.id, 5);
+      if (messages.length === 0) continue;
+      const lastMsg = messages[messages.length - 1];
+      const lastMsgTime = new Date(lastMsg.createdAt || 0).getTime();
+      const hoursSinceLastMsg = (now - lastMsgTime) / (60 * 60 * 1000);
+
+      // Follow up between 18-48 hours after last message
+      if (hoursSinceLastMsg < 18 || hoursSinceLastMsg > 48) continue;
+
+      const userId = conv.sessionId.replace("line-", "");
+      const greeting = conv.customerName ? getGenderGreeting(detectGenderFromName(conv.customerName)) : "人客";
+
+      // Find last vehicle they asked about
+      let lastVehicle: string | null = null;
+      for (const msg of [...messages].reverse()) {
+        const match = msg.content.match(/(?:詢問|看|了解)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/);
+        if (match) { lastVehicle = match[1]; break; }
+      }
+
+      const followUpText = lastVehicle
+        ? `${greeting}你好～ 昨天看的 ${lastVehicle} 今天有其他人在問喔！😊\n\n要不要先卡個位？預約看車完全免費，不滿意也沒關係 👇`
+        : `${greeting}你好～ 上次聊到一半不知道有沒有幫到你？😊\n\n如果還有任何疑問，隨時跟阿家說，或者直接預約來店看看 👇`;
+
+      try {
+        await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [{
+              type: "text",
+              text: followUpText,
+              quickReply: {
+                items: [
+                  { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
+                  { type: "action", action: { type: "message", label: "💰 問貸款", text: "我想了解貸款方案" } },
+                  { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
+                ],
+              },
+            }],
+          }),
+        });
+
+        followUpCooldown.set(conv.id, now);
+        console.log(`[LINE] 📩 Follow-up sent to conv ${conv.id} (${greeting})`);
+
+        // Save follow-up to conversation
+        await db.addMessage({
+          conversationId: conv.id,
+          role: "assistant",
+          content: `[系統自動跟進] ${followUpText}`,
+        });
+      } catch (err) {
+        console.error(`[LINE] Follow-up push failed for conv ${conv.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[LINE] Follow-up system error:", err);
+  }
+}
+
+// Run follow-up check every 2 hours
+setInterval(() => {
+  sendFollowUpMessages().catch((err) => console.error("[LINE] Follow-up interval error:", err));
+}, 2 * 60 * 60 * 1000);
 
 export { lineRouter };

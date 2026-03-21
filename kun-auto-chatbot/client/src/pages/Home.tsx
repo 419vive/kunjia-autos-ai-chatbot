@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { Car, MessageCircle, MapPin, Fuel, Gauge, Calendar, Search, ChevronLeft, ChevronRight, Shield, X, ExternalLink, GitCompareArrows, Expand } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
@@ -13,9 +13,17 @@ import { ProgressiveImage } from "@/components/ProgressiveImage";
 import { useCompareList, CompareBar } from "@/components/VehicleCompare";
 import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import SeoFooter from "@/components/SeoFooter";
+import StickyBookingBar from "@/components/StickyBookingBar";
+import WelcomeBack from "@/components/WelcomeBack";
+import WishlistButton from "@/components/WishlistButton";
+import WishlistDrawer from "@/components/WishlistDrawer";
+import { TodayActivity } from "@/components/SocialProof";
+import { useScrollReveal, revealClass, staggerDelay } from "@/hooks/useScrollReveal";
 import { nanoid } from "nanoid";
 
-function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void }) {
+const FullscreenGallery = lazy(() => import("@/components/FullscreenGallery"));
+
+function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: { vehicle: any; isComparing: boolean; onToggleCompare: () => void; onOpenGallery?: (photos: string[], index: number, alt: string) => void }) {
   const [, setLocation] = useLocation();
   const photos = useMemo(() => {
     if (!vehicle.photoUrls) return [];
@@ -140,12 +148,57 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare }: { vehicle: any; 
         <Badge className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs">
           {vehicle.status === "available" ? "在售" : vehicle.status === "reserved" ? "已預訂" : "已售出"}
         </Badge>
-        {/* Photo count badge */}
-        {totalPhotos > 1 && (
-          <span className="absolute top-2 right-2 flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
-            📷 {totalPhotos}
-          </span>
-        )}
+        {/* Scarcity / social proof badges */}
+        {(() => {
+          const isNew = vehicle.createdAt
+            ? Date.now() - new Date(vehicle.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000
+            : false;
+          const isHot = Number(vehicle.price) < 50;
+          if (!isNew && !isHot) return null;
+          return (
+            <div className="absolute top-8 left-2 flex flex-col gap-1">
+              {isNew && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500 text-white leading-none">
+                  本週新到
+                </span>
+              )}
+              {isHot && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500 text-white leading-none">
+                  詢問熱烈
+                </span>
+              )}
+            </div>
+          );
+        })()}
+        {/* Photo count + expand + wishlist */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {vehicle.status === "available" && (
+            <WishlistButton
+              vehicle={{
+                id: vehicle.id,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                price: vehicle.priceDisplay || `${vehicle.price}萬`,
+                photo: photos[0],
+              }}
+              size="sm"
+            />
+          )}
+          {totalPhotos > 1 && (
+            <span className="flex items-center gap-0.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
+              📷 {totalPhotos}
+            </span>
+          )}
+          {photos.length > 0 && onOpenGallery && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenGallery(photos, currentPhoto, `${vehicle.brand} ${vehicle.model}`); }}
+              className="flex items-center justify-center w-6 h-6 rounded bg-black/50 text-white hover:bg-black/70 transition-colors"
+              aria-label="全螢幕瀏覽"
+            >
+              <Expand className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
       <CardContent className="p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
@@ -234,6 +287,8 @@ export default function Home() {
   const [priceRange, setPriceRange] = useState("all");
   const compare = useCompareList();
   const [recentlyViewed] = useState<RecentlyViewedItem[]>(() => getRecentlyViewed());
+  const [galleryState, setGalleryState] = useState<{ photos: string[]; index: number; alt: string } | null>(null);
+  const openGallery = useCallback((photos: string[], index: number, alt: string) => setGalleryState({ photos, index, alt }), []);
 
   // Inline chatbot state — persist across tab close with localStorage
   const [chatOpen, setChatOpen] = useState(false);
@@ -413,6 +468,21 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Trust Signal Strip */}
+      <div className="border-b bg-white">
+        <div className="container py-2.5">
+          <div className="grid grid-cols-2 gap-y-1.5 sm:flex sm:flex-row sm:flex-nowrap sm:items-center sm:justify-center sm:gap-x-6 text-xs sm:text-sm text-gray-600 text-center">
+            <span>✅ 累計服務 2,000+ 位車主</span>
+            <span>⭐ Google 評分 4.8</span>
+            <span>🔐 全車第三方認證</span>
+            <span>📍 高雄在地 40 年</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Smart Welcome Back Banner */}
+      <WelcomeBack />
+
       {/* Search & Filter */}
       <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container py-3">
@@ -427,7 +497,7 @@ export default function Home() {
               />
             </div>
             <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[120px] sm:w-[140px]">
                 <SelectValue placeholder="品牌" />
               </SelectTrigger>
               <SelectContent>
@@ -440,7 +510,7 @@ export default function Home() {
               </SelectContent>
             </Select>
             <Select value={priceRange} onValueChange={setPriceRange}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[120px] sm:w-[140px]">
                 <SelectValue placeholder="價格" />
               </SelectTrigger>
               <SelectContent>
@@ -517,7 +587,7 @@ export default function Home() {
 
       {/* Vehicle Grid */}
       <main className="container py-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">
             在售車輛
             {!isLoading && (
@@ -526,10 +596,11 @@ export default function Home() {
               </span>
             )}
           </h2>
+          <TodayActivity className="text-muted-foreground" />
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="overflow-hidden">
                 <Skeleton className="aspect-[16/10]" />
@@ -548,9 +619,9 @@ export default function Home() {
             <p className="mt-1 text-sm">試試調整搜尋條件</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((v) => (
-              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} />
+              <VehicleCard key={v.id} vehicle={v} isComparing={compare.has(v.id)} onToggleCompare={() => compare.toggle(v.id)} onOpenGallery={openGallery} />
             ))}
           </div>
         )}
@@ -560,7 +631,7 @@ export default function Home() {
 
       {/* Floating Chat Popup */}
       {chatOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border bg-background shadow-2xl flex flex-col" style={{ height: 'min(540px, calc(100vh - 7rem))' }}>
+        <div className="fixed bottom-36 md:bottom-24 right-6 z-50 w-full sm:w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border bg-background shadow-2xl flex flex-col" style={{ height: 'min(540px, calc(100vh - 7rem))' }}>
           {/* Chat header */}
           <div className="flex items-center justify-between bg-primary px-4 py-2.5 text-primary-foreground shrink-0">
             <div className="flex items-center gap-2">
@@ -591,8 +662,25 @@ export default function Home() {
       {/* Vehicle Compare Bar */}
       <CompareBar ids={compare.ids} onClear={compare.clear} />
 
+      <StickyBookingBar />
+
+      {/* Fullscreen Gallery Modal */}
+      {galleryState && (
+        <Suspense fallback={null}>
+          <FullscreenGallery
+            photos={galleryState.photos}
+            initialIndex={galleryState.index}
+            alt={galleryState.alt}
+            onClose={() => setGalleryState(null)}
+          />
+        </Suspense>
+      )}
+
+      {/* Wishlist Drawer */}
+      <WishlistDrawer />
+
       {/* Floating Chat Button with Tooltip */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+      <div className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-3">
         {!chatOpen && (
           <div className="rounded-full bg-primary/90 px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg backdrop-blur-sm">
             <span>有問題？阿家線上回答你</span>
@@ -601,7 +689,7 @@ export default function Home() {
         )}
         <button
           onClick={() => setChatOpen((prev) => !prev)}
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-110 active:scale-95"
+          className="relative flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-110 active:scale-95"
           aria-label={chatOpen ? "關閉聊天" : "開始聊天"}
         >
           {chatOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}

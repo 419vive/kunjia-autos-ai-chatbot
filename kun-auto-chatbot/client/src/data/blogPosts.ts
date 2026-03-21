@@ -24,7 +24,7 @@ export const blogPosts: BlogPost[] = [
 <p class="answer-summary" data-speakable><strong>買二手車7大注意事項：查車輛歷史、取得第三方認證、辨認泡水車、識破里程表作假、辨認事故車、小心貸款陷阱、確認過戶細節。購買前務必完成這7項檢查，可大幅降低買到問題車的風險。</strong></p>
 
 <h2>前言：買二手車為什麼容易踩雷？</h2>
-<p>二手車市場水很深。一台外觀漂亮、里程數低的車，可能藏著嚴重的機械問題、事故紀錄，甚至是泡水車。根據統計，台灣每年二手車糾紛案件超過數千件，大多數都是買家忽略了基本的檢查步驟。</p>
+<p>二手車市場水很深。一台外觀漂亮、里程數低的車，可能藏著嚴重的機械問題、事故紀錄，甚至是泡水車。根據<a href="https://www.mvdis.gov.tw" target="_blank" rel="noopener">交通部公路監理總局</a>資料，台灣每年二手車交易糾紛案件眾多，大多數都是買家忽略了基本的檢查步驟。</p>
 <p>本篇指南整理了7大必看注意事項，不論你是第一次買車還是有經驗的老手，讀完這篇再去看車，保證少走很多冤枉路。</p>
 
 <h3>7大注意事項一覽表</h3>
@@ -49,7 +49,7 @@ export const blogPosts: BlogPost[] = [
 </table>
 
 <h2>注意事項 1：一定要查車輛歷史紀錄</h2>
-<p>在台灣，你可以透過監理所或合法平台查詢車輛的過戶次數、事故紀錄、是否曾被查扣等資訊。<strong>過戶次數過多的車要特別小心</strong>，可能頻繁易手代表這台車有潛在問題。</p>
+<p>在台灣，你可以透過<a href="https://www.mvdis.gov.tw/m3-emv-trn/exm/query-car" target="_blank" rel="noopener">公路監理系統</a>或合法平台查詢車輛的過戶次數、事故紀錄、是否曾被查扣等資訊。<strong>過戶次數過多的車要特別小心</strong>，可能頻繁易手代表這台車有潛在問題。</p>
 <p>查詢方式：</p>
 <ul>
   <li>到監理所申請車輛異動查詢</li>
@@ -157,7 +157,7 @@ export const blogPosts: BlogPost[] = [
 <p>一般來說，二手車貸款成數為車價的 <strong>50%–80%</strong>，具體取決於：</p>
 <ul>
   <li><strong>車齡</strong>：車齡越新，貸款成數越高</li>
-  <li><strong>信用評分</strong>：聯徵分數好的人可以貸到更高成數</li>
+  <li><strong>信用評分</strong>：<a href="https://www.jcic.org.tw" target="_blank" rel="noopener">聯合徵信中心</a>分數好的人可以貸到更高成數</li>
   <li><strong>車種與品牌</strong>：保值度高的品牌（Toyota、Honda）貸款成數通常更高</li>
   <li><strong>貸款機構</strong>：銀行、車貸公司、車行自辦貸款條件各異</li>
 </ul>
@@ -472,7 +472,7 @@ export const blogPosts: BlogPost[] = [
 
 <h2>過戶前必做的3件事</h2>
 <h3>1. 確認車輛無欠稅欠罰款</h3>
-<p>過戶前，請賣方提供車輛的欠稅欠費查詢結果（可至公路監理系統查詢）。若有未繳罰款或牌照稅，<strong>過戶後這些債務通常轉移到新車主身上</strong>，務必在過戶前要求賣方清繳。</p>
+<p>過戶前，請賣方提供車輛的欠稅欠費查詢結果（可至<a href="https://www.mvdis.gov.tw" target="_blank" rel="noopener">公路監理系統</a>查詢）。若有未繳罰款或牌照稅，<strong>過戶後這些債務通常轉移到新車主身上</strong>，務必在過戶前要求賣方清繳。</p>
 
 <h3>2. 確認無動產擔保設定</h3>
 <p>向賣方確認車輛沒有向金融機構設定動產擔保（即以車輛為抵押品貸款）。若有，賣方必須先清償貸款、解除設定後才能過戶。可至監理所或法院查詢設定狀況。</p>

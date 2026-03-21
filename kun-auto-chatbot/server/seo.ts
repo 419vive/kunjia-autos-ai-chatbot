@@ -8,6 +8,30 @@
 import { Router } from "express";
 import * as db from "./db";
 
+// ============ IndexNow: Instant URL notification to Bing/Yandex ============
+
+const INDEXNOW_KEY = "kun-auto-chatbot-indexnow-key-2026";
+
+export async function submitIndexNow(urls: string[]): Promise<void> {
+  if (urls.length === 0) return;
+  const baseUrl = getBaseUrl();
+  const host = new URL(baseUrl).host;
+  try {
+    await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        host,
+        key: INDEXNOW_KEY,
+        keyLocation: `${baseUrl}/${INDEXNOW_KEY}.txt`,
+        urlList: urls.slice(0, 10000),
+      }),
+    });
+  } catch (err) {
+    console.error("[IndexNow] Submission failed:", err);
+  }
+}
+
 // ============ CONSTANTS ============
 
 const SITE_NAME = "崑家汽車";
@@ -79,8 +103,18 @@ function autoDealer(): object {
     },
     "sameAs": [
       LINE_OA_URL,
-      "https://maps.google.com/?cid=崑家汽車",
+      "https://www.facebook.com/hong0961/",
+      "https://www.sum.com.tw/storeinfo-71008.php",
+      "https://www.twcar.com.tw/store_web/?mode=car&SID=2487",
+      "https://www.abccar.com.tw/dealer/53764",
     ],
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${getBaseUrl()}/og-default.jpg`,
+      "width": 600,
+      "height": 60,
+    },
+    "foundingDate": "1986",
     "contactPoint": {
       "@type": "ContactPoint",
       "telephone": BUSINESS_PHONE,
@@ -303,8 +337,8 @@ function reviewSchema(): object {
     "datePublished": r.date,
     "itemReviewed": {
       "@type": "AutoDealer",
+      "@id": `${getBaseUrl()}/#organization`,
       "name": SITE_NAME,
-      "address": BUSINESS_ADDRESS,
     },
   }));
 }
@@ -436,6 +470,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   let ogType = "website";
   let ogImage = `${baseUrl}/og-default.jpg`;
   let canonicalUrl = `${baseUrl}${path === "/" ? "" : path}`;
+  let robotsMeta = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
   const jsonLdBlocks: object[] = [autoDealer(), websiteSchema()];
 
   // ---------- Vehicle detail page ----------
@@ -449,9 +484,18 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         const year = vehicle.modelYear ? `${vehicle.modelYear}年` : "";
         const price = vehicle.priceDisplay || `${vehicle.price}萬`;
         const photo = parseFirstPhoto(vehicle.photoUrls);
+        const isSold = vehicle.status === "sold" || vehicle.status === "reserved";
 
-        title = `${name} ${year} ${price}｜高雄二手${vehicle.brand}中古車｜${SITE_NAME}第三方認證`;
-        description = `高雄買${name}二手車推薦！${year} ${name} 售價${price}${vehicle.mileage ? `、里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。崑家汽車全車第三方認證、實車實價、可貸款、外縣市免費接駁。在地40年正派經營。`;
+        if (isSold) {
+          // Sold vehicles: noindex to stop Google from indexing stale listings,
+          // but keep follow so link equity flows to other pages
+          robotsMeta = "noindex, follow";
+          title = `【已售出】${name} ${year}｜${SITE_NAME}高雄二手車`;
+          description = `此車輛已售出。崑家汽車高雄二手車行，在地40年正派經營，更多${vehicle.brand}二手車歡迎查看。`;
+        } else {
+          title = `${name} ${year} ${price}｜高雄二手${vehicle.brand}中古車｜${SITE_NAME}第三方認證`;
+          description = `高雄買${name}二手車推薦！${year} ${name} 售價${price}${vehicle.mileage ? `、里程${vehicle.mileage}` : ""}${vehicle.color ? `、${vehicle.color}` : ""}${vehicle.transmission ? `、${vehicle.transmission}` : ""}。崑家汽車全車第三方認證、實車實價、可貸款、外縣市免費接駁。在地40年正派經營。`;
+        }
         ogType = "product";
         if (photo) ogImage = photo;
 
@@ -569,6 +613,16 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { q: `${brand} 二手車可以貸款嗎？`, a: `可以，合作多家銀行，${brand}車款皆適用，最快一天核准。` },
         { q: `${brand} 二手車行情價多少？`, a: `依車型、年份、里程而異。實車實價，LINE詢問最新庫存報價。` },
       ]));
+      // Speakable for brand pages
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "speakable": speakableSchema(canonicalUrl),
+        "url": canonicalUrl,
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+      });
     }
   }
 
@@ -595,6 +649,16 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { q: `${rangeMeta.label}二手車可以貸款嗎？`, a: `可以，合作多家銀行，最快一天核准，多種方案可選。` },
         { q: `${rangeMeta.label}二手車有哪些品牌？`, a: `Toyota、Honda、BMW、Benz、Mazda等品牌齊全，每週更新庫存。` },
       ]));
+      // Speakable for price range pages
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "speakable": speakableSchema(canonicalUrl),
+        "url": canonicalUrl,
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+      });
     }
   }
 
@@ -607,6 +671,9 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       { name: "常見問題", url: canonicalUrl },
     ]));
     jsonLdBlocks.push(faqSchema([
+      { q: "預約看車要付費嗎？", a: "完全免費，無任何費用或義務。來看車不滿意也沒關係。" },
+      { q: "預約後多快會有人聯絡我？", a: "一般1小時內，最慢當天營業時間內回電確認。" },
+      { q: "外縣市的客人可以預約嗎？", a: "可以，我們提供外縣市接駁服務，詳情請聯絡賴先生。" },
       ...HOMEPAGE_FAQS,
       { q: "什麼是第三方認證？", a: "由獨立專業機構對車輛進行全面檢查並出具書面報告，是保障買家權益最有效的方式。" },
       { q: "二手車貸款成數是多少？", a: "一般為車價的50%-80%，依車齡和信用而定。崑家合作多家銀行可協助規劃。" },
@@ -677,6 +744,13 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         { name: meta.title, url: canonicalUrl },
       ]));
       // Enhanced Article schema with datePublished, dateModified, speakable, E-E-A-T author
+      const blogWordCount: Record<string, number> = {
+        "buy-used-car-guide": 1773,
+        "used-car-loan-guide": 1117,
+        "kaohsiung-used-car-guide": 1148,
+        "third-party-inspection-guide": 1187,
+        "used-car-transfer-guide": 1125,
+      };
       const blogDates: Record<string, { published: string; modified: string }> = {
         "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-17" },
         "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-17" },
@@ -696,6 +770,10 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "worksFor": { "@id": `${baseUrl}/#organization` },
         "knowsAbout": ["二手車買賣", "中古車鑑定", "汽車貸款", "車輛過戶", "第三方認證"],
         "description": "高雄崑家汽車創辦人，40年以上二手車買賣經驗，專精車輛鑑定與貸款規劃。",
+        "url": `${baseUrl}/`,
+        "sameAs": [
+          "https://www.facebook.com/hong0961/",
+        ],
       });
 
       jsonLdBlocks.push({
@@ -727,6 +805,13 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "keywords": meta.keywords.join(", "),
         "inLanguage": "zh-TW",
         "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+        "image": {
+          "@type": "ImageObject",
+          "url": `${baseUrl}/og-default.jpg`,
+          "width": 1200,
+          "height": 630,
+        },
+        ...(blogWordCount[slug] && { "wordCount": blogWordCount[slug] }),
         ...(dates && {
           "datePublished": dates.published,
           "dateModified": dates.modified,
@@ -734,11 +819,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "speakable": speakableSchema(canonicalUrl, ["h1", "h2", ".answer-summary", "[data-speakable]"]),
       });
 
-      // HowTo schema for procedural blog posts (AEO)
-      const howToData = BLOG_HOWTO[slug];
-      if (howToData) {
-        jsonLdBlocks.push(howToSchema(howToData));
-      }
+      // HowTo schema removed — Google deprecated HowTo rich results in Sep 2023
     }
   }
 
@@ -748,7 +829,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <title>${escAttr(title)}</title>
     <meta name="description" content="${escAttr(description)}" />
     <link rel="canonical" href="${escAttr(canonicalUrl)}" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="robots" content="${robotsMeta}" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="${escAttr(title)}" />
@@ -804,66 +885,102 @@ User-agent: GPTBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Anthropic (Claude)
 User-agent: ClaudeBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Claude-SearchBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Claude-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Google AI
 User-agent: Google-Extended
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: GoogleOther
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Perplexity
 User-agent: PerplexityBot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 User-agent: Perplexity-User
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Microsoft / Bing
 User-agent: Bingbot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # Meta AI
 User-agent: Meta-ExternalAgent
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
 
 # === Default crawler rules ===
 User-agent: *
@@ -881,6 +998,11 @@ Sitemap: ${baseUrl}/sitemap.xml
 Crawl-delay: 1
 `
     );
+  });
+
+  // IndexNow — instant URL submission to Bing/Yandex for faster indexing
+  router.get(`/${INDEXNOW_KEY}.txt`, (_req, res) => {
+    res.type("text/plain").send(INDEXNOW_KEY);
   });
 
   // llms.txt — AI-readable site map for LLMs (proposed standard by Answer.AI)
@@ -954,23 +1076,6 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
         { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
       ];
-
-      // Dynamic brand pages
-      let brandEntries: string[] = [];
-      try {
-        const vehicles = await db.getAllVehicles();
-        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand).filter(Boolean)));
-        brandEntries = brands.map((brand: string) =>
-          `  <url>
-    <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>`
-        );
-      } catch (err) {
-        console.error("[SEO] Failed to fetch brands for sitemap:", err);
-      }
 
       // Dynamic vehicle pages + brand pages
       let vehicleEntries: string[] = [];

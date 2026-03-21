@@ -9,6 +9,22 @@ interface FaqItem {
 }
 
 const FAQ_DATA: FaqItem[] = [
+  // 看車預約
+  {
+    category: "看車預約",
+    question: "預約看車要付費嗎？",
+    answer: "完全免費，無任何費用或義務。來看車不滿意也沒關係。",
+  },
+  {
+    category: "看車預約",
+    question: "預約後多快會有人聯絡我？",
+    answer: "一般1小時內，最慢當天營業時間內回電確認。",
+  },
+  {
+    category: "看車預約",
+    question: "外縣市的客人可以預約嗎？",
+    answer: "可以，我們提供外縣市接駁服務，詳情請聯絡賴先生。",
+  },
   // 購車相關
   {
     category: "購車相關",

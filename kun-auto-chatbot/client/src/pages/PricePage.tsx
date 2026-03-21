@@ -6,6 +6,7 @@ import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ProgressiveImage } from "@/components/ProgressiveImage";
 import SeoFooter from "@/components/SeoFooter";
+import StickyBookingBar from "@/components/StickyBookingBar";
 
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
@@ -275,6 +276,7 @@ export default function PricePage() {
       </main>
 
       <SeoFooter />
+      <StickyBookingBar />
     </div>
   );
 }
