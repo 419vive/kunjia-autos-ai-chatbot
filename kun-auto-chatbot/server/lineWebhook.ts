@@ -157,7 +157,8 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
       },
       body: JSON.stringify({
         model: "gemini-2.5-flash",
-        max_tokens: 200,
+        max_completion_tokens: 1024,
+        reasoning_effort: "none",
         messages: [
           {
             role: "user",
@@ -177,13 +178,14 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
     });
 
     if (!res.ok) {
-      console.error(`[LINE Image] Gemini Vision error: ${res.status}`);
+      const errorBody = await res.text().catch(() => "");
+      console.error(`[LINE Image] Gemini Vision error: ${res.status}`, errorBody.substring(0, 300));
       return null;
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
-    console.log("[LINE Image] Gemini Vision raw response:", content.substring(0, 200));
+    console.log("[LINE Image] Gemini Vision raw response:", content.substring(0, 500));
 
     // Extract JSON from response (may have markdown code block wrapping)
     const jsonMatch = content.match(/\{[\s\S]*?\}/);
