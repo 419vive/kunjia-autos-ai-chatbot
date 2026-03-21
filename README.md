@@ -24,6 +24,13 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Deployment](#deployment)
 - [Agent Reach — AI Agent Internet Access](#agent-reach--ai-agent-internet-access)
 - [Security Audit — Agent Reach](#security-audit--agent-reach)
+- [Conversion & UX Optimization](#conversion--ux-optimization)
+  - [Website UX](#website-ux)
+  - [LINE Chatbot Intelligence](#line-chatbot-intelligence)
+  - [Video & 360° Gallery](#video--360-gallery)
+- [Security Hardening](#security-hardening)
+- [GEO Audit & Fixes](#geo-audit--fixes)
+- [Recall-Stack Memory System](#recall-stack-memory-system)
 - [AI Agent Development Strategy](#ai-agent-development-strategy)
   - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
 
@@ -693,8 +700,8 @@ kun-auto-chatbot/
              │
              ▼
   ┌─────────────────────┐     ┌───────────────────────┐
-  │  POST /api/auth/    │────▶│  Timing-safe compare  │
-  │  login              │     │  vs ADMIN_PASSWORD env │
+  │  POST /api/auth/    │────▶│  Bcrypt compare (12   │
+  │  login (5/15min)    │     │  rounds) + rate limit │
   └──────────┬──────────┘     └───────────────────────┘
              │
              ├── FAIL ──▶ 401 Unauthorized
@@ -707,7 +714,7 @@ kun-auto-chatbot/
   │  Set HttpOnly cookie │
   │  (app_session_id,    │
   │   Secure, SameSite,  │
-  │   1-year expiry)     │
+  │   24h admin expiry)  │
   └──────────┬──────────┘
              │
              ▼
@@ -968,6 +975,319 @@ docs/install.md             — Install guide with security boundaries
 ### Summary
 
 Agent Reach is a well-structured, transparent tool. It does not phone home, does not collect telemetry, and does not transmit credentials anywhere. All internet access happens through well-known upstream tools (yt-dlp, xreach, curl, mcporter) that the user can independently audit. **Critical: always use `--safe` mode** to prevent silent cookie extraction and remote script execution. We installed with safe mode enabled. Keep `~/.agent-reach/config.yaml` at `0o600` permissions and use dedicated accounts for cookie-based platforms.
+
+---
+
+## Conversion & UX Optimization
+
+A comprehensive suite of conversion and engagement features added based on research from NNGroup, Baymard Institute, Omnichat, LINE CONVERGE 2025, and behavioral psychology (Cialdini, Kahneman, Fitt's Law).
+
+### Website UX
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  CONVERSION & ENGAGEMENT FEATURES                │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  TRUST & URGENCY SIGNALS                               │
+  │                                                        │
+  │  Homepage:                                             │
+  │  ├── Trust strip: 2000+ customers, 4.8★, 40 years     │
+  │  ├── Scarcity badges: 本週新到, 詢問熱烈              │
+  │  ├── Social proof: "今日N人諮詢"                       │
+  │  └── Scroll reveal animations (IntersectionObserver)   │
+  │                                                        │
+  │  Vehicle Detail:                                       │
+  │  ├── Urgency line + third-party certification badge    │
+  │  ├── Real-time "X人正在看" viewer count                │
+  │  ├── Proactive chat nudge after 15s browsing           │
+  │  └── Returning visitor banner ("歡迎回來！")           │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  INTERACTIVE FEATURES                                   │
+  │                                                        │
+  │  Wishlist (localStorage, max 20):                      │
+  │  ├── Animated heart toggle on vehicle cards            │
+  │  ├── WishlistDrawer: slide-out panel with LINE CTA    │
+  │  └── Baymard: 17% abandonment from inability to save  │
+  │                                                        │
+  │  Fullscreen Photo Gallery:                             │
+  │  ├── Zoom, swipe, keyboard navigation                 │
+  │  └── Thumbnail strip for quick browsing               │
+  │                                                        │
+  │  Form Auto-Save (sessionStorage):                      │
+  │  ├── BookVisit + LoanInquiry auto-save on input       │
+  │  ├── Restore banner on return                         │
+  │  └── useFormAutosave hook (debounced 500ms)            │
+  │                                                        │
+  │  Inline Form Validation:                               │
+  │  ├── Real-time ✓/✗ feedback                           │
+  │  └── Phone format hints for TW numbers                │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  STICKY CTA BAR (mobile + tablet)                      │
+  │                                                        │
+  │  ┌─────────────────────────────────────────────────┐  │
+  │  │  📅 預約看車          📞 立即撥打              │  │
+  │  │  (Book Visit)         (Call Now)                 │  │
+  │  └─────────────────────────────────────────────────┘  │
+  │  Fixed bottom bar on Home, Brand, Price pages          │
+  │  44px min touch targets, visible through lg breakpoint │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  SOLD VEHICLE HANDLING                                  │
+  │                                                        │
+  │  /vehicle/:id (status = sold/reserved):                │
+  │  ├── 已售出 overlay banner with dimmed photo           │
+  │  ├── Same-brand recommendations (fallback: all)       │
+  │  ├── CTA to browse all inventory                      │
+  │  └── SEO: noindex,follow + 【已售出】title prefix     │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  RESPONSIVE DESIGN (tested on iPhone/Android/tablet)   │
+  │                                                        │
+  │  ├── Chat popup: full-width on mobile                 │
+  │  ├── VehicleCompare: responsive modal, narrow columns │
+  │  ├── BookVisit: py-3 inputs for 44px+ touch targets   │
+  │  ├── BlogPost: sidebar at md breakpoint               │
+  │  ├── Analytics: 2-col KPI grid on mobile              │
+  │  └── DashboardLayout: drawer mode on mobile           │
+  └───────────────────────────────────────────────────────┘
+```
+
+### LINE Chatbot Intelligence
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  CHATBOT SMART FEATURES                          │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  RETURNING USER MEMORY                                 │
+  │                                                        │
+  │  Re-follow / return visit:                             │
+  │  ├── Personalized welcome with last discussed vehicle  │
+  │  └── Replaces generic welcome sequence                │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  CSAT SATISFACTION SURVEY                               │
+  │                                                        │
+  │  Trigger: 5min inactivity after 3+ messages            │
+  │  ├── 5-star Flex Message rating                       │
+  │  ├── 24-hour cooldown per user                        │
+  │  ├── Score logged to analytics                        │
+  │  └── Owner notified on low scores                     │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  FRUSTRATION DETECTION + AUTO-HANDOFF                   │
+  │                                                        │
+  │  Keywords: 不滿, 騙, 轉真人, 客訴, etc.               │
+  │  ├── Empathetic message + immediate human handoff     │
+  │  └── 27% satisfaction improvement (research)          │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  CONVERSATION RECOVERY                                  │
+  │                                                        │
+  │  5-8min silence mid-conversation:                      │
+  │  ├── Contextual nudge (vehicle/loan/general topics)   │
+  │  └── 60-second periodic check                         │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  FOLLOW-UP PUSH MESSAGING                               │
+  │                                                        │
+  │  18-48h after inquiry (inactive users):                │
+  │  ├── "昨天看的那台車今天有人問喔"                      │
+  │  └── Gentle scarcity nudge to re-engage               │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  CONVERSION-FOCUSED QUICK REPLIES                       │
+  │                                                        │
+  │  After vehicle inquiries:                              │
+  │  ├── 📅 預約看車 (message action)                     │
+  │  ├── 💰 問貸款 (message action)                       │
+  │  └── 📞 直接撥打 (URI tel action)                     │
+  │                                                        │
+  │  Personalized based on:                                │
+  │  ├── Conversation history + lead score                │
+  │  └── Previously discussed vehicles                    │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  ENHANCED IMAGE RECOGNITION                             │
+  │                                                        │
+  │  Gemini Vision now extracts:                           │
+  │  ├── Year, color, condition, license plate            │
+  │  └── Matches against inventory for identification     │
+  └───────────────────────────────────────────────────────┘
+```
+
+### Video & 360° Gallery
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  VIDEO & 360° MEDIA SUPPORT                      │
+└─────────────────────────────────────────────────────────────────┘
+
+  Database: videoUrl + photos360Urls fields on vehicles table
+  Migration: drizzle/0002_add_vehicle_media.sql
+
+  ┌───────────────────────────────────────────────────────┐
+  │  VEHICLE DETAIL PAGE — MEDIA TABS                       │
+  │                                                        │
+  │  ┌──────────┐ ┌──────────┐ ┌──────────┐              │
+  │  │ 📷 照片  │ │ 🎬 影片  │ │ 🔄 360°  │              │
+  │  └──────────┘ └──────────┘ └──────────┘              │
+  │                                                        │
+  │  Photos: existing gallery with fullscreen zoom         │
+  │  Video: YouTube embed (privacy-enhanced nocookie)      │
+  │  360°: Vehicle360Viewer (drag-to-rotate, auto-spin)    │
+  │                                                        │
+  │  Tabs only appear when content exists.                 │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  ADMIN — VIDEO/360° MANAGEMENT                          │
+  │                                                        │
+  │  VehicleManagement.tsx:                                │
+  │  ├── Video URL input field                            │
+  │  └── 360° photo URLs input field                      │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  LINE CHATBOT — VIDEO INTEGRATION                       │
+  │                                                        │
+  │  Flex Message cards:                                   │
+  │  └── "看影片" button when videoUrl exists              │
+  └───────────────────────────────────────────────────────┘
+```
+
+---
+
+## Security Hardening
+
+Three critical security upgrades implemented (2026-03-18):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  SECURITY HARDENING                               │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  1. BCRYPT PASSWORD HASHING (adminAuth.ts)             │
+  │                                                        │
+  │  ├── Admin password hashed with bcrypt (12 rounds)    │
+  │  ├── Login uses bcrypt.compare()                      │
+  │  └── Timing-safe username check preserved             │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  2. LOGIN RATE LIMITER (index.ts)                       │
+  │                                                        │
+  │  ├── 5 failed attempts per 15 minutes                 │
+  │  ├── Successful requests don't count                  │
+  │  └── Security event logged on rate limit hit          │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  3. REDUCED TOKEN TTL (const.ts, adminAuth.ts)          │
+  │                                                        │
+  │  ├── Admin sessions: 24 hours (was 365 days)          │
+  │  └── OAuth sessions: 7 days (was 365 days)            │
+  └───────────────────────────────────────────────────────┘
+```
+
+---
+
+## GEO Audit & Fixes
+
+Based on a 5-agent parallel GEO audit (score: 66/100) with targeted fixes:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  GEO AUDIT FIXES (2026-03-18)                    │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  SCHEMA IMPROVEMENTS                                    │
+  │                                                        │
+  │  ├── AutoDealer: sameAs (Facebook, SUM, TWCar, ABCCar)│
+  │  ├── Review: @id cross-reference (not inline address) │
+  │  ├── Article: ImageObject + wordCount                 │
+  │  ├── Person (author): sameAs + url for E-E-A-T       │
+  │  ├── Removed deprecated HowTo (Google Sep 2023)       │
+  │  └── Speakable extended to brand + price pages        │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  CRAWLER & INDEXING                                     │
+  │                                                        │
+  │  ├── robots.txt: disallow /chat, /loan-inquiry,       │
+  │  │   /book-visit for all AI crawlers                  │
+  │  ├── IndexNow: key endpoint + submitIndexNow()        │
+  │  │   for Bing instant indexing                        │
+  │  ├── Fixed duplicate brand entries in sitemap.xml     │
+  │  └── Wikidata entity creation script for ChatGPT      │
+  │      entity recognition                               │
+  └───────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────────────────────────┐
+  │  CONTENT & ACCESSIBILITY                                │
+  │                                                        │
+  │  ├── External citations (mvdis.gov.tw, jcic.org.tw)   │
+  │  ├── Fixed viewport: removed maximum-scale=1          │
+  │  │   (was blocking pinch-zoom, failing WCAG 2.1)     │
+  │  └── Added Permissions-Policy security header         │
+  └───────────────────────────────────────────────────────┘
+```
+
+---
+
+## Recall-Stack Memory System
+
+A 5-layer persistent memory architecture based on [recall-stack](https://github.com/keshavsuki/recall-stack) that survives across sessions and terminal crashes:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  5-LAYER MEMORY ARCHITECTURE                     │
+└─────────────────────────────────────────────────────────────────┘
+
+  Layer 1: CLAUDE.md ────────────── Permanent agent rules
+       │
+  Layer 2: primer.md ────────────── Auto-rewriting session state
+       │                            (survives crashes)
+       │
+  Layer 3: SessionStart Hook ────── Injects git context
+       │                            (branch, commits, diffs)
+       │
+  Layer 4: long-term-memory.md ──── Distilled knowledge & patterns
+       │                            (techniques, research findings)
+       │
+  Layer 5: .claude-memory.md ────── Recent commit log (last 10)
+                                    (auto-populated by post-commit hook)
+
+  ┌───────────────────────────────────────────────────────┐
+  │  KEY FILES                                              │
+  │                                                        │
+  │  ~/.claude/CLAUDE.md          Global agent rules       │
+  │  ~/.claude/primer.md          Session state (Layer 2)  │
+  │  ~/.claude/memory/                                     │
+  │  ├── long-term-memory.md      Distilled knowledge      │
+  │  ├── project-memory.md        Project state            │
+  │  └── recent-memory.md         Recent observations      │
+  │  tasks/lessons.md             Behavioral corrections   │
+  │  .claude-memory.md            Commit log (auto)        │
+  └───────────────────────────────────────────────────────┘
+```
 
 ---
 
