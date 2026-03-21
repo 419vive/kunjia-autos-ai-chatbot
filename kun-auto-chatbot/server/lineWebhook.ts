@@ -164,7 +164,7 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
             content: [
               {
                 type: "text",
-                text: '這張圖片裡有車嗎？如果有，請辨識車輛的品牌(brand)、車型(model)、大約年份(year)、顏色(color)和車況觀察(condition)。只回覆 JSON 格式：{"brand":"品牌","model":"車型","year":"約2020","color":"白色","condition":"外觀良好"}。如果無法辨識某項就留空字串。如果圖中沒有車，回覆 {"brand":"","model":""}。不要回覆其他文字。如果是車牌照片，嘗試辨識車牌號碼放在plate欄位。如果是行照，辨識行照上的資訊。',
+                text: '請分析這張圖片，找出任何車輛相關資訊。可能的情境包括：\n1. 直接的車輛照片 → 從外觀辨識品牌、車型\n2. 社群媒體貼文截圖（Facebook、IG等）→ 從貼文文字中擷取車輛資訊\n3. 車輛刊登/廣告截圖 → 從文字內容擷取品牌、車型、價格\n4. 車牌照片 → 辨識車牌號碼\n5. 行照 → 辨識行照上的資訊\n\n不管是哪種情境，只要能找到車輛品牌和車型，就回覆 JSON：\n{"brand":"品牌","model":"車型","year":"約2020","color":"白色","condition":"外觀良好","price":"69.8萬","plate":"ABC-1234"}\n\n重要：如果圖中的文字提到車輛品牌和車型（例如「Corolla Cross」、「Toyota RAV4」），即使圖片本身沒有車，也要從文字擷取並回覆。\n如果無法辨識某項就留空字串。如果完全找不到任何車輛資訊，回覆 {"brand":"","model":""}。不要回覆其他文字。',
               },
               {
                 type: "image_url",
@@ -196,6 +196,7 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
       if (parsed.color) result.color = parsed.color;
       if (parsed.condition) result.condition = parsed.condition;
       if (parsed.plate) result.plate = parsed.plate;
+      if (parsed.price) result.price = parsed.price;
       return result;
     }
     return null;
@@ -618,10 +619,13 @@ async function processLineEvent(
         if ((identified as any).year) extraInfo.push(`約${(identified as any).year}`);
         if ((identified as any).color) extraInfo.push(`${(identified as any).color}`);
         const extraStr = extraInfo.length > 0 ? `（${extraInfo.join("・")}）` : "";
+        const priceNote = (identified as any).price
+          ? `\n你看到的那台售價 ${(identified as any).price}，來比較看看我們的價格 💪`
+          : "";
 
         const textMsg = {
           type: "text" as const,
-          text: `我看到你傳了一張 ${identified.brand} ${identified.model}${extraStr} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇`,
+          text: `我看到你傳了一張 ${identified.brand} ${identified.model}${extraStr} 的照片！🚗\n我們剛好有 ${matches.length} 台${identified.brand} ${identified.model} 可以看，幫你列出來 👇${priceNote}`,
         };
 
         // LINE reply max 5 messages
