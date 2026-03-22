@@ -33,6 +33,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Recall-Stack Memory System](#recall-stack-memory-system)
 - [AI Agent Development Strategy](#ai-agent-development-strategy)
   - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
+- [Video Content Creation — Remotion + Claude Code](#video-content-creation--remotion--claude-code)
 
 ---
 
@@ -1404,6 +1405,111 @@ You run `/simplify` twice: once to gate the plan, once to clean the output. The 
 > **The core insight:** Use AI to defend against AI. You don't need to understand every abstraction in the plan — let the review agents do that work for you. The cost is one extra step; the payoff is code that stays simple and maintainable.
 >
 > **Credit:** Technique from [FinLab 財經實驗室](https://www.facebook.com/finaboratory)'s Claude Code tips series.
+
+---
+
+## Video Content Creation — Remotion + Claude Code
+
+Professional video content pipeline using [Remotion](https://remotion.dev) Agent Skills — React-based programmatic video creation driven entirely by natural language prompts through Claude Code. No video editing skills required.
+
+> **Source:** [Sabrina Ramonov](https://www.sabrina.dev/p/5-insane-claude-code-video-prompts) — "5 INSANE Claude Code + Video Prompts" (March 2026)
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              REMOTION + CLAUDE CODE VIDEO PIPELINE                │
+└─────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+  │  Natural     │───▶│  Claude Code  │───▶│  React Code  │
+  │  Language    │    │  + Remotion   │    │  (Remotion   │
+  │  Prompt      │    │  Skills (37+) │    │  Components) │
+  └──────────────┘    └──────────────┘    └──────┬───────┘
+                                                  │
+                      ┌──────────────┐    ┌──────▼───────┐
+                      │  MP4 / WebM  │◀───│  Remotion    │
+                      │  Final Video │    │  Studio      │
+                      └──────────────┘    │  (Preview)   │
+                                          └──────────────┘
+
+  Key difference from AI video generators (Sora, Runway):
+  Claude generates CODE, not pixels — full control, editable, reproducible.
+```
+
+### Setup
+
+```bash
+# Install Remotion skills globally for Claude Code
+npx skills add remotion-dev/skills
+
+# Create video workspace
+mkdir car-videos && cd car-videos
+
+# After Claude generates video code, preview in browser
+npx remotion studio     # Opens at localhost:3000
+
+# Render final video
+npx remotion render
+```
+
+### 5 Prompt Templates
+
+| # | Type | Input | Output |
+|---|------|-------|--------|
+| 1 | **Education Explainer** | Change topic in quotes | Full animated explainer (research → script → design → animate) |
+| 2 | **Product Demo + Launch** | Any product URL | Scrapes branding, downloads images, creates animated product ad |
+| 3 | **Google Reviews Testimonial** | Google Business Profile link | Animated testimonial with real reviews, star ratings, social proof |
+| 4 | **Avatar + Animated Overlays** | 9:16 talking-head video in `public/` | Transcribes speech, overlays animated titles/badges/captions |
+| 5 | **Data Viz Dashboard** | CSV file in `public/` | Analyzes data, picks chart types, animates visualizations |
+
+### Use Cases for 崑家汽車
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              CAR DEALERSHIP VIDEO CONTENT PLAN                    │
+└─────────────────────────────────────────────────────────────────┘
+
+  1. CAR SHOWCASE VIDEOS (Product Demo prompt)
+     └── Point at vehicle detail page URL
+         → Scrapes car photos, specs, price
+         → Creates animated showcase ad
+
+  2. CUSTOMER TESTIMONIALS (Google Reviews prompt)
+     └── Paste 崑家汽車 Google Business Profile
+         → Scrapes real 5-star reviews
+         → Animated testimonial with star animations
+         → What businesses pay $200-500 on Fiverr
+
+  3. BOSS INTRODUCTION (Avatar Overlay prompt)
+     └── Record 老闆 talking-head video (9:16)
+         → Auto-transcribes speech
+         → Overlays animated car stats/titles
+         → Professional expert commentary look
+
+  4. PRICE COMPARISON (Data Viz prompt)
+     └── Export inventory CSV (model, year, price, mileage)
+         → Animated charts showing value proposition
+         → Great for LINE/IG/Facebook posts
+
+  5. BUYING TIPS (Education Explainer prompt)
+     └── Topic: "中古車選購注意事項"
+         → Full animated educational video
+         → Positions 崑家 as trusted authority
+         → YouTube/IG Reels content
+
+  All videos: 1080x1920 vertical for LINE / IG / TikTok / Shorts
+```
+
+### Production Tips
+
+- **Keep it simple** — text appearing, images in frames = clean. Complex overlapping animations get messy.
+- **Iterate from basic** — start simple, refine with follow-up prompts.
+- **Use Plan Mode** — let Claude structure narrative before writing code.
+- **Save working prompts** — reuse for consistent brand style.
+- **Always specify 1080x1920** for social media vertical format.
+- **Browser automation** — Claude can visit URLs, take real screenshots, incorporate into video.
+- **Free tier** — Remotion is free for teams of 3 or fewer.
 
 ---
 
