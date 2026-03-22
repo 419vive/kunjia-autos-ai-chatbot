@@ -2,7 +2,7 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp"]
+      "args": ["-y", "@playwright/mcp", "--browser", "chromium", "--no-sandbox"]
     },
     "context7": {
       "command": "npx",
