@@ -6,17 +6,22 @@ import {
   interpolate,
   spring,
   Sequence,
+  Img,
+  staticFile,
 } from "remotion";
-// System font fallback (Google Fonts blocked in this environment)
+
+// System font fallback (swap to @remotion/google-fonts/NotoSansSC locally)
 const fontFamily =
   '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif';
 
 // ── Vehicle Data ──────────────────────────────────────────────
+// TO USE REAL PHOTOS: drop car images in public/ folder as car-1.jpg, car-2.jpg, etc.
 const CAR = {
   brand: "BMW",
   model: "X1",
   year: 2015,
-  price: "37.8萬",
+  price: "37.8",
+  priceUnit: "萬",
   mileage: "5萬公里",
   displacement: "2.0L",
   transmission: "自排",
@@ -26,308 +31,282 @@ const CAR = {
   dealer: "崑家汽車",
   location: "高雄三民區",
   yearsInBusiness: "40年正派經營",
-  lineUrl: "https://page.line.me/825oftez",
-  photoUrl:
-    "https://img.8891.com.tw/images/car/1726/1726-1.jpg",
+  // Set to true when you drop real photos in public/
+  hasRealPhotos: false,
 };
 
-// ── Color Palette ─────────────────────────────────────────────
 const COLORS = {
-  dark: "#0a0a0a",
-  accent: "#c9a962", // Gold
+  dark: "#0d0d0d",
+  accent: "#d4a843",
+  accentDark: "#8b7028",
   white: "#ffffff",
-  gray: "#888888",
-  gradientTop: "#1a1a2e",
-  gradientBottom: "#0a0a0a",
+  gray: "#999999",
+  lightGray: "#cccccc",
+  red: "#e63946",
+  lineGreen: "#06c755",
 };
 
-// ── Scene 1: Brand Reveal ─────────────────────────────────────
-const BrandReveal: React.FC = () => {
+// ── SVG Car Illustration (BMW X1 SUV silhouette) ──────────────
+const CarSVG: React.FC<{ scale?: number; color?: string }> = ({
+  scale = 1,
+  color = COLORS.white,
+}) => (
+  <svg
+    width={800 * scale}
+    height={340 * scale}
+    viewBox="0 0 800 340"
+    fill="none"
+  >
+    {/* Car body */}
+    <path
+      d="M120 220 C120 220 140 120 200 100 C240 88 320 75 400 72 C480 75 560 88 600 100 C660 120 680 220 680 220"
+      fill={color}
+      opacity={0.15}
+      stroke={color}
+      strokeWidth={2}
+    />
+    {/* Roof line */}
+    <path
+      d="M200 100 C240 88 320 75 400 72 C480 75 560 88 600 100"
+      fill="none"
+      stroke={COLORS.accent}
+      strokeWidth={3}
+    />
+    {/* Windows */}
+    <path
+      d="M220 110 C250 95 330 82 400 80 C440 82 490 90 520 100 L510 160 L230 160 Z"
+      fill={COLORS.accent}
+      opacity={0.2}
+      stroke={COLORS.accent}
+      strokeWidth={1.5}
+    />
+    {/* Window divider */}
+    <line
+      x1={380}
+      y1={82}
+      x2={370}
+      y2={160}
+      stroke={color}
+      strokeWidth={2}
+      opacity={0.5}
+    />
+    {/* Lower body */}
+    <path
+      d="M80 230 L120 220 L680 220 L720 230 L740 250 L740 260 L60 260 L60 250 Z"
+      fill={color}
+      opacity={0.12}
+      stroke={color}
+      strokeWidth={2}
+    />
+    {/* Front bumper */}
+    <path
+      d="M60 260 L80 230 L120 220"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+    />
+    {/* Rear bumper */}
+    <path
+      d="M740 260 L720 230 L680 220"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+    />
+    {/* Headlight front */}
+    <ellipse cx={95} cy={235} rx={25} ry={12} fill={COLORS.accent} opacity={0.6} />
+    {/* Headlight rear */}
+    <ellipse cx={705} cy={235} rx={25} ry={12} fill={COLORS.red} opacity={0.5} />
+    {/* Front wheel */}
+    <circle cx={200} cy={270} r={50} fill={COLORS.dark} stroke={color} strokeWidth={3} />
+    <circle cx={200} cy={270} r={35} fill="none" stroke={color} strokeWidth={1.5} opacity={0.5} />
+    <circle cx={200} cy={270} r={18} fill="none" stroke={COLORS.accent} strokeWidth={2} />
+    <circle cx={200} cy={270} r={6} fill={COLORS.accent} />
+    {/* Rear wheel */}
+    <circle cx={600} cy={270} r={50} fill={COLORS.dark} stroke={color} strokeWidth={3} />
+    <circle cx={600} cy={270} r={35} fill="none" stroke={color} strokeWidth={1.5} opacity={0.5} />
+    <circle cx={600} cy={270} r={18} fill="none" stroke={COLORS.accent} strokeWidth={2} />
+    <circle cx={600} cy={270} r={6} fill={COLORS.accent} />
+    {/* BMW kidney grille */}
+    <rect x={85} y={224} width={16} height={18} rx={3} fill="none" stroke={color} strokeWidth={1.5} opacity={0.7} />
+    <rect x={104} y={224} width={16} height={18} rx={3} fill="none" stroke={color} strokeWidth={1.5} opacity={0.7} />
+    {/* Ground shadow */}
+    <ellipse cx={400} cy={325} rx={350} ry={12} fill={color} opacity={0.05} />
+  </svg>
+);
+
+// ── Scene 1: Car Hero with Brand ──────────────────────────────
+const CarHero: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const lineScale = spring({ frame, fps, config: { damping: 200 } });
-  const lineWidth = interpolate(lineScale, [0, 1], [0, 600], {
+  const carEntrance = spring({ frame, fps, config: { damping: 200 } });
+  const carX = interpolate(carEntrance, [0, 1], [-400, 0]);
+
+  const textOpacity = interpolate(frame, [0.6 * fps, 1.0 * fps], [0, 1], {
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-
-  const brandOpacity = interpolate(frame, [0.4 * fps, 0.8 * fps], [0, 1], {
+  const textY = interpolate(frame, [0.6 * fps, 1.0 * fps], [30, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const brandY = interpolate(frame, [0.4 * fps, 0.8 * fps], [30, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const modelOpacity = interpolate(frame, [0.8 * fps, 1.2 * fps], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const modelY = interpolate(frame, [0.8 * fps, 1.2 * fps], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const yearOpacity = interpolate(frame, [1.2 * fps, 1.6 * fps], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(180deg, ${COLORS.gradientTop} 0%, ${COLORS.dark} 100%)`,
-        justifyContent: "center",
-        alignItems: "center",
-        fontFamily,
-      }}
-    >
-      {/* Decorative gold line */}
-      <div
-        style={{
-          position: "absolute",
-          top: "42%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: lineWidth,
-          height: 2,
-          backgroundColor: COLORS.accent,
-        }}
-      />
-
-      {/* Brand name */}
-      <div
-        style={{
-          position: "absolute",
-          top: "28%",
-          textAlign: "center",
-          opacity: brandOpacity,
-          transform: `translateY(${brandY}px)`,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 140,
-            fontWeight: 900,
-            color: COLORS.white,
-            letterSpacing: 20,
-          }}
-        >
-          {CAR.brand}
-        </div>
-      </div>
-
-      {/* Model */}
-      <div
-        style={{
-          position: "absolute",
-          top: "48%",
-          textAlign: "center",
-          opacity: modelOpacity,
-          transform: `translateY(${modelY}px)`,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 90,
-            fontWeight: 700,
-            color: COLORS.accent,
-            letterSpacing: 8,
-          }}
-        >
-          {CAR.model}
-        </div>
-      </div>
-
-      {/* Year */}
-      <div
-        style={{
-          position: "absolute",
-          top: "62%",
-          textAlign: "center",
-          opacity: yearOpacity,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 48,
-            fontWeight: 400,
-            color: COLORS.gray,
-            letterSpacing: 12,
-          }}
-        >
-          {CAR.year}
-        </div>
-      </div>
-    </AbsoluteFill>
-  );
-};
-
-// ── Scene 2: Price Hero ───────────────────────────────────────
-const PriceHero: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
-  const priceScale = spring({
+  const priceEntrance = spring({
     frame,
     fps,
+    delay: Math.round(1.0 * fps),
     config: { damping: 12, stiffness: 200 },
-  });
-
-  const labelOpacity = interpolate(frame, [0.5 * fps, 0.9 * fps], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
   });
 
   const badgeScale = spring({
     frame,
     fps,
-    delay: Math.round(0.8 * fps),
+    delay: Math.round(1.4 * fps),
     config: { damping: 15 },
   });
 
   return (
     <AbsoluteFill
       style={{
-        background: `linear-gradient(180deg, ${COLORS.dark} 0%, #1a0a00 50%, ${COLORS.dark} 100%)`,
-        justifyContent: "center",
-        alignItems: "center",
+        background: `radial-gradient(ellipse at 50% 30%, #1a1a2e 0%, ${COLORS.dark} 70%)`,
         fontFamily,
       }}
     >
-      {/* Price label */}
+      {/* Top: brand + model */}
       <div
         style={{
           position: "absolute",
-          top: "30%",
-          opacity: labelOpacity,
-          fontSize: 42,
-          color: COLORS.gray,
-          letterSpacing: 6,
-        }}
-      >
-        超值價格
-      </div>
-
-      {/* Price */}
-      <div
-        style={{
-          position: "absolute",
-          top: "38%",
-          transform: `scale(${priceScale})`,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 160,
-            fontWeight: 900,
-            color: COLORS.accent,
-            textAlign: "center",
-          }}
-        >
-          {CAR.price}
-        </div>
-      </div>
-
-      {/* Hot badge */}
-      <div
-        style={{
-          position: "absolute",
-          top: "58%",
-          transform: `scale(${badgeScale})`,
-          backgroundColor: "#cc3333",
-          padding: "16px 48px",
-          borderRadius: 50,
+          top: 100,
+          width: "100%",
+          textAlign: "center",
+          opacity: textOpacity,
+          transform: `translateY(${textY}px)`,
         }}
       >
         <div
           style={{
             fontSize: 36,
+            color: COLORS.gray,
+            letterSpacing: 12,
+            marginBottom: 8,
+          }}
+        >
+          {CAR.year} {CAR.bodyType}
+        </div>
+        <div
+          style={{
+            fontSize: 120,
+            fontWeight: 900,
+            color: COLORS.white,
+            letterSpacing: 10,
+          }}
+        >
+          {CAR.brand}
+        </div>
+        <div
+          style={{
+            fontSize: 80,
+            fontWeight: 700,
+            color: COLORS.accent,
+            letterSpacing: 6,
+            marginTop: -10,
+          }}
+        >
+          {CAR.model}
+        </div>
+      </div>
+
+      {/* Center: car image */}
+      <div
+        style={{
+          position: "absolute",
+          top: "42%",
+          left: "50%",
+          transform: `translateX(calc(-50% + ${carX}px))`,
+        }}
+      >
+        {CAR.hasRealPhotos ? (
+          <Img
+            src={staticFile("car-1.jpg")}
+            style={{
+              width: 900,
+              height: 600,
+              objectFit: "cover",
+              borderRadius: 20,
+            }}
+          />
+        ) : (
+          <CarSVG scale={1.2} />
+        )}
+      </div>
+
+      {/* Bottom: price overlay */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 200,
+          width: "100%",
+          textAlign: "center",
+          transform: `scale(${priceEntrance})`,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: 4 }}>
+          <span style={{ fontSize: 42, color: COLORS.lightGray }}>NT$</span>
+          <span
+            style={{
+              fontSize: 140,
+              fontWeight: 900,
+              color: COLORS.accent,
+            }}
+          >
+            {CAR.price}
+          </span>
+          <span style={{ fontSize: 60, fontWeight: 700, color: COLORS.accent }}>
+            {CAR.priceUnit}
+          </span>
+        </div>
+      </div>
+
+      {/* Badge */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 120,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          transform: `scale(${badgeScale})`,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: COLORS.red,
+            padding: "12px 40px",
+            borderRadius: 30,
+            fontSize: 32,
             fontWeight: 700,
             color: COLORS.white,
           }}
         >
-          詢問熱烈
+          詢問熱烈 · 限量一台
         </div>
-      </div>
-
-      {/* Mileage */}
-      <div
-        style={{
-          position: "absolute",
-          top: "70%",
-          opacity: labelOpacity,
-          fontSize: 36,
-          color: COLORS.gray,
-        }}
-      >
-        里程 {CAR.mileage}
       </div>
     </AbsoluteFill>
   );
 };
 
-// ── Scene 3: Specs Grid ───────────────────────────────────────
-const SpecItem: React.FC<{
-  label: string;
-  value: string;
-  delay: number;
-}> = ({ label, value, delay }) => {
+// ── Scene 2: Specs with Car ───────────────────────────────────
+const SpecsWithCar: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const entrance = spring({
-    frame,
-    fps,
-    delay: Math.round(delay * fps),
-    config: { damping: 200 },
-  });
-
-  const y = interpolate(entrance, [0, 1], [40, 0]);
-  const opacity = entrance;
-
-  return (
-    <div
-      style={{
-        opacity,
-        transform: `translateY(${y}px)`,
-        textAlign: "center",
-        padding: "30px 0",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 32,
-          color: COLORS.gray,
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 52,
-          fontWeight: 700,
-          color: COLORS.white,
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-};
-
-const SpecsGrid: React.FC = () => {
   const specs = [
-    { label: "排氣量", value: CAR.displacement },
-    { label: "變速箱", value: CAR.transmission },
-    { label: "燃料", value: CAR.fuelType },
-    { label: "車型", value: CAR.bodyType },
-    { label: "顏色", value: CAR.color },
-    { label: "年份", value: String(CAR.year) },
+    { icon: "⚡", label: "排氣量", value: CAR.displacement },
+    { icon: "⚙", label: "變速箱", value: CAR.transmission },
+    { icon: "⛽", label: "燃料", value: CAR.fuelType },
+    { icon: "🛣", label: "里程", value: CAR.mileage },
+    { icon: "🎨", label: "顏色", value: CAR.color },
+    { icon: "📅", label: "年份", value: String(CAR.year) },
   ];
 
   return (
@@ -335,163 +314,343 @@ const SpecsGrid: React.FC = () => {
       style={{
         background: COLORS.dark,
         fontFamily,
-        padding: "120px 80px",
       }}
     >
-      {/* Title */}
+      {/* Car at top */}
       <div
         style={{
-          fontSize: 48,
-          fontWeight: 700,
-          color: COLORS.accent,
-          textAlign: "center",
-          marginBottom: 60,
-          letterSpacing: 8,
+          position: "absolute",
+          top: 80,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
         }}
       >
-        車輛規格
+        {CAR.hasRealPhotos ? (
+          <Img
+            src={staticFile("car-2.jpg")}
+            style={{
+              width: 900,
+              height: 500,
+              objectFit: "cover",
+              borderRadius: 16,
+            }}
+          />
+        ) : (
+          <CarSVG scale={1.1} />
+        )}
       </div>
 
-      {/* 2-column grid */}
+      {/* Gold divider */}
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "20px 60px",
+          position: "absolute",
+          top: "45%",
+          left: "10%",
+          width: "80%",
+          height: 2,
+          backgroundColor: COLORS.accent,
+          opacity: 0.4,
+        }}
+      />
+
+      {/* Specs list */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          width: "100%",
+          padding: "0 80px",
         }}
       >
-        {specs.map((spec, i) => (
-          <div key={spec.label} style={{ width: "40%" }}>
-            <SpecItem
-              label={spec.label}
-              value={spec.value}
-              delay={0.15 * i}
-            />
-          </div>
-        ))}
+        {specs.map((spec, i) => {
+          const entrance = spring({
+            frame,
+            fps,
+            delay: Math.round(0.12 * i * fps),
+            config: { damping: 200 },
+          });
+          const x = interpolate(entrance, [0, 1], [80, 0]);
+          return (
+            <div
+              key={spec.label}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "22px 20px",
+                borderBottom: `1px solid rgba(255,255,255,0.08)`,
+                opacity: entrance,
+                transform: `translateX(${x}px)`,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ fontSize: 36 }}>{spec.icon}</span>
+                <span style={{ fontSize: 34, color: COLORS.gray }}>
+                  {spec.label}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: 40,
+                  fontWeight: 700,
+                  color: COLORS.white,
+                }}
+              >
+                {spec.value}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </AbsoluteFill>
   );
 };
 
-// ── Scene 4: Dealer Trust ─────────────────────────────────────
-const DealerTrust: React.FC = () => {
+// ── Scene 3: Why Choose Us ────────────────────────────────────
+const WhyChooseUs: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const nameEntrance = spring({
-    frame,
-    fps,
-    config: { damping: 200 },
+  const reasons = [
+    { num: "40+", text: "年經營歷史" },
+    { num: "500+", text: "台成交紀錄" },
+    { num: "4.8", text: "Google 評分" },
+    { num: "100%", text: "實車實價" },
+  ];
+
+  const titleOpacity = interpolate(frame, [0, 0.5 * fps], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
   });
-
-  const taglineOpacity = interpolate(
-    frame,
-    [0.5 * fps, 1.0 * fps],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-
-  const ctaScale = spring({
-    frame,
-    fps,
-    delay: Math.round(1.2 * fps),
-    config: { damping: 15 },
-  });
-
-  const ctaPulse = interpolate(
-    frame,
-    [2.0 * fps, 2.5 * fps, 3.0 * fps, 3.5 * fps],
-    [1, 1.05, 1, 1.05],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
 
   return (
     <AbsoluteFill
       style={{
-        background: `linear-gradient(180deg, ${COLORS.dark} 0%, #0a1a0a 50%, ${COLORS.dark} 100%)`,
-        justifyContent: "center",
-        alignItems: "center",
+        background: `linear-gradient(180deg, #0a0a1a 0%, ${COLORS.dark} 50%, #0a1a0a 100%)`,
         fontFamily,
       }}
     >
-      {/* Dealer name */}
+      {/* Dealer badge */}
       <div
         style={{
           position: "absolute",
-          top: "25%",
-          transform: `scale(${nameEntrance})`,
+          top: 140,
+          width: "100%",
           textAlign: "center",
+          opacity: titleOpacity,
         }}
       >
+        <div
+          style={{
+            fontSize: 80,
+            fontWeight: 900,
+            color: COLORS.accent,
+            marginBottom: 16,
+          }}
+        >
+          {CAR.dealer}
+        </div>
+        <div style={{ fontSize: 32, color: COLORS.gray, letterSpacing: 6 }}>
+          {CAR.location} · {CAR.yearsInBusiness}
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div
+        style={{
+          position: "absolute",
+          top: "38%",
+          width: "100%",
+          padding: "0 60px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 0,
+        }}
+      >
+        {reasons.map((r, i) => {
+          const entrance = spring({
+            frame,
+            fps,
+            delay: Math.round(0.2 * i * fps),
+            config: { damping: 15 },
+          });
+          return (
+            <div
+              key={r.text}
+              style={{
+                width: "50%",
+                textAlign: "center",
+                padding: "40px 0",
+                transform: `scale(${entrance})`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 72,
+                  fontWeight: 900,
+                  color: COLORS.accent,
+                }}
+              >
+                {r.num}
+              </div>
+              <div
+                style={{
+                  fontSize: 30,
+                  color: COLORS.lightGray,
+                  marginTop: 8,
+                }}
+              >
+                {r.text}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Car silhouette at bottom */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 100,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          opacity: 0.3,
+        }}
+      >
+        <CarSVG scale={0.9} color={COLORS.accent} />
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// ── Scene 4: CTA ──────────────────────────────────────────────
+const CallToAction: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const carEntrance = spring({ frame, fps, config: { damping: 200 } });
+  const carY = interpolate(carEntrance, [0, 1], [60, 0]);
+
+  const ctaScale = spring({
+    frame,
+    fps,
+    delay: Math.round(0.8 * fps),
+    config: { damping: 12 },
+  });
+
+  const ctaPulse = interpolate(
+    frame,
+    [2.0 * fps, 2.3 * fps, 2.6 * fps, 2.9 * fps, 3.2 * fps, 3.5 * fps],
+    [1, 1.06, 1, 1.06, 1, 1.06],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  const infoOpacity = interpolate(frame, [0.4 * fps, 0.8 * fps], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  return (
+    <AbsoluteFill
+      style={{
+        background: `radial-gradient(ellipse at 50% 70%, #0a1a0a 0%, ${COLORS.dark} 70%)`,
+        fontFamily,
+      }}
+    >
+      {/* Car at top */}
+      <div
+        style={{
+          position: "absolute",
+          top: 100,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          opacity: carEntrance,
+          transform: `translateY(${carY}px)`,
+        }}
+      >
+        {CAR.hasRealPhotos ? (
+          <Img
+            src={staticFile("car-3.jpg")}
+            style={{
+              width: 900,
+              height: 500,
+              objectFit: "cover",
+              borderRadius: 16,
+            }}
+          />
+        ) : (
+          <CarSVG scale={1.1} color={COLORS.accent} />
+        )}
+      </div>
+
+      {/* Price reminder */}
+      <div
+        style={{
+          position: "absolute",
+          top: "42%",
+          width: "100%",
+          textAlign: "center",
+          opacity: infoOpacity,
+        }}
+      >
+        <div style={{ fontSize: 36, color: COLORS.gray }}>
+          {CAR.brand} {CAR.model} · {CAR.year} · {CAR.mileage}
+        </div>
         <div
           style={{
             fontSize: 100,
             fontWeight: 900,
             color: COLORS.accent,
+            marginTop: 8,
           }}
         >
-          {CAR.dealer}
+          {CAR.price}{CAR.priceUnit}
         </div>
       </div>
 
-      {/* Tagline */}
+      {/* LINE CTA button */}
       <div
         style={{
           position: "absolute",
-          top: "42%",
-          opacity: taglineOpacity,
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: 40, color: COLORS.white, marginBottom: 16 }}>
-          {CAR.location}
-        </div>
-        <div style={{ fontSize: 36, color: COLORS.gray }}>
-          {CAR.yearsInBusiness}
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div
-        style={{
-          position: "absolute",
-          top: "60%",
+          top: "62%",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
           transform: `scale(${ctaScale * ctaPulse})`,
         }}
       >
         <div
           style={{
-            backgroundColor: "#06c755", // LINE green
-            padding: "24px 80px",
+            backgroundColor: COLORS.lineGreen,
+            padding: "28px 100px",
             borderRadius: 60,
-            textAlign: "center",
+            boxShadow: "0 8px 32px rgba(6, 199, 85, 0.3)",
           }}
         >
-          <div
-            style={{
-              fontSize: 44,
-              fontWeight: 700,
-              color: COLORS.white,
-            }}
-          >
+          <div style={{ fontSize: 48, fontWeight: 700, color: COLORS.white }}>
             LINE 立即詢問
           </div>
         </div>
       </div>
 
-      {/* Website */}
+      {/* Contact info */}
       <div
         style={{
           position: "absolute",
-          top: "78%",
-          opacity: taglineOpacity,
+          bottom: 160,
+          width: "100%",
           textAlign: "center",
+          opacity: infoOpacity,
         }}
       >
-        <div style={{ fontSize: 32, color: COLORS.gray }}>
-          kuncar.tw
+        <div style={{ fontSize: 36, fontWeight: 700, color: COLORS.white, marginBottom: 12 }}>
+          {CAR.dealer}
+        </div>
+        <div style={{ fontSize: 28, color: COLORS.gray }}>
+          {CAR.location} · kuncar.tw
         </div>
       </div>
     </AbsoluteFill>
@@ -501,45 +660,21 @@ const DealerTrust: React.FC = () => {
 // ── Main Composition ──────────────────────────────────────────
 export const CarShowcase: React.FC = () => {
   const { fps } = useVideoConfig();
-
-  const sceneDuration = 4 * fps; // 4 seconds per scene
+  const sceneDuration = 5 * fps; // 5 seconds per scene = 20s total
 
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.dark }}>
-      {/* Scene 1: Brand Reveal (0-4s) */}
-      <Sequence
-        from={0}
-        durationInFrames={sceneDuration}
-        premountFor={Math.round(0.5 * fps)}
-      >
-        <BrandReveal />
+      <Sequence from={0} durationInFrames={sceneDuration} premountFor={Math.round(0.5 * fps)}>
+        <CarHero />
       </Sequence>
-
-      {/* Scene 2: Price Hero (4-8s) */}
-      <Sequence
-        from={sceneDuration}
-        durationInFrames={sceneDuration}
-        premountFor={Math.round(0.5 * fps)}
-      >
-        <PriceHero />
+      <Sequence from={sceneDuration} durationInFrames={sceneDuration} premountFor={Math.round(0.5 * fps)}>
+        <SpecsWithCar />
       </Sequence>
-
-      {/* Scene 3: Specs Grid (8-12s) */}
-      <Sequence
-        from={2 * sceneDuration}
-        durationInFrames={sceneDuration}
-        premountFor={Math.round(0.5 * fps)}
-      >
-        <SpecsGrid />
+      <Sequence from={2 * sceneDuration} durationInFrames={sceneDuration} premountFor={Math.round(0.5 * fps)}>
+        <WhyChooseUs />
       </Sequence>
-
-      {/* Scene 4: Dealer Trust + CTA (12-16s) */}
-      <Sequence
-        from={3 * sceneDuration}
-        durationInFrames={sceneDuration}
-        premountFor={Math.round(0.5 * fps)}
-      >
-        <DealerTrust />
+      <Sequence from={3 * sceneDuration} durationInFrames={sceneDuration} premountFor={Math.round(0.5 * fps)}>
+        <CallToAction />
       </Sequence>
     </AbsoluteFill>
   );
