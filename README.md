@@ -1292,6 +1292,46 @@ A 5-layer persistent memory architecture based on [recall-stack](https://github.
 
 ---
 
+## CLI Tools & Agent Infrastructure
+
+Development and agent tools installed in this environment:
+
+| Tool | Version | Purpose | Install Method |
+|------|---------|---------|----------------|
+| **Stripe CLI** | 1.38.1 | Payment webhook testing, event simulation | GitHub binary |
+| **GitHub CLI (gh)** | 2.88.1 | PR/issue management, CI/CD monitoring | GitHub binary |
+| **gws** | 0.18.1 | Google Workspace API (Drive, Gmail, Calendar, Sheets, Docs, Chat) | GitHub binary (Rust) |
+| **llmfit** | 0.8.4 | LLM fine-tuning — dataset prep, training, evaluation | `cargo install` (Rust) |
+| **FFmpeg** | 6.1.1 | Video/audio processing, Remotion rendering backend | `apt install` |
+| **CLI-Anything** | latest | Make any software agent-native (7-phase CLI generation) | Project skill (`.claude/skills/`) |
+| **Agent Reach** | 1.3.0 | Multi-platform web research (15+ channels) | `pip install` |
+| **OpenCLI** | 1.1.1 | Turn any website/Electron app into a CLI | `npm install -g` |
+
+### gws — MCP Server Mode
+
+```bash
+# Expose Google Workspace APIs as tools for Claude
+gws mcp -s drive,gmail,calendar
+
+# Example: list Drive files
+gws drive files list --format json
+
+# Example: send Gmail
+gws gmail messages send --to user@example.com --subject "Test" --body "Hello"
+```
+
+### CLI-Anything — Agent-Native Software
+
+```bash
+# Generate a CLI for any GUI application
+/cli-anything /path/to/software
+
+# Refine an existing generated CLI
+/cli-anything:refine /path/to/cli "add batch export"
+```
+
+---
+
 ## AI Agent Development Strategy
 
 This project uses Claude Code's sub-agent and agent team patterns strategically. Choosing the wrong one costs time, money, and clean context.
