@@ -4,6 +4,7 @@ import { createServer } from "http";
 import net from "net";
 import compression from "compression";
 import helmet from "helmet";
+import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { lineRouter } from "../lineWebhook";
@@ -166,6 +167,12 @@ async function startServer() {
       return compression.filter(req, _res);
     },
   }));
+
+  // ============================================================
+  // PERFORMANCE: gzip/brotli compression for all responses
+  // Reduces transfer size by 60-80% for text-based content
+  // ============================================================
+  app.use(compression());
 
   // ============================================================
   // SECURITY LAYER 1: HTTP Security Headers (Helmet)
@@ -388,17 +395,14 @@ a{color:#C4A265;text-decoration:underline}
   // Seed admin user if ADMIN_PASSWORD is configured
   await seedAdminUser();
 
-  server.listen(port, async () => {
+  server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     console.log("[Security] All security layers active: Helmet, Rate Limiting, PII Protection");
-    // Run initial 8891 sync on startup, then schedule every 6 hours
-    try {
-      console.log("[Sync] Running initial 8891 vehicle sync...");
-      const result = await sync8891();
-      console.log("[Sync] Initial sync completed:", result);
-    } catch (err) {
-      console.error("[Sync] Initial sync failed:", err);
-    }
+    // Run initial 8891 sync in background (non-blocking) — server handles requests immediately
+    console.log("[Sync] Running initial 8891 vehicle sync (background)...");
+    sync8891()
+      .then(result => console.log("[Sync] Initial sync completed:", result))
+      .catch(err => console.error("[Sync] Initial sync failed:", err));
     startSyncScheduler(6);
   });
 }

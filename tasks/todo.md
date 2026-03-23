@@ -14,11 +14,11 @@
 - [x] Taiwan Geo Optimization: Multi-city schema, service area pages (台南/屏東/台中/嘉義), enhanced structured data, geo meta tags, SearchAction, founder name fix
 - [x] GEO Phase 1: Research synthesis + implementation (compression, noscript SSR, llms-full.txt, blog GEO signals, freshness fix)
 - [x] Competitive Intelligence: Competitor comparison blog post, enhanced FAQs (HOT/SUM/Toyota/杰運/ATDC/格上/FindCar/ABC), authority citations, llms.txt competitive positioning, sitemap updates
+- [x] Speed optimization: gzip compression, static asset caching, DB connection pooling, Vite chunk splitting, non-blocking startup sync
 
 ## Backlog (identified, not yet requested)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
 - [ ] Split routers.ts (1,277 lines) into smaller modules
 - [ ] Replace 170+ console statements with structured logging
-- [ ] Configure database connection pooling
 - [ ] Add API pagination for admin endpoints
 - [ ] Remove unused KaTeX fonts from bundle
