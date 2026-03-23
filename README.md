@@ -1496,6 +1496,8 @@ A comprehensive set of CLIs and plugins installed for AI-powered development, in
 | **[Claude Mem](https://github.com/thedotmack/claude-mem)** | v10.6.2 | Persistent cross-session memory with vector search |
 | **[Recall-Stack](https://github.com/keshavsuki/recall-stack)** | v1.0 | 5-layer memory architecture (CLAUDE.md → primer → git context → Hindsight → Obsidian) |
 | **[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** | Latest | Design system skill with 50+ styles, 161 palettes, 57 font pairings |
+| **[SuperClaude](https://github.com/NomenAK/SuperClaude)** | v4.3.0 | Meta-programming framework — 31 slash commands, 20 agents, 7 behavioral modes |
+| **[Go Viral Bitch](https://github.com/charlesdove977/goviralbitch)** | Latest | Trainable social media coaching — 7 commands, 5-stage viral pipeline, evolving agent brain |
 
 ### Internet Access & Search
 
