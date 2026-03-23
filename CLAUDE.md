@@ -72,3 +72,56 @@ And only implement if you are 100% sure it will work.
 - Format: [date] | what went wrong | rule to follow next time
 - Read tasks/lessons.md at the start of every session before doing anything
 - Apply every rule before touching any code
+
+## Multi-Agent Tasks (Ruflo / claude-flow)
+For any task requiring multiple steps, parallel work, or more than two files: use Ruflo.
+
+```bash
+# Quick parallel orchestration
+claude-flow orchestrate "<task>" --agents 8 --parallel
+
+# Full SPARC pipeline (Specification → Pseudocode → Architecture → Refinement → Completion)
+claude-flow sparc run dev "<task>"
+
+# Hive-Mind swarm for complex refactors
+claude-flow hive init --topology mesh --agents 5
+claude-flow hive run "<task>"
+
+# Status & monitoring
+claude-flow status
+claude-flow logs --agent <agent-name>
+claude-flow cost --last
+claude-flow stop --all
+```
+
+Do not work sequentially when Ruflo can parallelize.
+
+### Model Routing
+- Basic tasks (<2000 tokens) → Haiku (cheapest)
+- Advanced tasks (<8000 tokens) → Sonnet
+- Complex tasks → Opus
+- Ruflo routes automatically — no manual model selection needed
+
+### When to Use Ruflo
+- Large refactors touching many files
+- Features with multiple components (API + tests + docs + security)
+- Code reviews on large PRs
+- Any task you would normally prompt Claude 5+ times sequentially
+
+### When NOT to Use Ruflo
+- Single file edits
+- Quick fixes
+- Simple questions
+- Swarm overhead is not worth it on small tasks
+
+## Build & Test
+```bash
+npm run build
+npm test
+npm run lint
+```
+
+## Security Rules
+- NEVER hardcode API keys, secrets, or credentials in source files
+- NEVER commit .env files or any file containing secrets
+- Always validate user input at system boundaries
