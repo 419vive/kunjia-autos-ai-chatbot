@@ -34,6 +34,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [AI Agent Development Strategy](#ai-agent-development-strategy)
   - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
 - [Ruflo — Multi-Agent Orchestration](#ruflo--multi-agent-orchestration)
+- [Developer Toolchain](#developer-toolchain)
 
 ---
 
@@ -1479,6 +1480,50 @@ claude-flow cost --last                                   # View API costs
 | Skills | 29 | Reusable skill templates (swarm orchestration, pair programming, etc.) |
 | Commands | 10 groups | Analysis, automation, monitoring, optimization, SPARC, GitHub, hooks |
 | Helpers | 30+ | Hook handlers, memory management, swarm coordination scripts |
+
+---
+
+## Developer Toolchain
+
+A comprehensive set of CLIs and plugins installed for AI-powered development, internet access, and deployment.
+
+### AI Agent Frameworks
+
+| Tool | Version | Description |
+|------|---------|-------------|
+| **[Ruflo](https://github.com/ruvnet/ruflo)** (claude-flow) | v3.5.42 | 60-agent parallel orchestration with SPARC pipeline and hive-mind memory |
+| **[Superpowers](https://github.com/obra/superpowers)** | Latest | Hooks, skills, commands, and agent definitions for Claude Code |
+| **[Claude Mem](https://github.com/thedotmack/claude-mem)** | v10.6.2 | Persistent cross-session memory with vector search |
+| **[Recall-Stack](https://github.com/keshavsuki/recall-stack)** | v1.0 | 5-layer memory architecture (CLAUDE.md → primer → git context → Hindsight → Obsidian) |
+| **[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** | Latest | Design system skill with 50+ styles, 161 palettes, 57 font pairings |
+
+### Internet Access & Search
+
+| Tool | Version | Description |
+|------|---------|-------------|
+| **[Agent Reach](https://github.com/Panniantong/Agent-Reach)** | v1.3.0 | 17-platform internet access (Twitter, Reddit, YouTube, Bilibili, etc.) |
+| **[OpenCLI](https://github.com/jackwener/opencli)** | v1.3.3 | Universal CLI for 50+ websites — structured data from Twitter, Reddit, YouTube, HN, etc. |
+| **[mcporter](https://npmjs.com/package/mcporter)** | v0.7.3 | MCP bridge for Exa semantic web search |
+| **[bird](https://npmjs.com/package/@steipete/bird)** | v0.8.0 | Twitter/X CLI for direct tweet access |
+| **[CLI-Anything](https://github.com/HKUDS/CLI-Anything)** | Latest | Auto-generate CLI harnesses for GUI applications (GIMP, Blender, OBS, etc.) |
+
+### Cloud & Deployment
+
+| Tool | Version | Description |
+|------|---------|-------------|
+| **[Vercel CLI](https://vercel.com/docs/cli)** | v50.35.0 | Deploy, manage domains, retrieve logs from Vercel |
+| **[Supabase CLI](https://supabase.com/docs/guides/cli)** | v2.78.1 | Local Supabase dev, database migrations, auth management |
+| **[Stripe CLI](https://stripe.com/docs/stripe-cli)** | v1.38.1 | Test webhooks locally, tail API logs, manage Stripe integrations |
+| **[gws](https://github.com/googleworkspace/cli)** (Google Workspace CLI) | v0.18.1 | Gmail, Drive, Calendar, Docs, Sheets — structured JSON, 40+ agent skills |
+| **[GitHub CLI](https://cli.github.com)** (gh) | v2.45.0 | PRs, issues, actions, releases from the terminal |
+
+### Media & Utilities
+
+| Tool | Version | Description |
+|------|---------|-------------|
+| **[FFmpeg](https://ffmpeg.org)** | v6.1.1 | Multimedia processing — video/audio conversion, streaming, encoding |
+| **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** | Latest | Video/audio downloading from YouTube, Bilibili, and 1000+ sites |
+| **[llmfit](https://github.com/moremind/llmfit)** | v0.8.4 | Right-size LLM models to your hardware (RAM, CPU, GPU) |
 
 ---
 
