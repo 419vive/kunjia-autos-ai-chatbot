@@ -1,6 +1,8 @@
 # TODO
 
 ## Completed
+- [x] Activate Claude Code HUD (status line) with model, branch, context %, cost, duration
+- [x] Install Ruflo (claude-flow v3.5) — 60-agent parallel orchestration framework
 - [x] Optimize LINE chatbot and website performance (6 optimizations)
 - [x] Create CLAUDE.md with project rules
 - [x] Add SESSION START workflow and task management to CLAUDE.md
