@@ -1306,6 +1306,7 @@ Development and agent tools installed in this environment:
 | **CLI-Anything** | latest | Make any software agent-native (7-phase CLI generation) | Project skill (`.claude/skills/`) |
 | **Agent Reach** | 1.3.0 | Multi-platform web research (15+ channels) | `pip install` |
 | **OpenCLI** | 1.1.1 | Turn any website/Electron app into a CLI | `npm install -g` |
+| **MiroFish** | 0.1.0 | Swarm intelligence prediction engine (multi-agent simulation) | `git clone` + `pip install` |
 
 ### gws — MCP Server Mode
 
