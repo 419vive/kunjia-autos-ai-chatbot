@@ -11,6 +11,24 @@
 - [x] AEO Phase 1: HowTo schema, Speakable schema, Review schema, enhanced Article schema, concise FAQ answers
 - [x] AEO Phase 2: AI crawler robots.txt, BLUF answer blocks, Service schema, entity graph @id, freshness signals, data-speakable frontend attrs
 - [x] Agent Reach: Install, security audit, README update (6/15 channels active)
+- [x] Install Stripe CLI v1.38.1 (GitHub binary)
+- [x] Install GitHub CLI (gh) v2.88.1 (GitHub binary)
+- [x] Install gws (Google Workspace CLI) v0.18.1 (Rust binary)
+- [x] Install llmfit v0.8.4 (cargo install)
+- [x] Install CLI-Anything (HKUDS/CLI-Anything) as project skill
+- [x] Install MiroFish (666ghj/MiroFish) as git submodule + Python deps
+- [x] Save tool knowledge to long-term memory
+- [x] Update README with CLI tools section
+- [x] World-class security audit (2026-03-23)
+
+## Security Audit Findings (2026-03-23)
+### Priority fixes:
+- [ ] **CRITICAL:** Add CSRF protection (sameSite strict or double-submit cookie)
+- [ ] **HIGH:** Update deps: @trpc/server >=11.8.0, pnpm >=10.27.0, @aws-sdk/client-s3
+- [ ] **HIGH:** Separate PII encryption key from JWT_SECRET
+- [ ] **HIGH:** Block prompt injection attempts, not just log them
+- [ ] **MEDIUM:** Remove dev-only-secret JWT fallback
+- [ ] **MEDIUM:** Persist security events to database
 
 ## Backlog (identified, not yet requested)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
