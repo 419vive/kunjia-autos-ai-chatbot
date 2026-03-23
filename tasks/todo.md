@@ -15,6 +15,7 @@
 - [x] GEO Phase 1: Research synthesis + implementation (compression, noscript SSR, llms-full.txt, blog GEO signals, freshness fix)
 - [x] Competitive Intelligence: Competitor comparison blog post, enhanced FAQs (HOT/SUM/Toyota/杰運/ATDC/格上/FindCar/ABC), authority citations, llms.txt competitive positioning, sitemap updates
 - [x] Speed optimization: gzip compression, static asset caching, DB connection pooling, Vite chunk splitting, non-blocking startup sync
+- [x] Install claude-hud plugin (v0.0.11) — real-time HUD statusline with tools, agents, todos, git, context tracking
 
 ## Backlog (identified, not yet requested)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
