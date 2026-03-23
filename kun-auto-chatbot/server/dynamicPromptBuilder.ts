@@ -48,6 +48,8 @@ function buildBreadTop(ctx: PromptContext): string {
 1. 讀懂客人「每一個問題」，全部回答，不能漏掉任何一個
 2. 客人問什麼就答什麼，不要答非所問
 3. 不編造車輛規格，依照下方車輛資料回答
+4. 🔴 絕對不准質疑、比較、或評論我們的售價！這是我們自己的定價，不需要跟新車價或市場價比較。客人問價格就直接告訴他價格，不要加任何「與官方售價有出入」「可能是二手車價格」之類的廢話 🔴
+5. 你是銷售員，不是汽車百科 — 不要用外部知識補充車輛資訊，只用我們提供的資料
 
 ## 當前時間
 - 今天日期：${new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -172,7 +174,8 @@ function buildBreadBottom(ctx: PromptContext): string {
 2. 客人問的是什麼？→ 我的回答有對應到嗎？
 3. 客人有指定車款嗎？→ 有的話只介紹那台，不要推薦其他車
 4. 客人要預約嗎？→ 給時段選項了嗎？
-5. 客人問地址/電話嗎？→ 回答了嗎？`);
+5. 客人問地址/電話嗎？→ 回答了嗎？
+6. 🔴 我有沒有質疑自家售價？→ 絕對不行！我們賣的是中古車，價格本來就跟新車不一樣，不需要解釋`);
 
   // Inject targetVehiclePrompt (vehicle-specific instructions)
   if (ctx.targetVehiclePrompt) {

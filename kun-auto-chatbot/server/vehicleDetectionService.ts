@@ -201,6 +201,7 @@ export interface DetectionResult {
   questionType: QuestionType;
   directAnswer: string;
   termExplanation: string; // Explanation for car terms (e.g., "1.5L 代表...")
+  parsedInquiry?: { name: string; year: string; price: string }; // Extracted from inquiry button even when vehicle not in DB
 }
 
 /**
@@ -392,9 +393,10 @@ export function detectVehicleFromMessage(
       return nameStr.includes(v.brand) || nameStr.includes(v.model);
     });
 
+    const priceStr = inquiryMatch[3]; // e.g., "59.8"
     const directAnswer = matchedVehicle ? getQuestionAnswer(matchedVehicle, questionType) : '';
     const termExplanation = matchedVehicle ? getTermExplanation(userMessage, matchedVehicle) : '';
-    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType, directAnswer, termExplanation };
+    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType, directAnswer, termExplanation, parsedInquiry: { name: nameStr.trim(), year: yearStr, price: priceStr } };
   }
 
   // ============ Layer 2: Brand + Model mention (indexed or linear) ============
@@ -534,39 +536,73 @@ export function buildTargetVehiclePrompt(
   const termExplanation = detection.termExplanation;
   
   if (detection.type === 'inquiry_button' && v) {
-    // === HIGH-INTENT INQUIRY ===
+    // === HIGH-INTENT INQUIRY (AIDA Framework) ===
     // Customer clicked the inquiry button — intent is crystal clear.
-    // Strategy: briefly affirm choice + 1-2 highlights, then DIRECTLY ask for phone.
+    // AIDA: Attention → Interest → Desire → Action
     const phoneInstruction = customerContact
       ? `客人已留電話 ${customerContact}，不需要再問電話。直接告訴客人：「我們業務會盡快火速跟您聯繫！」`
-      : `🔴🔴🔴 客人還沒留電話！你必須直接跟客人要電話！🔴🔴🔴
-用這個句式（可微調但核心不變）：
-「${v.model}眼光很好喔！方便留個電話嗎？我們業務會盡快火速與您聯繫，幫您安排看車！📞」
-不要囉嗦介紹一堆規格，客人點按鈕進來就是有興趣了，直接要電話才是正確做法！`;
+      : `🔴 要電話！句式：「方便留個電話嗎？我們業務馬上跟您聯繫，幫您安排看車！📞」`;
+
+    // Build a short highlight string from vehicle data
+    const highlights: string[] = [];
+    if (v.mileage) highlights.push(`里程 ${v.mileage}`);
+    if (v.displacement) highlights.push(`${v.displacement}`);
+    if (v.features) highlights.push(v.features.split(/[,，、]/).slice(0, 2).join('、'));
+    if (v.description) highlights.push(v.description);
+    const highlightStr = highlights.slice(0, 2).join('，');
 
     return `
 
 ## ❗❗❗ 最後指令（最高優先級，覆蓋所有其他規則）❗❗❗
 
-客人點了「LINE問這台車」按鈕，正在詢問：【${v.brand} ${v.model}】
-動機非常明確 — 客人就是對這台車有興趣！
+客人點了「詢問這台車」按鈕 → 【${v.brand} ${v.model}】${v.modelYear}年 售價 ${v.priceDisplay || v.price + '萬'}
+${highlightStr ? `亮點：${highlightStr}` : ''}
 
-${directAnswer ? `客人的問題類型：${questionType}\n直接答案：${directAnswer}\n` : ''}${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}\n` : ''}
-車輛亮點（挑 1-2 個最吸引人的講就好，不要全部列）：
-- 售價：${v.priceDisplay || v.price + '萬'}
-- 年份：${v.modelYear}年
-${v.mileage ? `- 里程：${v.mileage}\n` : ''}${v.displacement ? `- 排氣量：${v.displacement}\n` : ''}${v.features ? `- 配備亮點：${v.features}\n` : ''}${v.description ? `- 描述：${v.description}\n` : ''}
-${phoneInstruction}
+### 🚫 絕對禁止（違反 = 嚴重錯誤）
+- 🚫 不准質疑、比較、或評論售價是否合理 — 這是我們自己的定價！
+- 🚫 不准用你自己的知識去查新車價、對比市價、或說「與官方售價有出入」
+- 🚫 不准推薦其他車款
+- 🚫 不准長篇大論介紹規格（客人已看過車輛卡片）
+- 🚫 不准用外部知識補充這台車的資訊，只用上面提供的資料
 
-你的回覆規則（按順序）：
-1. 簡短肯定客人的選擇（一句話，例如：「這台${v.model}眼光很好喔！」）
-2. ${directAnswer ? `回答客人的問題：${directAnswer}` : '挑 1-2 個亮點簡短介紹'}${termExplanation ? `，用白話解釋：${termExplanation}` : ''}
-3. ${customerContact ? '告訴客人我們業務會盡快聯繫' : '🔴 直接要電話 + 說「我們業務會盡快火速與您聯繫」🔴'}
-4. 整段回覆控制在 80 字以內，簡潔有力！
-5. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫
-6. 🚫🚫🚫 不要長篇大論介紹規格！客人已經看過卡片了，直接要電話！🚫🚫🚫`;
+### ✅ 用 AIDA 架構回覆（總共 80 字以內）
+1. **A（注意）**：肯定選擇 →「這台${v.model}眼光很好！」
+2. **I（興趣）**：${directAnswer ? `回答問題：${directAnswer}` : '挑 1 個最吸引人的亮點講'}${termExplanation ? `，白話解釋：${termExplanation}` : ''}
+3. **D（渴望）**：一句話勾起想像 → 例如「開出去很有型」「這個價位很搶手」
+4. **A（行動）**：${customerContact ? '告訴客人業務會盡快聯繫' : phoneInstruction}
+
+### 回覆範例（照這個長度和語氣）
+「${v.model}眼光很好喔！👍 ${highlightStr ? highlightStr + '，' : ''}${v.priceDisplay || v.price + '萬'}這個價位很搶手💪 方便留個電話嗎？業務馬上跟您聯繫！📞」`;
   }
-  
+
+  // Safety net: inquiry_button matched but vehicle not found in DB
+  if (detection.type === 'inquiry_button' && !v && detection.parsedInquiry) {
+    const p = detection.parsedInquiry;
+    const phoneInst = customerContact
+      ? `客人已留電話 ${customerContact}，告訴客人業務會盡快聯繫。`
+      : `🔴 要電話！「方便留個電話嗎？業務馬上跟您聯繫！📞」`;
+
+    return `
+
+## ❗❗❗ 最後指令（最高優先級，覆蓋所有其他規則）❗❗❗
+
+客人點了「詢問這台車」按鈕 → 【${p.name}】${p.year}年 售價 ${p.price}萬
+
+### 🚫 絕對禁止
+- 🚫 不准質疑、比較、或評論售價 — 這是我們的定價！
+- 🚫 不准說「與官方售價有出入」「可能是二手車」之類的話
+- 🚫 不准用外部知識補充車輛資訊
+- 🚫 不准推薦其他車款
+
+### ✅ 回覆方式（80 字以內）
+1. 肯定選擇：「${p.name} 眼光很好喔！」
+2. 簡單介紹：${p.year}年 售價 ${p.price}萬
+3. ${customerContact ? '告訴客人業務會盡快聯繫' : phoneInst}
+
+### 回覆範例
+「${p.name} 眼光很好喔！👍 ${p.year}年式，${p.price}萬很超值💪 方便留個電話嗎？業務馬上跟您聯繫！📞」`;
+  }
+
   if (detection.type === 'mentioned' && v) {
     return `
 
@@ -589,9 +625,10 @@ ${directAnswer ? `\n客人的問題類型：${questionType}\n直接答案：${di
 1. 直接回答客人的問題${directAnswer ? `：${directAnswer}` : ''}${termExplanation ? `，並用白話解釋：${termExplanation}` : ''}
 2. 只能用上面有的資料，不能編造
 3. 用親切的口吻回答，然後引導來店看車
-4. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫`;
+4. 🚫 絕對禁止推薦其他車款！客人問的就是這台！
+5. 🚫 不准質疑、比較售價 — 這是我們的定價，不需要跟新車價比較`;
   }
-  
+
   if (detection.type === 'context' && v) {
     return `
 
