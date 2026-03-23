@@ -67,6 +67,21 @@
             "type": "command",
             "command": "sh -c 'exec node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/auto-memory-hook.mjs\" import'",
             "timeout": 8000
+          },
+          {
+            "type": "command",
+            "command": "_R=/opt/node22/lib/node_modules/claude-mem/plugin; node \"$_R/scripts/smart-install.js\"",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "_R=/opt/node22/lib/node_modules/claude-mem/plugin; node \"$_R/scripts/bun-runner.js\" \"$_R/scripts/worker-service.cjs\" start",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "_R=/opt/node22/lib/node_modules/claude-mem/plugin; node \"$_R/scripts/bun-runner.js\" \"$_R/scripts/worker-service.cjs\" hook claude-code context",
+            "timeout": 60000
           }
         ]
       }
@@ -78,6 +93,11 @@
             "type": "command",
             "command": "sh -c 'exec node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/hook-handler.cjs\" session-end'",
             "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "_R=/opt/node22/lib/node_modules/claude-mem/plugin; node \"$_R/scripts/bun-runner.js\" \"$_R/scripts/worker-service.cjs\" hook claude-code session-complete",
+            "timeout": 30000
           }
         ]
       }
@@ -89,6 +109,11 @@
             "type": "command",
             "command": "sh -c 'exec node \"${CLAUDE_PROJECT_DIR:-.}/.claude/helpers/auto-memory-hook.mjs\" sync'",
             "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "_R=/opt/node22/lib/node_modules/claude-mem/plugin; node \"$_R/scripts/bun-runner.js\" \"$_R/scripts/worker-service.cjs\" hook claude-code summarize",
+            "timeout": 120000
           }
         ]
       }
