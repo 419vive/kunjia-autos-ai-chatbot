@@ -33,6 +33,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
 - [Recall-Stack Memory System](#recall-stack-memory-system)
 - [AI Agent Development Strategy](#ai-agent-development-strategy)
   - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
+- [Ruflo — Multi-Agent Orchestration](#ruflo--multi-agent-orchestration)
 
 ---
 
@@ -1404,6 +1405,80 @@ You run `/simplify` twice: once to gate the plan, once to clean the output. The 
 > **The core insight:** Use AI to defend against AI. You don't need to understand every abstraction in the plan — let the review agents do that work for you. The cost is one extra step; the payoff is code that stays simple and maintainable.
 >
 > **Credit:** Technique from [FinLab 財經實驗室](https://www.facebook.com/finaboratory)'s Claude Code tips series.
+
+---
+
+## Ruflo — Multi-Agent Orchestration
+
+This project uses **[Ruflo](https://github.com/ruvnet/ruflo)** (claude-flow v3.5) for AI-powered parallel agent orchestration during development.
+
+### What It Does
+
+Instead of one Claude agent working sequentially, Ruflo coordinates **up to 60 specialized agents** working in parallel — architect, coder, tester, security auditor, database designer — all running simultaneously with shared memory.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                  RUFLO ORCHESTRATOR                    │
+│                                                        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐    │
+│  │ Architect │  │  Coder   │  │ Security Auditor │    │
+│  │  Agent    │  │  Agent   │  │     Agent        │    │
+│  └────┬─────┘  └────┬─────┘  └────────┬─────────┘    │
+│       │              │                 │               │
+│  ┌────┴──────────────┴─────────────────┴──────────┐   │
+│  │           SHARED HIVE-MIND MEMORY               │   │
+│  │  (All agents read/write to shared context)      │   │
+│  └─────────────────────────────────────────────────┘   │
+│       │              │                 │               │
+│  ┌────┴─────┐  ┌────┴─────┐  ┌───────┴──────────┐    │
+│  │  Tester  │  │ Reviewer │  │  DB Designer     │    │
+│  │  Agent   │  │  Agent   │  │     Agent        │    │
+│  └──────────┘  └──────────┘  └──────────────────┘    │
+└──────────────────────────────────────────────────────┘
+```
+
+### SPARC Pipeline
+
+Every complex task flows through a structured pipeline:
+
+| Phase | What Happens |
+|-------|--------------|
+| **S**pecification | Architect agent writes a full technical spec — inputs, outputs, edge cases |
+| **P**seudocode | Planning agent converts spec to high-level logic before any real code |
+| **A**rchitecture | Architecture agent designs file layout, module boundaries, data flow |
+| **R**efinement | Coder + Tester + Security agents run simultaneously in parallel |
+| **C**ompletion | Reviewer agent consolidates, resolves conflicts, delivers final result |
+
+### Cost Optimization
+
+Ruflo automatically routes tasks by complexity to minimize API costs:
+
+| Task Complexity | Model Used | Cost |
+|----------------|------------|------|
+| Basic (<2K tokens) | Claude Haiku | Lowest |
+| Advanced (<8K tokens) | Claude Sonnet | Medium |
+| Complex | Claude Opus | Full |
+
+**Result: ~75% lower API costs** through BatchTool optimization and intelligent model routing.
+
+### Quick Commands
+
+```bash
+claude-flow orchestrate "<task>" --agents 8 --parallel   # Parallel orchestration
+claude-flow sparc run dev "<task>"                        # Full SPARC pipeline
+claude-flow hive init --topology mesh --agents 5          # Hive-mind swarm
+claude-flow status                                        # Check swarm status
+claude-flow cost --last                                   # View API costs
+```
+
+### Installed Components
+
+| Component | Count | Description |
+|-----------|-------|-------------|
+| Agents | 99 | Specialized agent definitions (coder, tester, security, SPARC, etc.) |
+| Skills | 29 | Reusable skill templates (swarm orchestration, pair programming, etc.) |
+| Commands | 10 groups | Analysis, automation, monitoring, optimization, SPARC, GitHub, hooks |
+| Helpers | 30+ | Hook handlers, memory management, swarm coordination scripts |
 
 ---
 
