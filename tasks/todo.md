@@ -20,6 +20,9 @@
 - [x] Save tool knowledge to long-term memory
 - [x] Update README with CLI tools section
 - [x] World-class security audit (2026-03-23)
+- [x] Install Go Viral Bitch (charlesdove977/goviralbitch) — 7 /viral:* commands, global symlinks
+- [x] Install Everything Claude Code (affaan-m/everything-claude-code) — 48 agents, 64 skills, 68 commands, 13 rule sets
+- [x] Install Supabase CLI v2.78.1 (deb package)
 
 ## Security Audit Findings (2026-03-23)
 ### Priority fixes:
