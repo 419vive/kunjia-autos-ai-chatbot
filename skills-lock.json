@@ -460,6 +460,11 @@
       "source": "googleworkspace/cli",
       "sourceType": "github",
       "computedHash": "18fd02047764692c60efb9ef03ac3103dd1d3f5fcff152ca5dd37de715f5d9bf"
+    },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "computedHash": "2f673b7710813ac07c71c0a54657f740078aec6585f15edf351494499e1f9ac3"
     }
   }
 }
