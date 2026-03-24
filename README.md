@@ -35,6 +35,7 @@ A full-stack TypeScript application that powers an AI-driven LINE chatbot for cu
   - [The `/simplify` Plan Gate](#the-simplify-plan-gate--catching-over-engineering-before-it-ships)
 - [Ruflo — Multi-Agent Orchestration](#ruflo--multi-agent-orchestration)
 - [Developer Toolchain](#developer-toolchain)
+- [Blotato Content Engine — AI Social Media Automation](#blotato-content-engine--ai-social-media-automation)
 
 ---
 
@@ -1498,6 +1499,7 @@ A comprehensive set of CLIs and plugins installed for AI-powered development, in
 | **[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** | Latest | Design system skill with 50+ styles, 161 palettes, 57 font pairings |
 | **[SuperClaude](https://github.com/NomenAK/SuperClaude)** | v4.3.0 | Meta-programming framework — 31 slash commands, 20 agents, 7 behavioral modes |
 | **[Go Viral Bitch](https://github.com/charlesdove977/goviralbitch)** | Latest | Trainable social media coaching — 7 commands, 5-stage viral pipeline, evolving agent brain |
+| **[Blotato Content Engine](#blotato-content-engine--ai-social-media-automation)** | v1.0 | 9-platform social media automation — post, schedule 30 days, repurpose content via MCP |
 
 ### Internet Access & Search
 
@@ -1526,6 +1528,112 @@ A comprehensive set of CLIs and plugins installed for AI-powered development, in
 | **[FFmpeg](https://ffmpeg.org)** | v6.1.1 | Multimedia processing — video/audio conversion, streaming, encoding |
 | **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** | Latest | Video/audio downloading from YouTube, Bilibili, and 1000+ sites |
 | **[llmfit](https://github.com/moremind/llmfit)** | v0.8.4 | Right-size LLM models to your hardware (RAM, CPU, GPU) |
+
+---
+
+## Blotato Content Engine — AI Social Media Automation
+
+A complete AI-powered social media content engine using **Claude AI + Blotato MCP** to plan, generate, and schedule content across **9 platforms** from a single prompt. No coding required.
+
+### What It Does
+
+| Level | Capability | Time Saved |
+|-------|-----------|------------|
+| **Level 1** | Post once → publish everywhere (9 platforms) | 30-60 min per post |
+| **Level 2** | Schedule a full 30-day content calendar from one prompt | ~3 hours/week |
+| **Level 3** | Repurpose YouTube/podcast/blog across all platforms | Hours per piece |
+
+### Supported Platforms
+
+Instagram, TikTok, LinkedIn, X (Twitter), YouTube Shorts, Pinterest, Threads, Facebook, Bluesky
+
+### One-Time Setup
+
+```
+Step A: Blotato Account
+  1. Sign up at blotato.com
+  2. Connect all 9 platforms in Settings (OAuth login)
+  3. Copy your API key from Settings → API
+
+Step B: Install Blotato MCP in Claude Desktop
+  1. Open Claude Desktop → ⋯ → MCP Servers → Manage
+  2. Ask Claude: "Install the Blotato MCP server" + paste config
+  3. Paste your API key when prompted
+  4. Restart Claude — verify hammer icon shows Blotato tools
+
+Step C: Add Skill File + Brand Guidelines
+  1. Skill file already installed at .claude/skills/blotato-social-media/
+  2. Copy brand template to project root:
+     cp .claude/skills/blotato-social-media/templates/brand-template.md brand.md
+  3. Fill it out (or ask Claude: "Interview me to fill out my brand.md")
+```
+
+### Usage — Slash Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `/social-media:post <content>` | Post content to connected platforms with auto-generated captions |
+| `/social-media:schedule-month <topic>` | Generate and schedule a 30-day content calendar |
+| `/social-media:repurpose <url>` | Repurpose YouTube/podcast/blog across all platforms |
+
+### Quick Prompt Examples
+
+**Level 1 — Post everywhere:**
+```
+Post this image to all connected platforms.
+Write platform-appropriate captions. Use relevant hashtags.
+```
+
+**Level 2 — Schedule a month:**
+```
+Create a 30-day content plan for [your topic].
+Mix of educational, inspirational, and promotional.
+Generate image descriptions. Write captions using brand.md.
+Schedule through Blotato, one post per day at 9am.
+```
+
+**Level 3 — Repurpose content:**
+```
+Extract the transcript from this YouTube video: [URL].
+Repurpose into: LinkedIn post, 3 Instagram carousel slides,
+3 short posts for X. Schedule across the coming week.
+```
+
+### Platform Best Practices (Built Into Skill)
+
+| Platform | Best Content | Caption Style |
+|----------|-------------|---------------|
+| Instagram | Reels, carousels | Hook → story → CTA, 3-5 hashtags |
+| TikTok | Vertical video 15-60s | Conversational, 1-2 lines |
+| LinkedIn | Text posts, carousels | Professional, insight-led |
+| X | Threads, images | Punchy, 280 chars, no hashtags |
+| YouTube Shorts | Vertical video < 60s | SEO title, keyword description |
+| Pinterest | Vertical images, infographics | Keyword-rich, 200-500 words |
+
+### File Structure
+
+```
+.claude/
+├── skills/blotato-social-media/
+│   ├── SKILL.md                    # Full skill with platform rules + automation levels
+│   └── templates/
+│       └── brand-template.md       # Brand guidelines template
+├── commands/social-media/
+│   ├── post.md                     # /social-media:post command
+│   ├── schedule-month.md           # /social-media:schedule-month command
+│   └── repurpose.md                # /social-media:repurpose command
+```
+
+### Cost
+
+| Item | Cost |
+|------|------|
+| Blotato free plan | Free to start |
+| Claude Desktop | Free (Pro $20/mo recommended) |
+| Image generation | ~$3/30 images (optional) |
+| **Total** | **Free to start, < $30/mo full workflow** |
+
+> **Source**: [AI Social Media Automation — A Beginner's Guide](https://skool.com/zero-to-ai-9192) by @aiwithanushka
 
 ---
 
