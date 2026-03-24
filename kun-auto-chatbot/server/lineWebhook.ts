@@ -1190,6 +1190,18 @@ async function processLineEvent(
     }
   }
 
+  // ============ POST-PROCESSING: Clean up LLM output ============
+  // Remove system message leaks (LLM sometimes mimics [系統...] format)
+  replyText = replyText.replace(/\[系統[^\]]*\][^\n]*/g, '').trim();
+  // Remove markdown formatting (LINE doesn't render it)
+  replyText = replyText.replace(/\*\*/g, '');
+  replyText = replyText.replace(/^\s*[-*]\s+/gm, '');
+  replyText = replyText.replace(/^---+$/gm, '');
+  // Remove periods at end of sentences (unnatural in LINE chat)
+  replyText = replyText.replace(/。/g, '！');
+  // Collapse multiple newlines into one
+  replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();
+
   // ============ HUMAN HANDOFF DETECTION ============
   // Check if AI flagged [HUMAN_HANDOFF] in its response
   if (replyText.includes('[HUMAN_HANDOFF]')) {
