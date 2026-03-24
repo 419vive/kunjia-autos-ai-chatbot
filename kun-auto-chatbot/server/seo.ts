@@ -42,9 +42,9 @@ const BUSINESS_HOURS = "Mo-Sa 09:00-21:00";
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
 function getBaseUrl(): string {
-  return process.env.BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-    : "https://kuncar.tw"; // TODO: Update with actual domain
+  if (process.env.BASE_URL) return process.env.BASE_URL;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  return "https://claude-code-remote-production.up.railway.app";
 }
 
 // ============ HELPER: Escape HTML attributes ============
@@ -1008,8 +1008,19 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <!-- JSON-LD Structured Data -->
     ${jsonLdBlocks.map(block => `<script type="application/ld+json">${JSON.stringify(block)}</script>`).join("\n    ")}`;
 
-  // Replace existing <title> tag and inject before </head>
-  let result = html.replace(/<title>[^<]*<\/title>/, "");
+  // Strip tags from base HTML that are dynamically injected to prevent duplicates
+  let result = html
+    .replace(/<title>[^<]*<\/title>/, "")
+    .replace(/<meta\s+name="description"[^>]*>/gi, "")
+    .replace(/<meta\s+name="robots"[^>]*>/gi, "")
+    .replace(/<meta\s+name="language"[^>]*>/gi, "")
+    .replace(/<meta\s+name="author"[^>]*>/gi, "")
+    .replace(/<meta\s+name="keywords"[^>]*>/gi, "")
+    .replace(/<meta\s+name="geo\.[^"]*"[^>]*>/gi, "")
+    .replace(/<meta\s+name="ICBM"[^>]*>/gi, "")
+    .replace(/<meta\s+property="og:(title|description|type|url|image|site_name|locale)"[^>]*>/gi, "")
+    .replace(/<link\s+rel="alternate"\s+hreflang="[^"]*"[^>]*>/gi, "")
+    .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
 
   return result;
