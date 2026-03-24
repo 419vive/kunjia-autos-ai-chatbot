@@ -277,7 +277,9 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
   const reminders: string[] = [];
 
   // Vehicle-specific reminder
-  if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
+  if (ctx.detection.type === 'context_missing') {
+    reminders.push(`客人似乎在問跟進問題但不確定是哪台車 → 自然地問「你問的是哪一台呢？」並列出在售車款讓客人選`);
+  } else if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
     const v = ctx.detection.vehicle;
     if (ctx.detection.type === 'inquiry_button') {
       // HIGH-INTENT: customer clicked inquiry button — affirm + 3 engaging questions

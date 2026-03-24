@@ -196,7 +196,7 @@ export function getQuestionAnswer(vehicle: any, questionType: QuestionType): str
 // ============ VEHICLE DETECTION ============
 
 export interface DetectionResult {
-  type: 'inquiry_button' | 'mentioned' | 'context' | 'fallback' | 'none';
+  type: 'inquiry_button' | 'mentioned' | 'context' | 'context_missing' | 'fallback' | 'none';
   vehicle: any | null;
   questionType: QuestionType;
   directAnswer: string;
@@ -292,26 +292,36 @@ function findVehicleFromNormalized(normalizedUpper: string, index: VehicleIndex,
  */
 const CONTEXT_REFERENCE_PATTERNS = /^(那|這台|那台|這個|那個|它的?|上面那台|剛剛那台|前面那台|同一台)/;
 const FOLLOW_UP_PATTERNS = /^(那|所以|然後|還有|另外|對了|請問|想問|想知道|好奇|順便問)/;
+const ACKNOWLEDGMENT_PATTERNS = /^(好|嗯|ok|OK|對|是|好的|好啊|好喔|沒問題|可以|行|嗯嗯|👍|🙏|了解|知道了|收到|okok)$/;
 
 /**
  * Check if the current message is a follow-up question about a previously discussed vehicle.
  * Returns true if the message has a question type but no explicit vehicle mention.
  */
 function isFollowUpQuestion(message: string, questionType: QuestionType): boolean {
-  if (questionType === 'general') return false;
-  
-  const lower = message.toLowerCase();
-  
+  const lower = message.trim().toLowerCase();
+
+  // Acknowledgments always carry context from previous message
+  if (ACKNOWLEDGMENT_PATTERNS.test(lower)) return true;
+
+  // General type without explicit context reference is NOT a follow-up
+  if (questionType === 'general') {
+    // Exception: explicit context references like "那台怎樣"
+    if (CONTEXT_REFERENCE_PATTERNS.test(lower)) return true;
+    return false;
+  }
+
   // Explicit context references: "那台", "這台", "它的"
   if (CONTEXT_REFERENCE_PATTERNS.test(lower)) return true;
-  
+
   // Follow-up starters + question type: "那排氣量呢", "所以多少錢"
   if (FOLLOW_UP_PATTERNS.test(lower)) return true;
-  
+
   // Short messages with only a question (no vehicle name) are likely follow-ups
   // e.g., "排氣量呢", "多少錢", "有什麼配備"
-  if (message.length <= 15) return true;
-  
+  // But not TOO loose — require at least a question-like word
+  if (message.length <= 10) return true;
+
   return false;
 }
 
@@ -324,15 +334,12 @@ export function extractVehicleFromHistory(
   allVehicles: any[]
 ): any | null {
   if (!conversationHistory || conversationHistory.length === 0) return null;
-  
-  // Scan from newest to oldest (last messages first)
-  // Check both user messages and assistant messages (assistant might mention the vehicle)
-  for (let i = conversationHistory.length - 1; i >= 0; i--) {
-    const msg = conversationHistory[i];
-    const content = msg.content || '';
+
+  // Helper to find vehicle in a message
+  const findInMessage = (content: string): any | null => {
     const normalized = normalizeForMatching(content);
     const normalizedUpper = normalized.toUpperCase();
-    
+
     // Try brand + model
     const found = allVehicles.find(v => {
       const brandUpper = v.brand.toUpperCase();
@@ -340,25 +347,38 @@ export function extractVehicleFromHistory(
       return normalizedUpper.includes(brandUpper) && normalizedUpper.includes(modelUpper);
     });
     if (found) return found;
-    
+
     // Try model only (min 2 chars)
     const foundModel = allVehicles.find(v => {
       const modelUpper = v.model.toUpperCase();
       return modelUpper.length >= 2 && normalizedUpper.includes(modelUpper);
     });
     if (foundModel) return foundModel;
-    
+
     // Try "我想詢問這台車" button format
     const inquiryMatch = content.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
     if (inquiryMatch) {
       const [, nameStr] = inquiryMatch;
-      const foundInquiry = allVehicles.find(v => {
-        return nameStr.includes(v.brand) || nameStr.includes(v.model);
-      });
-      if (foundInquiry) return foundInquiry;
+      return allVehicles.find(v => nameStr.includes(v.brand) || nameStr.includes(v.model)) || null;
     }
+
+    return null;
+  };
+
+  // Pass 1: Prioritize USER messages (what customer explicitly asked about)
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    if (conversationHistory[i].role !== 'user') continue;
+    const found = findInMessage(conversationHistory[i].content || '');
+    if (found) return found;
   }
-  
+
+  // Pass 2: Fall back to assistant messages (bot mentioned a vehicle)
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    if (conversationHistory[i].role !== 'assistant') continue;
+    const found = findInMessage(conversationHistory[i].content || '');
+    if (found) return found;
+  }
+
   return null;
 }
 
@@ -447,6 +467,10 @@ export function detectVehicleFromMessage(
         console.log(`[VehicleDetection] Context-aware: resolved "${userMessage}" to ${historyVehicle.brand} ${historyVehicle.model} from conversation history`);
         return { type: 'context', vehicle: historyVehicle, questionType, directAnswer, termExplanation };
       }
+      // Follow-up detected but no vehicle in history → special fallback
+      // So LLM knows to ask "你問的是哪一台呢？" instead of giving a generic greeting
+      console.log(`[VehicleDetection] Follow-up question detected but no vehicle in history: "${userMessage}"`);
+      return { type: 'context_missing', vehicle: null, questionType, directAnswer: '', termExplanation: '' };
     }
   }
 
@@ -609,7 +633,22 @@ ${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation
 4. 一段話，不分段不換行，不用句點（。），不用markdown
 5. 禁止推薦其他車款`;
   }
-  
+
+  if (detection.type === 'context_missing') {
+    return `
+
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
+
+客人似乎在問跟進問題，但我們不確定他問的是哪台車
+客人的原始訊息：「${userMessage}」
+
+回覆規則：
+1. 自然地問客人「你問的是哪一台呢？」或「你想了解哪台車呢？」
+2. 可以列出我們目前在售的車款讓客人選
+3. 一段話，不分段不換行，不用句點（。），不用markdown
+4. 語氣親切自然`;
+  }
+
   if (detection.type === 'fallback') {
     return `
 

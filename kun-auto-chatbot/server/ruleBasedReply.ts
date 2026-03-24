@@ -58,6 +58,11 @@ export function generateRuleBasedReply(ctx: RuleContext): string {
     return buildVehicleGeneralReply(detection.vehicle, greeting, customerContact);
   }
 
+  // === Priority 3.5: Follow-up question but no vehicle found in context ===
+  if (detection.type === 'context_missing') {
+    return `${greeting}，你問的是哪一台車呢？你可以點下方選單的「看車庫存」瀏覽我們目前在售的車款，或直接告訴我你想了解哪台車！🚗`;
+  }
+
   // === Priority 4: Intent-based replies (no specific vehicle) ===
 
   // Greeting

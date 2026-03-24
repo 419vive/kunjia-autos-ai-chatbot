@@ -285,12 +285,13 @@ const recentQuestions = new Map<string, string[]>();
 export function detectFrustration(message: string, userId?: string): { frustrated: boolean; confidence: number } {
   let confidence = 0;
 
-  // Direct frustration keywords (Chinese)
+  // Direct frustration keywords (Chinese + Taiwanese slang)
   const frustrationPatterns = [
     { pattern: /不滿|生氣|爛|很差|太差|廢物|騙人|騙子|浪費時間|沒有用|不想理|垃圾|白痴|笨/, weight: 0.4 },
+    { pattern: /三小|啥小|靠北|靠邀|靠腰|幹|操|他媽|媽的|什麼鬼|搞屁|屁話|你有病|腦殘|智障|機掰|雞掰/, weight: 0.6 },
     { pattern: /轉真人|找真人|找人|不想跟機器人說|要真人|真人客服|人工客服/, weight: 0.5 },
     { pattern: /[？]{3,}|[！]{3,}|[?]{3,}|[!]{3,}/, weight: 0.3 },
-    { pattern: /到底|究竟|為什麼|怎麼回事|搞什麼/, weight: 0.2 },
+    { pattern: /到底|究竟|為什麼|怎麼回事|搞什麼|是在哈囉/, weight: 0.2 },
   ];
 
   for (const { pattern, weight } of frustrationPatterns) {
