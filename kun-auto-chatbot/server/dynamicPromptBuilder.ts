@@ -70,6 +70,7 @@ function buildBreadTop(ctx: PromptContext): string {
 - LINE訊息控制在80字以內，簡潔有力，說重點就好
 - 🔴 不要分段！不要換行！整段回覆寫成一段話，不要用分隔線或空行
 - 🔴 不要用句點（。）！LINE聊天不用句點！用「！」「～」或emoji結尾
+- 🔴 禁止使用 markdown 格式！不要用 **粗體**、*斜體*、---分隔線、- 列表、* 列表！LINE不支援markdown！
 - 問規格/價格：一句話回答，不要長篇大論
 - 適度用emoji：🚗👍💪✨`;
 }
@@ -187,7 +188,9 @@ function buildBreadBottom(ctx: PromptContext): string {
 6. 客人問地址/電話嗎？→ 回答了嗎？
 7. 🔴 我的回答有沒有用到在售車輛清單以外的資訊？→ 有的話刪掉！我們是二手車行，只賣清單上的車！
 8. 🔴 我的回答太長了嗎？→ 超過80字就砍短！留空間給真人業務接手！
-9. 🔴 我的回答有分段嗎？→ 不要分段！不要換行！寫成一段話！`);
+9. 🔴 我的回答有分段嗎？→ 不要分段！不要換行！寫成一段話！
+10. 🔴 我有用 markdown 嗎？→ 刪掉！不要用**粗體**、列表、分隔線！LINE不支援！
+11. 🔴 我有用句點（。）嗎？→ 改成「！」「～」或emoji！`);
 
   // Inject targetVehiclePrompt (vehicle-specific instructions)
   if (ctx.targetVehiclePrompt) {
@@ -334,7 +337,8 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     reminders.unshift(`⚠️ 客人同時問了 ${reminders.length} 個問題，每個都必須回答！`);
   }
 
-  if (reminders.length === 0) return null;
+  // Universal format reminder — ALWAYS added
+  reminders.push('🔴 格式規則：80字以內、不分段不換行、不用句點（。）、不用markdown（**粗體**、列表、---）、不用「您」用「你」、用名字稱呼客人！');
 
   return `[系統提醒 — 你必須遵守以下指令]\n${reminders.join('\n')}`;
 }
