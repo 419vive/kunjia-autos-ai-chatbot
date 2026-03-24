@@ -76,7 +76,7 @@ export function detectQuestionType(message: string): QuestionType {
   }
   
   if (/cc數|cc 數|排氣量|排氣|幾cc|幾 cc|引擎|馬力|動力|\d+\.?\d*\s*l/.test(lower)) return 'displacement';
-  if (/多少錢|價格|價位|售價|報價|幾萬|便宜/.test(lower)) return 'price';
+  if (/多少錢|價錢|價格|價位|售價|報價|幾萬|便宜/.test(lower)) return 'price';
   if (/里程|跑多少|公里數|幾公里|多少公里/.test(lower)) return 'mileage';
   if (/變速箱|手排|自排|手自排|幾速|CVT/.test(lower)) return 'transmission';
   if (/油耗|省油|耗油|燃料|汽油|柴油|油電|電動/.test(lower)) return 'fuel';
@@ -603,10 +603,11 @@ ${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation
 車輛資料：售價${v.priceDisplay || v.price + '萬'}、${v.modelYear}年、${v.displacement || ''}、里程${v.mileage || '未標示'}、${v.color || ''}、${v.transmission || ''}
 
 回覆規則：
-1. 直接回答客人的跟進問題${directAnswer ? `（${directAnswer}）` : ''}，然後提供3個不同面向讓客人選擇繼續聊
-2. 只能用上面有的資料，不能編造
-3. 一段話，不分段不換行，不用句點（。），不用markdown
-4. 禁止推薦其他車款`;
+1. 如果這個問題之前已經回答過（例如售價已經在車輛卡片或之前的訊息提過），用「誠如剛剛說的，${directAnswer || '...'}」帶過，然後進一步問客人還想了解這台車的什麼資訊
+2. 如果是新問題，直接回答${directAnswer ? `（${directAnswer}）` : ''}，然後問客人還想進一步了解什麼
+3. 只能用上面有的資料，不能編造
+4. 一段話，不分段不換行，不用句點（。），不用markdown
+5. 禁止推薦其他車款`;
   }
   
   if (detection.type === 'fallback') {
