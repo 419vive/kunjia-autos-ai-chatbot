@@ -797,8 +797,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       jsonLdBlocks.push({
         "@context": "https://schema.org",
         "@type": "Person",
-        "@id": `${baseUrl}/#author-chen`,
-        "name": "陳崑家",
+        "@id": `${baseUrl}/#author-lai`,
+        "name": "賴崑家",
         "jobTitle": "創辦人 / 資深二手車鑑定師",
         "worksFor": { "@id": `${baseUrl}/#organization` },
         "knowsAbout": ["二手車買賣", "中古車鑑定", "汽車貸款", "車輛過戶", "第三方認證"],
@@ -816,8 +816,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "description": meta.description,
         "author": {
           "@type": "Person",
-          "@id": `${baseUrl}/#author-chen`,
-          "name": "陳崑家",
+          "@id": `${baseUrl}/#author-lai`,
+          "name": "賴崑家",
           "jobTitle": "創辦人 / 資深二手車鑑定師",
         },
         "publisher": {
