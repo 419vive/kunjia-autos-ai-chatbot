@@ -97,13 +97,32 @@ export function detectGenderFromName(name: string | null): 'male' | 'female' | '
   return 'unknown';
 }
 
-// Get the appropriate greeting based on gender
+// Get the appropriate greeting based on gender (fallback when no name)
 export function getGenderGreeting(gender: 'male' | 'female' | 'unknown'): string {
   switch (gender) {
     case 'male': return '大哥';
     case 'female': return '小姐';
     case 'unknown': return '人客';
   }
+}
+
+// Get a friendly name-based greeting from customer's display name
+// e.g., "王雅玲" → "雅玲", "小明" → "小明", "John" → "John"
+export function getNameGreeting(name: string | null, gender: 'male' | 'female' | 'unknown'): string {
+  if (!name || !name.trim()) return getGenderGreeting(gender);
+
+  const clean = name.trim();
+
+  // Pure Chinese name: extract given name
+  if (/^[\u4e00-\u9fff]{2,4}$/.test(clean)) {
+    if (clean.length === 2) return clean; // 2-char name: use full name (e.g., "雅玲")
+    if (clean.length === 3) return clean.slice(1); // 3-char: use given name (e.g., "王雅玲" → "雅玲")
+    if (clean.length === 4) return clean.slice(2); // 4-char: use last 2 (e.g., "司馬相如" → "相如")
+  }
+
+  // Mixed or non-Chinese name: use as-is if short, otherwise truncate
+  if (clean.length <= 10) return clean;
+  return getGenderGreeting(gender);
 }
 
 // ============ TYPING INDICATOR ============
@@ -498,7 +517,7 @@ async function processLineEvent(
 
         if (isReturning && conversation) {
           // RETURNING USER: personalized welcome back with context
-          const greeting = customerName ? getGenderGreeting(detectGenderFromName(customerName)) : "人客";
+          const greeting = getNameGreeting(customerName, detectGenderFromName(customerName));
           const messages = await db.getMessagesByConversation(conversation.id, 20);
           // Find last vehicle they asked about
           const vehicleRegex = /(?:詢問|看|了解|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/;
@@ -1098,7 +1117,7 @@ async function processLineEvent(
   const customerIntents = detectCustomerIntents(userMessage);
   console.log(`[IntentDetection] intents=${customerIntents.join(', ') || 'none'}`);
 
-  const greeting = getGenderGreeting(customerGender);
+  const greeting = getNameGreeting(customerName, customerGender);
 
   let replyText: string;
   let isHumanHandoff = false;
@@ -1985,7 +2004,7 @@ export async function sendFollowUpMessages() {
       if (hoursSinceLastMsg < 18 || hoursSinceLastMsg > 48) continue;
 
       const userId = conv.sessionId.replace("line-", "");
-      const greeting = conv.customerName ? getGenderGreeting(detectGenderFromName(conv.customerName)) : "人客";
+      const greeting = getNameGreeting(conv.customerName, detectGenderFromName(conv.customerName));
 
       // Find last vehicle they asked about
       let lastVehicle: string | null = null;
