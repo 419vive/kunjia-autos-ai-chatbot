@@ -284,6 +284,7 @@ export const appRouter = router({
       .input(z.object({
         vehicleId: z.number().optional(),
         vehicleName: z.string().optional(),
+        lineUserId: z.string().optional(),
         customerName: z.string().min(1),
         phone: z.string().min(1),
         gender: z.string().optional(),
@@ -351,6 +352,29 @@ export const appRouter = router({
           }
         } catch (err) {
           console.error("[Loan Inquiry Notify] Failed:", err);
+        }
+
+        // Push confirmation message to customer's LINE chat
+        if (input.lineUserId) {
+          const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+          if (token) {
+            try {
+              const confirmRes = await fetch("https://api.line.me/v2/bot/message/push", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  to: input.lineUserId,
+                  messages: [{
+                    type: "text",
+                    text: "表單已收到，服務馬上到！\n崑家汽車24小時內專人出動，貸款細節幫您一次搞懂。",
+                  }],
+                }),
+              });
+              console.log(`[Loan Confirm] LINE push to customer ${input.lineUserId}: ${confirmRes.status}`);
+            } catch (confirmErr) {
+              console.error(`[Loan Confirm] LINE push failed for customer:`, confirmErr);
+            }
+          }
         }
 
         return { success: true, id };

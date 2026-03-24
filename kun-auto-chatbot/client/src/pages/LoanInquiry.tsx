@@ -75,6 +75,7 @@ export default function LoanInquiry() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const vehicleId = params.get("vehicleId");
   const vehicleName = params.get("vehicle") || "";
+  const lineUserId = params.get("lineUserId") || "";
 
   const [form, setForm] = useState<FormData>(initialForm);
   const [submitted, setSubmitted] = useState(false);
@@ -121,6 +122,7 @@ export default function LoanInquiry() {
     mutation.mutate({
       vehicleId: vehicleId ? Number(vehicleId) : undefined,
       vehicleName: vehicleName || undefined,
+      lineUserId: lineUserId || undefined,
       ...form,
     });
   };

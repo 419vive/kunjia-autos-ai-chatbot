@@ -25,7 +25,7 @@ function parsePhotoUrls(v: Vehicle): string[] {
 
 // ============ VEHICLE BUBBLE BUILDER ============
 
-function buildVehicleBubble(v: Vehicle): any {
+function buildVehicleBubble(v: Vehicle, lineUserId?: string): any {
   const photos = parsePhotoUrls(v);
   const photoUrl = photos[0] || "https://via.placeholder.com/800x600?text=No+Photo";
   const priceText = v.priceDisplay || `${v.price}萬`;
@@ -108,7 +108,8 @@ function buildVehicleBubble(v: Vehicle): any {
   }
 
   // Loan inquiry button
-  const loanUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  const loanBaseUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  const loanUrl = lineUserId ? `${loanBaseUrl}&lineUserId=${encodeURIComponent(lineUserId)}` : loanBaseUrl;
   footerButtons.push({
     type: "button",
     action: {
@@ -205,7 +206,8 @@ function buildVehicleBubble(v: Vehicle): any {
 export function buildVehicleCarouselMessages(
   vehicles: Vehicle[],
   title: string,
-  subtitle: string
+  subtitle: string,
+  lineUserId?: string
 ): any[] {
   if (vehicles.length === 0) {
     return [
@@ -223,7 +225,7 @@ export function buildVehicleCarouselMessages(
 
   for (let i = 0; i < vehicles.length; i += CAROUSEL_MAX) {
     const chunk = vehicles.slice(i, i + CAROUSEL_MAX);
-    const bubbles = chunk.map((v) => buildVehicleBubble(v));
+    const bubbles = chunk.map((v) => buildVehicleBubble(v, lineUserId));
 
     const chunkIndex = Math.floor(i / CAROUSEL_MAX) + 1;
     const totalChunks = Math.ceil(vehicles.length / CAROUSEL_MAX);
@@ -256,9 +258,10 @@ export function buildVehicleCarouselMessages(
 export function buildVehicleCarousel(
   vehicles: Vehicle[],
   title: string,
-  subtitle: string
+  subtitle: string,
+  lineUserId?: string
 ): any {
-  const messages = buildVehicleCarouselMessages(vehicles, title, subtitle);
+  const messages = buildVehicleCarouselMessages(vehicles, title, subtitle, lineUserId);
   return messages[0] || null;
 }
 
@@ -1134,7 +1137,8 @@ export function detectRichMenuTrigger(message: string): RichMenuTrigger | null {
  */
 export function buildRichMenuResponseMessages(
   trigger: RichMenuTrigger,
-  allVehicles: Vehicle[]
+  allVehicles: Vehicle[],
+  lineUserId?: string
 ): any[] {
   const availableVehicles = allVehicles.filter((v) => v.status === "available");
 
@@ -1143,7 +1147,8 @@ export function buildRichMenuResponseMessages(
       return buildVehicleCarouselMessages(
         availableVehicles,
         "🚗 崑家汽車在售車輛",
-        "左右滑動瀏覽所有車輛"
+        "左右滑動瀏覽所有車輛",
+        lineUserId
       );
     }
 
@@ -1156,7 +1161,8 @@ export function buildRichMenuResponseMessages(
       return buildVehicleCarouselMessages(
         popular.slice(0, 6),
         "⭐ 熱門推薦車款",
-        "精選人氣車款"
+        "精選人氣車款",
+        lineUserId
       );
     }
 
@@ -1173,7 +1179,8 @@ export function buildRichMenuResponseMessages(
       return buildVehicleCarouselMessages(
         budget,
         "💰 50萬以下超值好車",
-        "精選超值車款"
+        "精選超值車款",
+        lineUserId
       );
     }
 
@@ -1448,8 +1455,9 @@ export function buildCsatSurveyMessage(): any {
 // Backward compat: single message version
 export function buildRichMenuResponse(
   trigger: RichMenuTrigger,
-  allVehicles: Vehicle[]
+  allVehicles: Vehicle[],
+  lineUserId?: string
 ): any {
-  const messages = buildRichMenuResponseMessages(trigger, allVehicles);
+  const messages = buildRichMenuResponseMessages(trigger, allVehicles, lineUserId);
   return messages[0] || null;
 }

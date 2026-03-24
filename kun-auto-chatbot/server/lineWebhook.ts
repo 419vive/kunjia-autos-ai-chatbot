@@ -612,7 +612,8 @@ async function processLineEvent(
         const flexMessages = buildVehicleCarouselMessages(
           matches,
           `🔍 ${identified.brand} ${identified.model}`,
-          "根據你傳的照片，幫你找到這些車"
+          "根據你傳的照片，幫你找到這些車",
+          userId
         );
 
         // Prepend a text message
@@ -1041,7 +1042,7 @@ async function processLineEvent(
 
     // Fetch vehicles for carousel-type triggers
     const allVehicles = await db.getAllVehicles();
-    const flexMessages = buildRichMenuResponseMessages(trigger, allVehicles);
+    const flexMessages = buildRichMenuResponseMessages(trigger, allVehicles, userId);
 
     if (flexMessages.length > 0) {
       // Save a descriptive assistant message for history
