@@ -119,36 +119,41 @@ export const CAR_TERM_GLOSSARY: Record<string, string> = {
 };
 
 /**
- * Get explanation for a car term mentioned in the message
+ * Get explanation for a car term mentioned in the message.
+ * IMPORTANT: Only triggers when customer explicitly asks "什麼意思" / "是什麼" type questions.
+ * Otherwise returns '' to avoid overriding the correct answer (e.g., price answer overridden by term glossary).
  */
 export function getTermExplanation(message: string, vehicle: any): string {
   const lower = message.toLowerCase();
-  
-  // Try to find specific term in the message
-  // Check for displacement values like "1.5L", "2.0L"
+
+  // Guard: Only provide term explanations when customer is asking "what does X mean?"
+  // Without this guard, glossary terms like "自排" could match inside unrelated messages
+  const isAskingExplanation = /什麼意思|是什麼|代表什麼|代表啥|啥意思|解釋|是啥|什麼東西|什麼概念/.test(lower);
+  if (!isAskingExplanation) return '';
+
+  // Try to find specific displacement value like "1.5L", "2.0L"
   const displacementMatch = lower.match(/(\d+\.?\d*)\s*l/);
   if (displacementMatch) {
     const key = displacementMatch[1] + 'l';
     const explanation = CAR_TERM_GLOSSARY[key];
     if (explanation) return explanation;
   }
-  
-  // Check for other terms
+
+  // Check for other terms in the glossary
   for (const [term, explanation] of Object.entries(CAR_TERM_GLOSSARY)) {
     if (lower.includes(term.toLowerCase())) {
       return explanation;
     }
   }
-  
-  // If vehicle has displacement and question is about it
+
+  // If customer asks "什麼意思" but no specific term found, explain the vehicle's displacement
   if (vehicle?.displacement) {
-    const vDisp = vehicle.displacement.toLowerCase();
-    const dispKey = vDisp.replace(/\s/g, '');
-    if (CAR_TERM_GLOSSARY[dispKey]) {
-      return CAR_TERM_GLOSSARY[dispKey];
+    const vDisp = vehicle.displacement.toLowerCase().replace(/\s/g, '');
+    if (CAR_TERM_GLOSSARY[vDisp]) {
+      return CAR_TERM_GLOSSARY[vDisp];
     }
   }
-  
+
   return '';
 }
 

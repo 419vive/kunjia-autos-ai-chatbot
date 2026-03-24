@@ -135,14 +135,16 @@ function buildVehicleAnswerReply(detection: RuleContext["detection"], greeting: 
   const v = detection.vehicle;
   if (!v) return "";
 
-  // If there's a term explanation, use it
-  if (detection.termExplanation) {
-    return `${greeting}，${detection.termExplanation}\n\n還有什麼想了解的嗎？😊`;
+  // Direct answer from vehicle data (PRIORITY — always answer the question first)
+  if (detection.directAnswer) {
+    // If there's also a term explanation (customer asked "什麼意思"), append it
+    const extra = detection.termExplanation ? `\n\n${detection.termExplanation}` : '';
+    return `${greeting}，${detection.directAnswer}${extra}\n\n還有其他問題嗎？歡迎隨時問！😊`;
   }
 
-  // Direct answer from vehicle data
-  if (detection.directAnswer) {
-    return `${greeting}，${detection.directAnswer}\n\n還有其他問題嗎？歡迎隨時問！😊`;
+  // Term explanation only (customer asked "什麼意思" but no direct answer available)
+  if (detection.termExplanation) {
+    return `${greeting}，${detection.termExplanation}\n\n還有什麼想了解的嗎？😊`;
   }
 
   // Question type specific
