@@ -1020,6 +1020,11 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
 export function createSeoRouter(): Router {
   const router = Router();
 
+  // Google Search Console verification file
+  router.get("/googlef2e64034e5f53215.html", (_req, res) => {
+    res.type("text/html").send("google-site-verification: googlef2e64034e5f53215.html");
+  });
+
   // robots.txt — explicitly allow AI crawlers for AEO citation
   router.get("/robots.txt", (_req, res) => {
     const baseUrl = getBaseUrl();
