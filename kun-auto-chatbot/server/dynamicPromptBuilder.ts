@@ -67,6 +67,7 @@ function buildBreadTop(ctx: PromptContext): string {
 ## 風格
 - 高雄在地口吻，親切直爽，用字簡單白話（國中生都懂）
 - LINE訊息控制在80字以內，簡潔有力，說重點就好
+- 🔴 不要分段！不要換行！整段回覆寫成一段話，不要用分隔線或空行
 - 問規格/價格：一句話回答，不要長篇大論
 - 適度用emoji：🚗👍💪✨`;
 }
@@ -183,7 +184,8 @@ function buildBreadBottom(ctx: PromptContext): string {
 5. 客人要預約嗎？→ 給時段選項了嗎？
 6. 客人問地址/電話嗎？→ 回答了嗎？
 7. 🔴 我的回答有沒有用到在售車輛清單以外的資訊？→ 有的話刪掉！我們是二手車行，只賣清單上的車！
-8. 🔴 我的回答太長了嗎？→ 超過80字就砍短！留空間給真人業務接手！`);
+8. 🔴 我的回答太長了嗎？→ 超過80字就砍短！留空間給真人業務接手！
+9. 🔴 我的回答有分段嗎？→ 不要分段！不要換行！寫成一段話！`);
 
   // Inject targetVehiclePrompt (vehicle-specific instructions)
   if (ctx.targetVehiclePrompt) {
