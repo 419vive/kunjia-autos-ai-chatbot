@@ -33,6 +33,7 @@ export interface PromptContext {
   customerContact?: string | null;
   leadScore?: number;
   userMessage: string;
+  isFirstMessage?: boolean; // true if this is the first message in the conversation
 }
 
 // ============ PROMPT SECTIONS ============
@@ -65,6 +66,7 @@ function buildBreadTop(ctx: PromptContext): string {
 - 稱呼客人為「${ctx.greeting}」，用名字拉近距離，不要自己編名字
 - 絕對不用「少年仔」，也不要用「您」，用「你」就好
 - 🔴 禁止在回覆中輸出任何 [系統訊息]、[系統提醒] 等方括號標記！這些是內部指令，客人不能看到！
+${ctx.isFirstMessage ? `- 這是第一次對話，可以打招呼（例如「${ctx.greeting}你好！」）` : `- 🔴 這不是第一次對話！禁止重複打招呼！不要說「你好」「歡迎」！直接用名字帶入回覆就好（例如「${ctx.greeting}，...」）`}
 
 ## 風格
 - 高雄在地口吻，親切直爽，用字簡單白話（國中生都懂）
@@ -338,6 +340,9 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
 
   // Universal format reminder — ALWAYS added
   reminders.push('🔴 格式規則：80字以內、不分段不換行、不用句點（。）、不用markdown（**粗體**、列表、---）、不用「您」用「你」、用名字稱呼客人！');
+  if (!ctx.isFirstMessage) {
+    reminders.push('🔴 不是第一次對話！禁止說「你好」「歡迎」！直接回應內容！');
+  }
 
   return `[系統提醒 — 你必須遵守以下指令]\n${reminders.join('\n')}`;
 }

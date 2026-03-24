@@ -770,8 +770,17 @@ export function buildIntentInstructions(
   greeting: string,
   customerContact?: string | null
 ): string {
-  if (intents.length === 0) return '';
-  
+  if (intents.length === 0) {
+    // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
+    return `
+
+## 回覆指引
+客人的訊息：「${userMessage}」
+沒有偵測到特定意圖，請根據訊息內容自然回應
+🔴 不要重複打招呼！不要說「你好」「歡迎」！直接回應客人說的內容就好
+🔴 如果不確定客人想問什麼，簡短回應並引導：「${greeting}想了解什麼車款呢？或者點下方選單看看我們的庫存🚗」`;
+  }
+
   const instructions: string[] = [];
   
   // ============ APPOINTMENT INTENT ============

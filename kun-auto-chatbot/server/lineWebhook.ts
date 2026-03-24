@@ -1155,6 +1155,7 @@ async function processLineEvent(
       customerContact: conversation!.customerContact,
       leadScore: conversation!.leadScore ?? undefined,
       userMessage,
+      isFirstMessage: history.length <= 1,
     };
 
     const llmMessages = buildLLMMessages(promptContext, history.map(m => ({ role: m.role, content: m.content })));
