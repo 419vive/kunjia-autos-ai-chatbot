@@ -588,10 +588,10 @@ ${directAnswer ? `\n客人的問題類型：${questionType}\n直接答案：${di
 你的回覆規則：
 1. 直接回答客人的問題${directAnswer ? `：${directAnswer}` : ''}${termExplanation ? `，並用白話解釋：${termExplanation}` : ''}
 2. 只能用上面有的資料，不能編造
-3. 用親切的口吻回答，然後引導來店看車
+3. 🔴 回答要短（80字以內），一句話回答重點，留空間給真人業務接手
 4. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫`;
   }
-  
+
   if (detection.type === 'context' && v) {
     return `
 
@@ -613,7 +613,7 @@ ${directAnswer ? `\n客人的問題類型：${questionType}\n直接答案：${di
 你的回覆規則：
 1. 客人之前在問這台 ${v.brand} ${v.model}，現在是跟進問題，直接回答${directAnswer ? `：${directAnswer}` : ''}${termExplanation ? `，並用白話解釋：${termExplanation}` : ''}
 2. 只能用上面有的資料，不能編造
-3. 用親切的口吻回答，然後引導來店看車
+3. 🔴 回答要短（80字以內），一句話回答重點，留空間給真人業務接手
 4. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫`;
   }
   
