@@ -134,9 +134,9 @@ export default function LoanInquiry() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
           </div>
-          <h1 className="text-xl font-bold">已收到您的貸款諮詢！</h1>
+          <h1 className="text-xl font-bold">表單已收到，服務馬上到！</h1>
           <p className="text-muted-foreground text-sm">
-            我們的專業銷售人員會盡快與您聯繫，為您提供最適合的貸款方案。
+            崑家汽車24小時內專人出動，貸款細節幫您一次搞懂。
           </p>
           {vehicleName && (
             <p className="text-sm text-primary font-medium">
