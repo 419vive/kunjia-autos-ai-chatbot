@@ -370,18 +370,17 @@ export function extractVehicleFromHistory(
     return null;
   };
 
-  // Pass 1: Prioritize USER messages (what customer explicitly asked about)
+  // Single pass: scan from newest to oldest, regardless of role.
+  // The most recent message that mentions a vehicle IS the current context.
+  // This correctly handles: customer asked about BMW X1 → bot replied about BMW X1 → customer asks "價錢"
+  // → the bot's response (newest with a vehicle) points to BMW X1.
   for (let i = conversationHistory.length - 1; i >= 0; i--) {
-    if (conversationHistory[i].role !== 'user') continue;
-    const found = findInMessage(conversationHistory[i].content || '');
-    if (found) return found;
-  }
-
-  // Pass 2: Fall back to assistant messages (bot mentioned a vehicle)
-  for (let i = conversationHistory.length - 1; i >= 0; i--) {
-    if (conversationHistory[i].role !== 'assistant') continue;
-    const found = findInMessage(conversationHistory[i].content || '');
-    if (found) return found;
+    const msg = conversationHistory[i];
+    const found = findInMessage(msg.content || '');
+    if (found) {
+      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in ${msg.role} message at index ${i}`);
+      return found;
+    }
   }
 
   return null;
