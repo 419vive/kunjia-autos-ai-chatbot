@@ -147,6 +147,11 @@ async function startServer() {
   app.set("trust proxy", 1);
   const server = createServer(app);
 
+  // Google Search Console verification — must be FIRST, before any middleware
+  app.get("/googlef2e64034e5f53215.html", (_req, res) => {
+    res.type("text/html").send("google-site-verification: googlef2e64034e5f53215.html");
+  });
+
   // ============================================================
   // SECURITY LAYER 1: HTTP Security Headers (Helmet)
   // OWASP A05:2021 – Security Misconfiguration
