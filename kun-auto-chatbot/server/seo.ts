@@ -124,11 +124,44 @@ function autoDealer(): object {
     },
     "priceRange": "$$",
     "image": `${getBaseUrl()}/og-default.jpg`,
-    "areaServed": {
-      "@type": "GeoCircle",
-      "geoMidpoint": { "@type": "GeoCoordinates", "latitude": "22.6444", "longitude": "120.3189" },
-      "geoRadius": "50000",
-    },
+    "hasMap": "https://maps.google.com/?q=高雄市三民區大順二路269號",
+    "areaServed": [
+      {
+        "@type": "City",
+        "name": "高雄市",
+        "@id": "https://www.wikidata.org/wiki/Q13806",
+        "sameAs": "https://zh.wikipedia.org/wiki/高雄市",
+      },
+      {
+        "@type": "City",
+        "name": "台南市",
+        "@id": "https://www.wikidata.org/wiki/Q140631",
+        "sameAs": "https://zh.wikipedia.org/wiki/台南市",
+      },
+      {
+        "@type": "City",
+        "name": "屏東縣",
+        "@id": "https://www.wikidata.org/wiki/Q153221",
+        "sameAs": "https://zh.wikipedia.org/wiki/屏東縣",
+      },
+      {
+        "@type": "City",
+        "name": "台中市",
+        "@id": "https://www.wikidata.org/wiki/Q245023",
+        "sameAs": "https://zh.wikipedia.org/wiki/台中市",
+      },
+      {
+        "@type": "City",
+        "name": "嘉義市",
+        "@id": "https://www.wikidata.org/wiki/Q194898",
+        "sameAs": "https://zh.wikipedia.org/wiki/嘉義市",
+      },
+      {
+        "@type": "GeoCircle",
+        "geoMidpoint": { "@type": "GeoCoordinates", "latitude": "22.6444", "longitude": "120.3189" },
+        "geoRadius": "200000",
+      },
+    ],
     "currenciesAccepted": "TWD",
     "paymentAccepted": "Cash, Credit Card, Bank Transfer, Financing",
     "hasOfferCatalog": {
@@ -224,9 +257,8 @@ function carSchema(vehicle: any): object {
       "itemCondition": "https://schema.org/UsedCondition",
       "seller": {
         "@type": "AutoDealer",
+        "@id": `${getBaseUrl()}/#organization`,
         "name": SITE_NAME,
-        "address": BUSINESS_ADDRESS,
-        "telephone": BUSINESS_PHONE,
       },
       "priceValidUntil": new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     },
@@ -438,6 +470,14 @@ function websiteSchema(): object {
     "description": SITE_DESCRIPTION,
     "inLanguage": "zh-TW",
     "publisher": { "@id": `${baseUrl}/#organization` },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${baseUrl}/?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
@@ -764,8 +804,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       jsonLdBlocks.push({
         "@context": "https://schema.org",
         "@type": "Person",
-        "@id": `${baseUrl}/#author-chen`,
-        "name": "陳崑家",
+        "@id": `${baseUrl}/#author-lai`,
+        "name": "賴崑家",
         "jobTitle": "創辦人 / 資深二手車鑑定師",
         "worksFor": { "@id": `${baseUrl}/#organization` },
         "knowsAbout": ["二手車買賣", "中古車鑑定", "汽車貸款", "車輛過戶", "第三方認證"],
@@ -783,8 +823,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "description": meta.description,
         "author": {
           "@type": "Person",
-          "@id": `${baseUrl}/#author-chen`,
-          "name": "陳崑家",
+          "@id": `${baseUrl}/#author-lai`,
+          "name": "賴崑家",
           "jobTitle": "創辦人 / 資深二手車鑑定師",
         },
         "publisher": {
@@ -823,6 +863,111 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     }
   }
 
+  // ---------- Service area pages (/area/:city) ----------
+  else if (path.startsWith("/area/")) {
+    const citySlug = path.replace("/area/", "");
+    const cityData: Record<string, { name: string; region: string; title: string; desc: string; keywords: string[]; faqs: Array<{q: string; a: string}> }> = {
+      tainan: {
+        name: "台南",
+        region: "TW-TNN",
+        title: "台南二手車推薦｜崑家汽車免費接駁｜台南中古車買賣",
+        desc: "台南買二手車推薦崑家汽車！從台南出發40分鐘即達，提供台南免費接駁服務。在地40年正派經營，全車第三方認證、實車實價、超強貸款方案。台南鄉親買二手車首選。",
+        keywords: ["台南二手車", "台南中古車", "台南二手車推薦", "台南中古車行", "台南買二手車"],
+        faqs: [
+          { q: "台南買二手車推薦哪裡？", a: "推薦高雄崑家汽車，在地40年老字號，從台南開車40分鐘即達。提供台南免費接駁服務，全車第三方認證。" },
+          { q: "台南到崑家汽車怎麼去？", a: "國道1號或國道3號南下，約40分鐘車程。也可預約免費接駁，專人到台南市區接送。" },
+          { q: "崑家汽車有提供台南送車服務嗎？", a: "有，購車後可安排送車到台南，讓您輕鬆交車不用跑高雄。" },
+          { q: "台南二手車貸款怎麼辦？", a: "崑家汽車合作多家銀行，台南鄉親一樣享有超強貸款方案，最快一天核准。" },
+        ],
+      },
+      pingtung: {
+        name: "屏東",
+        region: "TW-PIF",
+        title: "屏東二手車推薦｜崑家汽車免費接駁｜屏東中古車買賣",
+        desc: "屏東買二手車推薦崑家汽車！從屏東市區僅30分鐘車程，免費接駁直達。在地40年正派經營，全車第三方認證、實車實價。屏東鄉親買中古車，選崑家最安心。",
+        keywords: ["屏東二手車", "屏東中古車", "屏東二手車推薦", "屏東中古車行", "屏東買二手車"],
+        faqs: [
+          { q: "屏東買二手車推薦哪裡？", a: "推薦高雄崑家汽車，從屏東市區開車僅30分鐘。提供屏東免費接駁，全車第三方認證。" },
+          { q: "屏東到崑家汽車怎麼去？", a: "走國道3號或台1線北上，約30分鐘到高雄三民區。可預約免費接駁服務。" },
+          { q: "屏東可以貸款買二手車嗎？", a: "可以，崑家合作多家銀行，屏東鄉親一樣適用所有貸款方案。" },
+          { q: "崑家汽車有送車到屏東嗎？", a: "有，購車後可安排送車到屏東，當日即可交車。" },
+        ],
+      },
+      taichung: {
+        name: "台中",
+        region: "TW-TXG",
+        title: "台中二手車推薦｜崑家汽車免費接駁｜台中中古車買賣",
+        desc: "台中買二手車推薦崑家汽車！提供台中免費接駁、高鐵左營站接送。在地40年正派經營，全車第三方認證。台中朋友專程南下購車，信賴崑家品質。",
+        keywords: ["台中二手車", "台中中古車", "台中二手車推薦", "台中中古車行", "台中買二手車"],
+        faqs: [
+          { q: "台中可以到崑家汽車買車嗎？", a: "可以！許多台中客人專程南下購車。提供台中免費接駁，高鐵左營站接送服務。" },
+          { q: "台中到崑家汽車怎麼去？", a: "搭高鐵到左營站約45分鐘，我們提供高鐵站免費接送。開車走國道1號約2小時。" },
+          { q: "為什麼台中人要到高雄買二手車？", a: "崑家汽車40年老字號，車價透明實在，全車第三方認證，很多台中客人買過都推薦親友。" },
+          { q: "台中買車可以貸款嗎？", a: "可以，不限地區都能申辦貸款，合作多家銀行，最快一天核准。" },
+        ],
+      },
+      chiayi: {
+        name: "嘉義",
+        region: "TW-CYI",
+        title: "嘉義二手車推薦｜崑家汽車免費接駁｜嘉義中古車買賣",
+        desc: "嘉義買二手車推薦崑家汽車！提供嘉義免費接駁服務，高鐵站接送。在地40年正派經營，全車第三方認證、超強貸款方案。嘉義鄉親買中古車首選。",
+        keywords: ["嘉義二手車", "嘉義中古車", "嘉義二手車推薦", "嘉義中古車行", "嘉義買二手車"],
+        faqs: [
+          { q: "嘉義買二手車推薦哪裡？", a: "推薦高雄崑家汽車，提供嘉義免費接駁服務，全車第三方認證，在地40年老字號。" },
+          { q: "嘉義到崑家汽車怎麼去？", a: "國道1號南下約1.5小時，或搭高鐵到左營站，我們提供免費接送。" },
+          { q: "崑家汽車有送車到嘉義嗎？", a: "有，購車後可安排送車到嘉義，交車方便不用再跑一趟。" },
+          { q: "嘉義二手車貸款好辦嗎？", a: "崑家合作多家銀行，不限地區皆可申辦，嘉義鄉親一樣享有最優惠方案。" },
+        ],
+      },
+    };
+
+    const city = cityData[citySlug];
+    if (city) {
+      title = city.title;
+      description = city.desc;
+
+      // Service schema for the area
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": `${city.name}二手車買賣服務`,
+        "description": city.desc,
+        "provider": { "@type": "AutoDealer", "@id": `${baseUrl}/#organization` },
+        "areaServed": {
+          "@type": "City",
+          "name": city.name,
+        },
+        "serviceType": "二手車買賣",
+        "offers": {
+          "@type": "Offer",
+          "description": `${city.name}免費接駁看車服務`,
+          "price": "0",
+          "priceCurrency": "TWD",
+        },
+        "url": canonicalUrl,
+      });
+
+      jsonLdBlocks.push(breadcrumb([
+        { name: "首頁", url: baseUrl },
+        { name: "服務地區", url: `${baseUrl}/area` },
+        { name: `${city.name}二手車`, url: canonicalUrl },
+      ]));
+
+      jsonLdBlocks.push(faqSchema(city.faqs));
+
+      // Speakable + WebPage
+      jsonLdBlocks.push({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "speakable": speakableSchema(canonicalUrl),
+        "url": canonicalUrl,
+        "isPartOf": { "@type": "WebSite", "@id": `${baseUrl}/#website` },
+      });
+    }
+  }
+
   // ---------- Build the meta tag block ----------
   const seoBlock = `
     <!-- SEO Meta Tags -->
@@ -856,7 +1001,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <meta name="ICBM" content="22.6444, 120.3189" />
     <meta name="author" content="${SITE_NAME}" />
     <meta name="language" content="zh-TW" />
-    <meta name="keywords" content="高雄二手車,二手車推薦,中古車買賣,高雄中古車,崑家汽車,二手車行,高雄二手車行,二手車貸款,中古車推薦,三民區二手車,高雄買車,二手車第三方認證" />
+    <meta name="keywords" content="高雄二手車,二手車推薦,中古車買賣,高雄中古車,崑家汽車,二手車行,高雄二手車行,二手車貸款,中古車推薦,三民區二手車,高雄買車,二手車第三方認證,台南二手車,屏東二手車,台中二手車,嘉義二手車,南部二手車,台灣二手車推薦" />
     <link rel="alternate" hreflang="zh-TW" href="${escAttr(canonicalUrl)}" />
     <link rel="alternate" hreflang="x-default" href="${escAttr(canonicalUrl)}" />
 
@@ -1045,6 +1190,12 @@ Crawl-delay: 1
 - [50-80萬二手車](${baseUrl}/price/50-80): 品質與價格兼顧
 - [80萬以上二手車](${baseUrl}/price/over-80): BMW、Benz、Lexus豪華車款
 
+## Service Areas
+- [台南二手車](${baseUrl}/area/tainan): 台南買二手車推薦崑家汽車
+- [屏東二手車](${baseUrl}/area/pingtung): 屏東買二手車推薦崑家汽車
+- [台中二手車](${baseUrl}/area/taichung): 台中買二手車推薦崑家汽車
+- [嘉義二手車](${baseUrl}/area/chiayi): 嘉義買二手車推薦崑家汽車
+
 ## 在售車輛
 ${vehicleSection || "- 請訪問首頁查看最新庫存"}
 
@@ -1075,6 +1226,10 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
         { loc: "/price/30-50",                   changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
+        { loc: "/area/tainan",                   changefreq: "weekly",  priority: "0.8" },
+        { loc: "/area/pingtung",                 changefreq: "weekly",  priority: "0.8" },
+        { loc: "/area/taichung",                 changefreq: "weekly",  priority: "0.8" },
+        { loc: "/area/chiayi",                   changefreq: "weekly",  priority: "0.8" },
       ];
 
       // Dynamic vehicle pages + brand pages

@@ -22,6 +22,13 @@ const BLOG_LINKS = [
   { label: "過戶流程與費用", href: "/blog/used-car-transfer-guide" },
 ];
 
+const SERVICE_AREAS = [
+  { label: "台南二手車", href: "/area/tainan" },
+  { label: "屏東二手車", href: "/area/pingtung" },
+  { label: "台中二手車", href: "/area/taichung" },
+  { label: "嘉義二手車", href: "/area/chiayi" },
+];
+
 export default function SeoFooter() {
   return (
     <footer className="bg-[#1e2a38] text-white/80">
@@ -99,6 +106,19 @@ export default function SeoFooter() {
                   常見問題 FAQ
                 </a>
               </li>
+            </ul>
+            <h3 className="text-sm font-bold text-white mt-6 mb-3">服務地區</h3>
+            <ul className="space-y-2">
+              {SERVICE_AREAS.map((area) => (
+                <li key={area.href}>
+                  <a
+                    href={area.href}
+                    className="text-xs text-white/60 hover:text-white transition-colors"
+                  >
+                    {area.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
