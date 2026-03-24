@@ -257,9 +257,8 @@ function carSchema(vehicle: any): object {
       "itemCondition": "https://schema.org/UsedCondition",
       "seller": {
         "@type": "AutoDealer",
+        "@id": `${getBaseUrl()}/#organization`,
         "name": SITE_NAME,
-        "address": BUSINESS_ADDRESS,
-        "telephone": BUSINESS_PHONE,
       },
       "priceValidUntil": new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     },
@@ -471,6 +470,14 @@ function websiteSchema(): object {
     "description": SITE_DESCRIPTION,
     "inLanguage": "zh-TW",
     "publisher": { "@id": `${baseUrl}/#organization` },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${baseUrl}/?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
