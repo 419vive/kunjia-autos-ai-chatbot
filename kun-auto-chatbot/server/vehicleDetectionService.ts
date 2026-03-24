@@ -656,6 +656,7 @@ export type CustomerIntent =
   | 'how_to_browse'     // 怎麼看車、怎麼瀏覽
   | 'vehicle_spec'      // 車輛規格（由 vehicleDetection 處理）
   | 'general_browse'    // 一般瀏覽、推薦
+  | 'pricing'           // 問價格、多少錢
   ;
 
 /**
@@ -715,7 +716,12 @@ export function detectCustomerIntents(message: string): CustomerIntent[] {
   if (/怎麼看|怎麼瀏覽|在哪看|在哪裡看|哪裡看|如何看|如何瀏覽|怎麼查|怎麼找|看不到|找不到|要怎麼|有什麼車|有哪些車|車子在哪|庫存在哪|哪裡可以看|可以看車|想看車|看一下車|看看車|看你們的車/.test(lower)) {
     intents.push('how_to_browse');
   }
-  
+
+  // Pricing intent — customer asking about price
+  if (/多少錢|價格|價位|售價|報價|幾萬|多少萬|什麼價|賣多少/.test(lower)) {
+    intents.push('pricing');
+  }
+
   return intents;
 }
 

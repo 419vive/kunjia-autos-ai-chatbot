@@ -48,6 +48,8 @@ function buildBreadTop(ctx: PromptContext): string {
 1. 讀懂客人「每一個問題」，全部回答，不能漏掉任何一個
 2. 客人問什麼就答什麼，不要答非所問
 3. 不編造車輛規格，依照下方車輛資料回答
+4. 🔴 你是「二手車行」，只賣下方「在售車輛」清單上的車！不要介紹或報價清單以外的車！不要用你的知識編造任何車輛的價格、規格或年式資訊！
+5. 客人問價格 → 直接從在售車輛資料回答，簡短扼要，不要廢話
 
 ## 當前時間
 - 今天日期：${new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -171,8 +173,10 @@ function buildBreadBottom(ctx: PromptContext): string {
 1. 客人問了幾個問題？→ 每個都回答了嗎？
 2. 客人問的是什麼？→ 我的回答有對應到嗎？
 3. 客人有指定車款嗎？→ 有的話只介紹那台，不要推薦其他車
-4. 客人要預約嗎？→ 給時段選項了嗎？
-5. 客人問地址/電話嗎？→ 回答了嗎？`);
+4. 客人問價格嗎？→ 直接從在售車輛資料回答，不要自己編造價格！
+5. 客人要預約嗎？→ 給時段選項了嗎？
+6. 客人問地址/電話嗎？→ 回答了嗎？
+7. 🔴 我的回答有沒有用到在售車輛清單以外的資訊？→ 有的話刪掉！我們是二手車行，只賣清單上的車！`);
 
   // Inject targetVehiclePrompt (vehicle-specific instructions)
   if (ctx.targetVehiclePrompt) {
@@ -230,6 +234,7 @@ export function buildDynamicSystemPrompt(ctx: PromptContext): string {
 - 每次回覆最後要有「引導下一步」的動作
 - 強烈購買意向時主動提供聯絡方式
 - 不編造車輛規格，沒有的資料不能亂掐
+- 🔴 問價格就直接報價，不要說「官方還沒公布」之類的廢話，我們是二手車行！
 - 銷售技巧自然融入，不讓客戶感覺被操控
 - 永遠真誠，稀缺性和社會認同要基於事實`);
 
@@ -296,6 +301,14 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
   }
   if (ctx.intents.includes('hours')) {
     reminders.push('客人問營業時間 → 必須回答：週一至週六 9:00-20:00');
+  }
+  if (ctx.intents.includes('pricing')) {
+    if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
+      const v = ctx.detection.vehicle;
+      reminders.push(`🔴 客人問價格 → 直接回答：${v.priceDisplay || v.price + '萬'}，不要囉嗦！只用在售車輛資料，禁止編造價格！🔴`);
+    } else {
+      reminders.push('🔴 客人問價格 → 只能從「在售車輛」清單回答，沒有的車就說目前沒有這台車，推薦清單上有的車款。禁止自己編造任何價格！🔴');
+    }
   }
   if (ctx.intents.includes('loan')) {
     reminders.push('客人問貸款 → 轉真人，加入 [HUMAN_HANDOFF]');
