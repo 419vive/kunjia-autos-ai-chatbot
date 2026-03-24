@@ -792,11 +792,11 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "used-car-transfer-guide": 1125,
       };
       const blogDates: Record<string, { published: string; modified: string }> = {
-        "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-17" },
-        "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-17" },
-        "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-17" },
-        "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-17" },
-        "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-17" },
+        "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-24" },
+        "used-car-loan-guide":             { published: "2026-01-22", modified: "2026-03-24" },
+        "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-24" },
+        "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-24" },
+        "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-24" },
       };
       const dates = blogDates[slug];
 
@@ -991,8 +991,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <meta name="twitter:description" content="${escAttr(description)}" />
     <meta name="twitter:image" content="${escAttr(ogImage)}" />
 
-    <!-- Freshness signal -->
-    <meta property="article:modified_time" content="${new Date().toISOString()}" />
+    <!-- Freshness signal (stable daily timestamp to avoid manipulation flags) -->
+    <meta property="article:modified_time" content="${new Date().toISOString().split("T")[0] + "T00:00:00.000Z"}" />
 
     <!-- Additional SEO -->
     <meta name="geo.region" content="TW-KHH" />
@@ -1022,6 +1022,23 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<link\s+rel="alternate"\s+hreflang="[^"]*"[^>]*>/gi, "")
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
+
+  // Inject noscript fallback for AI crawlers that can't execute JS (69% of them)
+  const noscriptContent = `<noscript>
+<div itemscope itemtype="https://schema.org/AutoDealer">
+  <h1 itemprop="name">${escAttr(SITE_NAME)} — ${escAttr(title)}</h1>
+  <p itemprop="description">${escAttr(description)}</p>
+  <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+    <span itemprop="streetAddress">${BUSINESS_ADDRESS}</span>
+    <span itemprop="addressLocality">高雄市三民區</span>
+    <span itemprop="addressCountry">TW</span>
+  </div>
+  <span itemprop="telephone">${BUSINESS_PHONE}</span>
+  <a href="${baseUrl}/blog" itemprop="url">購車攻略</a>
+  <a href="${baseUrl}/faq">常見問題</a>
+</div>
+</noscript>`;
+  result = result.replace('<div id="root">', `${noscriptContent}\n<div id="root">`);
 
   return result;
 }
@@ -1157,6 +1174,11 @@ Sitemap: ${baseUrl}/sitemap.xml
 
 # Crawl-delay (only for generic crawlers)
 Crawl-delay: 1
+
+# LLM-readable content
+# See https://llmstxt.org for specification
+# llms.txt: ${baseUrl}/llms.txt
+# llms-full.txt: ${baseUrl}/llms-full.txt
 `
     );
   });
@@ -1218,6 +1240,88 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
 ## Optional
 - [首頁](${baseUrl}/): 全部在售車輛一覽
 - [購車攻略列表](${baseUrl}/blog): 所有文章列表
+`
+    );
+  });
+
+  // llms-full.txt — complete AI-readable content (llms.txt standard full version)
+  router.get("/llms-full.txt", async (_req, res) => {
+    const baseUrl = getBaseUrl();
+    let vehicleSection = "";
+    try {
+      const vehicles = await db.getAllVehicles();
+      const available = vehicles.filter((v: any) => v.status === "available");
+      vehicleSection = available.slice(0, 30).map((v: any) =>
+        `- [${v.brand} ${v.model} ${v.modelYear || ""}](${baseUrl}/vehicle/${v.id}): ${v.priceDisplay || v.price + "萬"}${v.mileage ? "、里程" + v.mileage : ""}${v.color ? "、" + v.color : ""}${v.transmission ? "、" + v.transmission : ""}`
+      ).join("\n");
+    } catch { /* ignore */ }
+
+    const faqSection = HOMEPAGE_FAQS.map(f => `### ${f.q}\n${f.a}`).join("\n\n");
+
+    res.type("text/plain; charset=utf-8").send(
+`# 崑家汽車 KUN MOTORS — 完整資訊
+
+> 高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。
+
+## 基本資訊
+- 名稱：崑家汽車（KUN MOTORS）
+- 地址：${BUSINESS_ADDRESS}
+- 電話：${BUSINESS_PHONE}
+- LINE官方帳號：${LINE_OA_URL}
+- 營業時間：週一至週六 09:00-21:00（週日公休）
+- 創立年份：1986年（超過40年歷史）
+- Google評分：4.8/5（156則評分，89則評論）
+
+## 服務項目
+1. **二手車買賣**：精選Toyota、Honda、BMW、Benz、Mazda、Nissan等品牌優質中古車，全車第三方認證
+2. **汽車貸款**：合作多家銀行，貸款成數50%-80%，年利率約2.5%-8%，最快一天核准
+3. **過戶代辦**：免手續費，1-2個工作天完成
+4. **外縣市免費接駁**：台中以南免費接駁到店看車
+5. **舊車高價收購**：以舊換新，降低換車成本
+6. **最快3小時交車**：當天看車、當天交車
+
+## 購車攻略（完整摘要）
+
+### 買二手車7大注意事項
+查車輛歷史、取得第三方認證、辨認泡水車（聞味/看地毯/查保險絲盒）、識破里程表作假（ECU讀取/保養紀錄比對）、辨認事故車（看縫隙/色差/磁鐵測試）、小心貸款陷阱（計算總還款額）、確認過戶細節（查欠稅/動產擔保設定）。
+→ 完整文章：${baseUrl}/blog/buy-used-car-guide
+
+### 二手車貸款全攻略（2026年最新）
+貸款成數：車齡1-3年可貸70%-80%，4-7年約60%-70%，8年以上50%-60%。銀行車貸年利率2.5%-5%（最低但審核嚴格），車貸公司4%-8%（中等），車行自辦5%-10%（寬鬆）。所需文件：身分證影本、近3月薪資存摺、在職證明。
+→ 完整文章：${baseUrl}/blog/used-car-loan-guide
+
+### 高雄買二手車推薦
+高雄主要二手車商圈：三民區大順路（傳統汽車街）、左營區、苓雅區。挑選車行5大標準：經營年資、第三方認證、透明定價、售後服務、實際客戶評價。高雄二手車價格比台北低約3%-8%。
+→ 完整文章：${baseUrl}/blog/kaohsiung-used-car-guide
+
+### 第三方認證完整指南
+認證項目：車身鈑金、引擎室、底盤懸吊、室內電子系統、里程真偽。費用約1,500-3,000元。認證報告以綠（正常）、黃（注意）、紅（問題）三色標記。崑家汽車全車已含認證，買家免費索取。
+→ 完整文章：${baseUrl}/blog/third-party-inspection-guide
+
+### 過戶流程與費用（2026年最新）
+流程：準備文件→前往監理站→填異動申請書→繳規費（150-200元）→等候新行照（15-30分鐘）→領取→更名保險。所需文件：身分證正本、行照正本、印鑑章。崑家汽車代辦免手續費。
+→ 完整文章：${baseUrl}/blog/used-car-transfer-guide
+
+## 常見問題
+${faqSection}
+
+## 在售車輛（最新庫存）
+${vehicleSection || "請訪問首頁查看最新庫存"}
+
+## 依預算找車
+- [30萬以下](${baseUrl}/price/under-30): 學生、新手首選
+- [30-50萬](${baseUrl}/price/30-50): 小家庭入門
+- [50-80萬](${baseUrl}/price/50-80): 品質與價格兼顧
+- [80萬以上](${baseUrl}/price/over-80): BMW、Benz、Lexus豪華車
+
+## 依品牌找車
+Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、Lexus
+
+## 聯絡方式
+- 電話預約：${BUSINESS_PHONE}
+- LINE諮詢：${LINE_OA_URL}（帳號 @825oftez）
+- 到店地址：${BUSINESS_ADDRESS}
+- 營業時間：週一至週六 09:00-21:00
 `
     );
   });

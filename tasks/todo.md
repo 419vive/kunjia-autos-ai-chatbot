@@ -12,6 +12,7 @@
 - [x] AEO Phase 2: AI crawler robots.txt, BLUF answer blocks, Service schema, entity graph @id, freshness signals, data-speakable frontend attrs
 - [x] Agent Reach: Install, security audit, README update (6/15 channels active)
 - [x] Taiwan Geo Optimization: Multi-city schema, service area pages (台南/屏東/台中/嘉義), enhanced structured data, geo meta tags, SearchAction, founder name fix
+- [x] GEO Phase 1: Research synthesis + implementation (compression, noscript SSR, llms-full.txt, blog GEO signals, freshness fix)
 
 ## Backlog (identified, not yet requested)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
