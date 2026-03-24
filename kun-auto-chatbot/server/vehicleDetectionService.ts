@@ -570,8 +570,7 @@ ${phoneNote}
 - 一段話，不分段不換行，不用句點（。），不用markdown
 - 絕對禁止推薦其他車款`;
   }
-  }
-  
+
   if (detection.type === 'mentioned' && v) {
     return `
 
@@ -589,7 +588,6 @@ ${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation
 2. 只能用上面有的資料，不能編造
 3. 一段話，不分段不換行，不用句點（。），不用markdown
 4. 禁止推薦其他車款`;
-  }
   }
 
   if (detection.type === 'context' && v) {
