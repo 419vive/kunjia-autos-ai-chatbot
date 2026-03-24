@@ -536,85 +536,79 @@ export function buildTargetVehiclePrompt(
   if (detection.type === 'inquiry_button' && v) {
     // === HIGH-INTENT INQUIRY ===
     // Customer clicked the inquiry button — intent is crystal clear.
-    // Strategy: briefly affirm choice + 1-2 highlights, then DIRECTLY ask for phone.
-    const phoneInstruction = customerContact
-      ? `客人已留電話 ${customerContact}，不需要再問電話。直接告訴客人：「我們業務會盡快火速跟您聯繫！」`
-      : `🔴🔴🔴 客人還沒留電話！你必須直接跟客人要電話！🔴🔴🔴
-用這個句式（可微調但核心不變）：
-「${v.model}眼光很好喔！方便留個電話嗎？我們業務會盡快火速與您聯繫，幫您安排看車！📞」
-不要囉嗦介紹一堆規格，客人點按鈕進來就是有興趣了，直接要電話才是正確做法！`;
+    // Strategy: affirm + 1 highlight + 3 engaging questions for the customer to pick from
+    const specs = [
+      v.modelYear ? `${v.modelYear}年` : '',
+      v.displacement || '',
+      v.mileage ? `里程${v.mileage}` : '',
+    ].filter(Boolean).join('、');
+
+    const phoneNote = customerContact
+      ? `（客人已留電話 ${customerContact}，不用再問）`
+      : '';
 
     return `
 
-## ❗❗❗ 最後指令（最高優先級，覆蓋所有其他規則）❗❗❗
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
 
-客人點了「LINE問這台車」按鈕，正在詢問：【${v.brand} ${v.model}】
-動機非常明確 — 客人就是對這台車有興趣！
+客人點了「詢問這台車」按鈕：【${v.brand} ${v.model}】（${specs}，售價${v.priceDisplay || v.price + '萬'}）
+${phoneNote}
 
-${directAnswer ? `客人的問題類型：${questionType}\n直接答案：${directAnswer}\n` : ''}${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}\n` : ''}
-車輛亮點（挑 1-2 個最吸引人的講就好，不要全部列）：
-- 售價：${v.priceDisplay || v.price + '萬'}
-- 年份：${v.modelYear}年
-${v.mileage ? `- 里程：${v.mileage}\n` : ''}${v.displacement ? `- 排氣量：${v.displacement}\n` : ''}${v.features ? `- 配備亮點：${v.features}\n` : ''}${v.description ? `- 描述：${v.description}\n` : ''}
-${phoneInstruction}
+你必須按照以下範本回覆（可以微調用詞但結構不變）：
 
-你的回覆規則（按順序）：
-1. 簡短肯定客人的選擇（一句話，例如：「這台${v.model}眼光很好喔！」）
-2. ${directAnswer ? `回答客人的問題：${directAnswer}` : '挑 1-2 個亮點簡短介紹'}${termExplanation ? `，用白話解釋：${termExplanation}` : ''}
-3. ${customerContact ? '告訴客人我們業務會盡快聯繫' : '🔴 直接要電話 + 說「我們業務會盡快火速與您聯繫」🔴'}
-4. 整段回覆控制在 80 字以內，簡潔有力！不要分段、不要換行，寫成一段話！
-5. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫
-6. 🚫🚫🚫 不要長篇大論介紹規格！客人已經看過卡片了，直接要電話！🚫🚫🚫`;
+範本：「[稱呼]這台${v.model}（${specs}）${v.priceDisplay || v.price + '萬'}眼光不錯！想了解[面向A]、[面向B]、還是[面向C]呢？🚗」
+
+面向選擇（從以下挑3個最適合的）：
+- 車況細節／保養紀錄
+- 預約來店看車試駕
+- 貸款分期方案
+- 實車照片
+- 配備亮點
+- 跟同級車比較
+
+規則：
+- 一段話，不分段不換行，不用句點（。），不用markdown
+- 絕對禁止推薦其他車款`;
+  }
   }
   
   if (detection.type === 'mentioned' && v) {
     return `
 
-## ❗❗❗ 最後指令（最高優先級，覆蓋所有其他規則）❗❗❗
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
 
 客人正在問：【${v.brand} ${v.model}】
 客人的原始訊息：「${userMessage}」
-${directAnswer ? `\n客人的問題類型：${questionType}\n直接答案：${directAnswer}\n` : ''}${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}\n` : ''}
-車輛完整資料：
-- 售價：${v.priceDisplay || v.price + '萬'}
-- 年份：${v.modelYear}年
-- 排氣量：${v.displacement || '未標示'}
-- 變速箱：${v.transmission || '未標示'}
-- 里程：${v.mileage || '未標示'}
-- 顏色：${v.color || '未標示'}
-- 配備：${v.features || '未標示'}
-- 描述：${v.description || '未標示'}
+${directAnswer ? `客人的問題類型：${questionType}，直接答案：${directAnswer}` : ''}
+${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}` : ''}
 
-你的回覆規則：
-1. 直接回答客人的問題${directAnswer ? `：${directAnswer}` : ''}${termExplanation ? `，並用白話解釋：${termExplanation}` : ''}
+車輛資料：售價${v.priceDisplay || v.price + '萬'}、${v.modelYear}年、${v.displacement || ''}、里程${v.mileage || '未標示'}、${v.color || ''}、${v.transmission || ''}
+
+回覆規則：
+1. 直接回答客人的問題${directAnswer ? `（${directAnswer}）` : ''}，然後提供3個不同面向讓客人選擇繼續聊
 2. 只能用上面有的資料，不能編造
-3. 🔴 回答要短（80字以內），一句話回答重點，留空間給真人業務接手
-4. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫`;
+3. 一段話，不分段不換行，不用句點（。），不用markdown
+4. 禁止推薦其他車款`;
+  }
   }
 
   if (detection.type === 'context' && v) {
     return `
 
-## ❗❗❗ 最後指令（最高優先級，覆蓋所有其他規則）❗❗❗
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
 
-客人之前在問【${v.brand} ${v.model}】，現在跟進問了一個問題。
+客人之前在問【${v.brand} ${v.model}】，現在跟進問了一個問題
 客人的原始訊息：「${userMessage}」
-${directAnswer ? `\n客人的問題類型：${questionType}\n直接答案：${directAnswer}\n` : ''}${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}\n` : ''}
-車輛完整資料：
-- 售價：${v.priceDisplay || v.price + '萬'}
-- 年份：${v.modelYear}年
-- 排氣量：${v.displacement || '未標示'}
-- 變速箱：${v.transmission || '未標示'}
-- 里程：${v.mileage || '未標示'}
-- 顏色：${v.color || '未標示'}
-- 配備：${v.features || '未標示'}
-- 描述：${v.description || '未標示'}
+${directAnswer ? `客人的問題類型：${questionType}，直接答案：${directAnswer}` : ''}
+${termExplanation ? `術語解釋（用白話告訴客人）：${termExplanation}` : ''}
 
-你的回覆規則：
-1. 客人之前在問這台 ${v.brand} ${v.model}，現在是跟進問題，直接回答${directAnswer ? `：${directAnswer}` : ''}${termExplanation ? `，並用白話解釋：${termExplanation}` : ''}
+車輛資料：售價${v.priceDisplay || v.price + '萬'}、${v.modelYear}年、${v.displacement || ''}、里程${v.mileage || '未標示'}、${v.color || ''}、${v.transmission || ''}
+
+回覆規則：
+1. 直接回答客人的跟進問題${directAnswer ? `（${directAnswer}）` : ''}，然後提供3個不同面向讓客人選擇繼續聊
 2. 只能用上面有的資料，不能編造
-3. 🔴 回答要短（80字以內），一句話回答重點，留空間給真人業務接手
-4. 🚫🚫🚫 絕對禁止推薦其他車款！客人問的就是這台！🚫🚫🚫`;
+3. 一段話，不分段不換行，不用句點（。），不用markdown
+4. 禁止推薦其他車款`;
   }
   
   if (detection.type === 'fallback') {

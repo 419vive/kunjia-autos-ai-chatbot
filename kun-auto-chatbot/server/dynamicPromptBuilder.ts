@@ -279,12 +279,8 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
   if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
     const v = ctx.detection.vehicle;
     if (ctx.detection.type === 'inquiry_button') {
-      // HIGH-INTENT: customer clicked inquiry button — ask for phone directly!
-      if (ctx.customerContact) {
-        reminders.push(`客人點按鈕問【${v.brand} ${v.model}】→ 簡短肯定 + 告知我們業務會盡快聯繫，不要長篇介紹`);
-      } else {
-        reminders.push(`🔴 客人點按鈕問【${v.brand} ${v.model}】→ 簡短肯定 + 直接要電話 + 說「我們業務會盡快火速與您聯繫」，不要長篇介紹規格！🔴`);
-      }
+      // HIGH-INTENT: customer clicked inquiry button — affirm + 3 engaging questions
+      reminders.push(`客人點按鈕問【${v.brand} ${v.model}】→ 肯定選擇 + 帶出車輛重點（售價、年份、排氣量）+ 提供3個不同面向讓客人選（如車況、預約看車、貸款）`);
     } else {
       reminders.push(`客人正在問【${v.brand} ${v.model}】，你必須針對這台車回答，禁止推薦其他車`);
     }
