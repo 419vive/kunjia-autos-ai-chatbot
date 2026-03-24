@@ -401,7 +401,9 @@ export function detectVehicleFromMessage(
   const normalizedUpper = normalized.toUpperCase();
 
   // ============ Layer 1: "我想詢問這台車" button format ============
-  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\ \S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)萬/);
+  // NOTE: Button text contains specs like "1.7L" which would pollute questionType.
+  // Force questionType to 'general' for inquiry buttons — the customer is inquiring, not asking a specific question.
+  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)萬/);
   if (inquiryMatch) {
     const [, nameStr, yearStr] = inquiryMatch;
     const matchedVehicle = allVehicles.find(v => {
@@ -412,9 +414,9 @@ export function detectVehicleFromMessage(
       return nameStr.includes(v.brand) || nameStr.includes(v.model);
     });
 
-    const directAnswer = matchedVehicle ? getQuestionAnswer(matchedVehicle, questionType) : '';
-    const termExplanation = matchedVehicle ? getTermExplanation(userMessage, matchedVehicle) : '';
-    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType, directAnswer, termExplanation };
+    // inquiry_button always uses 'general' — the button text contains specs (e.g. "1.7L")
+    // that would falsely trigger displacement/price detection
+    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType: 'general', directAnswer: '', termExplanation: '' };
   }
 
   // ============ Layer 2: Brand + Model mention (indexed or linear) ============
