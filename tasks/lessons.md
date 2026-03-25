@@ -9,3 +9,6 @@
 - [2026-03-25] | 正則 `([\d.]+)萬` 不匹配 `37.8 萬`（有空格），導致 inquiry_button 偵測失敗、配對到錯車 | 任何匹配使用者可見文字的正則，都要用 `\s*` 容許空格；priceDisplay 是外部資料（8891），格式不可控
 - [2026-03-25] | ruleBasedReply 回覆風格（emoji、\n\n、多段）與 LLM prompt 規則（一段話、不分段、不用markdown）不一致 | ruleBasedReply 的格式必須與 LLM prompt 規則對齊，避免兩套風格
 - [2026-03-25] | 重複的 brand/model 匹配邏輯散落在 Layer 1 和 Layer 1b | 共用匹配邏輯應抽成 helper function（如 matchVehicleByName），避免改一處漏另一處
+- [2026-03-25] | extractVehicleFromHistory 搜尋所有 role（含 bot）→ 舊 bot 回覆污染新查詢 | 歷史搜尋優先搜 user 訊息，bot 訊息只作 fallback
+- [2026-03-25] | 預約意圖指令太 generic 不帶車輛名 → LLM 從歷史抓錯車 | 當 intent 和 vehicle 同時偵測到，intent 指令必須包含車輛上下文
+- [2026-03-25] | LINE in-app browser 中 CSP scriptSrc:'self' 阻擋 Vite 動態 chunk → 頁面空白 | production CSP 需加 'unsafe-inline' 或 nonce 支援 Vite module preload
