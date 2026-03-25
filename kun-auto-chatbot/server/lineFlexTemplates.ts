@@ -1257,7 +1257,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       type: "action",
       action: {
         type: "message",
-        label: "💬 想和真人聊",
+        label: "💬 想和真人聊這台車",
         text: "我想跟真人業務聊聊這台車",
       },
     });
