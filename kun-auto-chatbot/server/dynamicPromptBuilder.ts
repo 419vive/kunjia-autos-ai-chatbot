@@ -368,18 +368,19 @@ export function buildLLMMessages(
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
 
   // 1. System prompt (with sandwich structure)
-  const systemPrompt = buildDynamicSystemPrompt(ctx);
-  messages.push({ role: "system", content: systemPrompt });
+  let systemPrompt = buildDynamicSystemPrompt(ctx);
 
   // 2. Conversation history (all except the last message)
-  // When inquiry_button detected (user clicked a specific car), truncate history to last 2 messages
+  // When inquiry_button detected (user clicked a specific car), clear history
   // to prevent previous vehicle discussions from contaminating the LLM response.
+  const prefill = buildUserMessagePrefill(ctx);
+  let historyCleared = false;
+
   if (conversationHistory.length > 1) {
     let historyWithoutLast = conversationHistory.slice(0, -1);
     if (ctx.detection.type === 'inquiry_button') {
-      // New vehicle inquiry — clear ALL history to prevent contamination.
-      // Previous conversation about other vehicles is irrelevant and actively harmful.
       historyWithoutLast = [];
+      historyCleared = true;
     }
     for (const m of historyWithoutLast) {
       messages.push({
@@ -387,13 +388,23 @@ export function buildLLMMessages(
         content: m.content,
       });
     }
+  } else {
+    historyCleared = true;
   }
 
-  // 3. System reminder (RIGHT BEFORE the last user message)
-  const prefill = buildUserMessagePrefill(ctx);
+  // 3. System reminder
+  // When history is cleared, merge reminder into system prompt (Gemini doesn't allow
+  // system → system → user without alternating user/assistant in between)
   if (prefill) {
-    messages.push({ role: "system", content: prefill });
+    if (historyCleared) {
+      systemPrompt += '\n\n' + prefill;
+    } else {
+      messages.splice(messages.length, 0, { role: "system", content: prefill });
+    }
   }
+
+  // Insert system prompt at the beginning
+  messages.unshift({ role: "system", content: systemPrompt });
 
   // 4. Last user message
   const lastMessage = conversationHistory[conversationHistory.length - 1];
