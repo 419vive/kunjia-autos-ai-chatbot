@@ -49,8 +49,9 @@ export function generateRuleBasedReply(ctx: RuleContext): string {
   }
 
   // === Priority 1.5: Inquiry button clicked but vehicle not in DB (likely sold) ===
+  // Style aligned with LLM prompt: 一段話、不分段、不用句點
   if (detection.type === "inquiry_button" && !detection.vehicle) {
-    return `${greeting}不好意思，這台車目前已經不在我們的庫存了，可能已經售出囉 😅\n\n不過我們還有很多好車可以看！你可以點下方「看車庫存」瀏覽目前在售的車輛，或告訴我你想找什麼條件的車，我幫你推薦！🚗`;
+    return `${greeting}不好意思這台車目前已經不在庫存了可能已經售出囉！不過我們還有很多好車可以看，你可以點下方「看車庫存」瀏覽目前在售的車輛，或告訴我你想找什麼條件的車我幫你推薦`;
   }
 
   // === Priority 2: Specific vehicle + specific question ===
@@ -128,12 +129,14 @@ export function generateRuleBasedReply(ctx: RuleContext): string {
 // === Builder helpers ===
 
 function buildVehicleInquiryReply(vehicle: any, greeting: string, customerContact: string | null): string {
-  const specs = buildSpecsText(vehicle);
-  const phonePrompt = customerContact
-    ? ""
-    : `\n\n方便留個電話嗎？賴先生可以直接跟你聯繫，更快喔！📞`;
-
-  return `${greeting}你好！👋 你問的這台 ${vehicle.brand} ${vehicle.model} 很不錯的選擇！\n\n${specs}\n\n${greeting}想了解什麼呢？可以問我任何問題，或者直接預約來店裡看實車！🚗${phonePrompt}`;
+  // Style: 一段話、不分段不換行、不用句點、80字以內
+  const v = vehicle;
+  const specs = [
+    v.modelYear ? `${v.modelYear}年` : '',
+    v.displacement || '',
+  ].filter(Boolean).join('');
+  const price = v.priceDisplay || `${v.price}萬`;
+  return `${greeting}你對這台${v.brand} ${v.model}有興趣眼光不錯喔！這台是${specs}售價${price}，想了解車況細節、預約看車試駕還是貸款方案呢`;
 }
 
 function buildVehicleAnswerReply(detection: RuleContext["detection"], greeting: string): string {

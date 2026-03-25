@@ -394,6 +394,36 @@ export function extractVehicleFromHistory(
  * Pass an optional `vehicleIndex` (from `buildVehicleIndex`) to skip
  * repeated O(N) scans. Falls back to linear search if index not provided.
  */
+/**
+ * Shared helper: match a vehicle by name string with 3-tier fallback.
+ * 1. Year + name (if yearStr provided)
+ * 2. Brand AND model (strict)
+ * 3. Brand OR model (loose)
+ */
+function matchVehicleByName(nameStr: string, allVehicles: any[], yearStr?: string): any | null {
+  const nameUpper = nameStr.toUpperCase();
+
+  // Tier 1: year + name
+  if (yearStr) {
+    const byYear = allVehicles.find(v => {
+      const nameMatch = nameStr.includes(v.brand) || nameStr.includes(v.model) || `${v.brand} ${v.model}`.includes(nameStr);
+      return nameMatch && String(v.modelYear) === yearStr;
+    });
+    if (byYear) return byYear;
+  }
+
+  // Tier 2: brand AND model
+  const strict = allVehicles.find(v =>
+    nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase())
+  );
+  if (strict) return strict;
+
+  // Tier 3: brand OR model (last resort)
+  return allVehicles.find(v =>
+    nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase())
+  ) || null;
+}
+
 export function detectVehicleFromMessage(
   userMessage: string,
   allVehicles: any[],
@@ -412,28 +442,14 @@ export function detectVehicleFromMessage(
   // 1. Full format with price: "我想詢問這台車：BMW X1 2014年\n售價：37.8 萬"
   // 2. Short format without price: "我想詢問這台車：BMW X1 2014年" (from photo carousel tap)
   // 3. No-price format: price is "面議"/"電洽" (non-numeric)
-  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)\s*萬/);
+  // Note: price group is non-capturing — we only need name + year for matching
+  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*(?:[\d.]+)\s*萬/);
   const inquiryShortMatch = !inquiryFullMatch && userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
   const inquiryMatch = inquiryFullMatch || inquiryShortMatch;
   if (inquiryMatch) {
     const [, nameStr, yearStr] = inquiryMatch;
-    const matchedVehicle = allVehicles.find(v => {
-      const nameMatch = nameStr.includes(v.brand) || nameStr.includes(v.model) || `${v.brand} ${v.model}`.includes(nameStr);
-      const yearMatch = String(v.modelYear) === yearStr;
-      return nameMatch && yearMatch;
-    }) || allVehicles.find(v => {
-      // Fallback: require BOTH brand AND model to match (not just one)
-      const nameUpper = nameStr.toUpperCase();
-      return nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase());
-    }) || allVehicles.find(v => {
-      // Last resort: brand OR model match
-      const nameUpper = nameStr.toUpperCase();
-      return nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase());
-    });
-
-    // inquiry_button always uses 'general' — the button text contains specs (e.g. "1.7L")
-    // that would falsely trigger displacement/price detection
-    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType: 'general', directAnswer: '', termExplanation: '' };
+    const matchedVehicle = matchVehicleByName(nameStr, allVehicles, yearStr);
+    return { type: 'inquiry_button', vehicle: matchedVehicle, questionType: 'general', directAnswer: '', termExplanation: '' };
   }
 
   // ============ Layer 1b: "我想了解 {brand} {model}" button format ============
@@ -441,12 +457,7 @@ export function detectVehicleFromMessage(
   const learnMatch = userMessage.match(/^我想了解\s+(.+)$/);
   if (learnMatch) {
     const nameStr = learnMatch[1].trim();
-    const nameUpper = nameStr.toUpperCase();
-    const matchedVehicle = allVehicles.find(v =>
-      nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase())
-    ) || allVehicles.find(v =>
-      nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase())
-    );
+    const matchedVehicle = matchVehicleByName(nameStr, allVehicles);
     if (matchedVehicle) {
       return { type: 'inquiry_button', vehicle: matchedVehicle, questionType: 'general', directAnswer: '', termExplanation: '' };
     }
