@@ -407,7 +407,14 @@ export function detectVehicleFromMessage(
   // ============ Layer 1: "我想詢問這台車" button format ============
   // NOTE: Button text contains specs like "1.7L" which would pollute questionType.
   // Force questionType to 'general' for inquiry buttons — the customer is inquiring, not asking a specific question.
-  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)\s*萬/);
+  //
+  // Two regex variants:
+  // 1. Full format with price: "我想詢問這台車：BMW X1 2014年\n售價：37.8 萬"
+  // 2. Short format without price: "我想詢問這台車：BMW X1 2014年" (from photo carousel tap)
+  // 3. No-price format: price is "面議"/"電洽" (non-numeric)
+  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)\s*萬/);
+  const inquiryShortMatch = !inquiryFullMatch && userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
+  const inquiryMatch = inquiryFullMatch || inquiryShortMatch;
   if (inquiryMatch) {
     const [, nameStr, yearStr] = inquiryMatch;
     const matchedVehicle = allVehicles.find(v => {
@@ -415,12 +422,34 @@ export function detectVehicleFromMessage(
       const yearMatch = String(v.modelYear) === yearStr;
       return nameMatch && yearMatch;
     }) || allVehicles.find(v => {
-      return nameStr.includes(v.brand) || nameStr.includes(v.model);
+      // Fallback: require BOTH brand AND model to match (not just one)
+      const nameUpper = nameStr.toUpperCase();
+      return nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase());
+    }) || allVehicles.find(v => {
+      // Last resort: brand OR model match
+      const nameUpper = nameStr.toUpperCase();
+      return nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase());
     });
 
     // inquiry_button always uses 'general' — the button text contains specs (e.g. "1.7L")
     // that would falsely trigger displacement/price detection
     return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType: 'general', directAnswer: '', termExplanation: '' };
+  }
+
+  // ============ Layer 1b: "我想了解 {brand} {model}" button format ============
+  // From photo carousel fallback, quick reply buttons, etc.
+  const learnMatch = userMessage.match(/^我想了解\s+(.+)$/);
+  if (learnMatch) {
+    const nameStr = learnMatch[1].trim();
+    const nameUpper = nameStr.toUpperCase();
+    const matchedVehicle = allVehicles.find(v =>
+      nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase())
+    ) || allVehicles.find(v =>
+      nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase())
+    );
+    if (matchedVehicle) {
+      return { type: 'inquiry_button', vehicle: matchedVehicle, questionType: 'general', directAnswer: '', termExplanation: '' };
+    }
   }
 
   // ============ Layer 2: Brand + Model mention (indexed or linear) ============
