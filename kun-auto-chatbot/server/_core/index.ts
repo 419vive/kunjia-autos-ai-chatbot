@@ -11,6 +11,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startSyncScheduler, sync8891 } from "../sync8891";
+import { deployRichMenu } from "../lineRichMenu";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
 import { trackingRouter } from "../trackingApi";
 import { registerAdminAuthRoutes, seedAdminUser } from "./adminAuth";
@@ -403,6 +404,13 @@ a{color:#C4A265;text-decoration:underline}
       .then(result => console.log("[Sync] Initial sync completed:", result))
       .catch(err => console.error("[Sync] Initial sync failed:", err));
     startSyncScheduler(6);
+    // Auto-deploy Rich Menu on startup to keep it in sync with code
+    const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (lineToken) {
+      deployRichMenu(lineToken)
+        .then(r => console.log(`[RichMenu] Auto-deployed on startup: ${r.richMenuId}`))
+        .catch(err => console.error("[RichMenu] Auto-deploy failed:", err));
+    }
   });
 }
 
