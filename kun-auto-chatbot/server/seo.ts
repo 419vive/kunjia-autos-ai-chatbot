@@ -112,8 +112,6 @@ function autoDealer(): object {
       "https://www.sum.com.tw/storeinfo-71008.php",
       "https://www.twcar.com.tw/store_web/?mode=car&SID=2487",
       "https://www.abccar.com.tw/dealer/53764",
-      "https://www.8891.com.tw/",
-      "https://www.findcar.com.tw/",
     ],
     "logo": {
       "@type": "ImageObject",
