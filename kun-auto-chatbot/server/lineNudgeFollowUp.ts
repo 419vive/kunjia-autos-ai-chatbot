@@ -1,6 +1,6 @@
 import * as db from "./db";
 import { createLogger } from "./_core/logger";
-import { getNameGreeting, detectGenderFromName } from "./lineWebhook";
+import { getNameGreeting, detectGenderFromName } from "./lineHelpers";
 
 const log = createLogger("LINE");
 
@@ -20,7 +20,7 @@ interface ConversationTrack {
 // This is acceptable for short-term nudges (5-8 min window) but means
 // a restart mid-conversation may cause a missed nudge or duplicate.
 // For production scale, consider persisting to DB or Redis.
-const conversationTracker = new Map<string, ConversationTrack>();
+export const conversationTracker = new Map<string, ConversationTrack>();
 
 function detectConversationTopic(message: string): ConversationTrack["lastTopic"] {
   if (/預約|看車|賞車|試駕|到店|什麼時候|幾點|營業/i.test(message)) return "booking";
@@ -76,7 +76,7 @@ async function checkConversationRecovery() {
     // Skip nudge if conversation is in human_handoff mode
     const conv = await db.getConversationBySessionId(`line-${userId}`);
     if (conv?.status === 'human_handoff') {
-      log.info(`Skipping nudge for ${userId.slice(0, 8)}... — in human_handoff mode`);
+      log.info("Skipping nudge — in human_handoff mode", { userId: userId.slice(0, 8) });
       continue;
     }
 
@@ -99,7 +99,7 @@ async function checkConversationRecovery() {
         { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
       );
     } else if (track.lastTopic === "booking") {
-      nudgeText = "看車的時間有想到嗎？不用完全確定，我們電話再聊也可以 😊";
+      nudgeText = "看車的時間有想到嗎？不用完全確定，我們電話再聯也可以 😊";
       quickReplyItems.push(
         { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
         { type: "action", action: { type: "message", label: "🕐 時間彈性", text: "我時間彈性，你們幫我安排" } },
@@ -134,7 +134,7 @@ async function checkConversationRecovery() {
 
       // Mark as nudged
       track.nudgeSent = true;
-      log.info(`Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
+      log.info("Nudge sent", { userId: userId.slice(0, 8), topic: track.lastTopic });
 
       // Save to conversation history
       const sessionId = `line-${userId}`;
@@ -147,14 +147,14 @@ async function checkConversationRecovery() {
         });
       }
     } catch (err) {
-      log.error(`Nudge failed for ${userId.slice(0, 8)}...:`, err);
+      log.error("Nudge failed", { userId: userId.slice(0, 8), err });
     }
   }
 }
 
 // Run conversation recovery check every 60 seconds
 setInterval(() => {
-  checkConversationRecovery().catch((err) => log.error("Recovery check error:", err));
+  checkConversationRecovery().catch((err) => log.error("Recovery check error", err));
 }, 60 * 1000);
 
 // ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
@@ -238,7 +238,7 @@ export async function sendFollowUpMessages() {
         });
 
         followUpCooldown.set(conv.id, now);
-        log.info(`📩 Follow-up sent to conv ${conv.id} (${greeting})`);
+        log.info("Follow-up sent", { conversationId: conv.id, greeting });
 
         // Save follow-up to conversation
         await db.addMessage({
@@ -247,15 +247,15 @@ export async function sendFollowUpMessages() {
           content: `[系統自動跟進] ${followUpText}`,
         });
       } catch (err) {
-        log.error(`Follow-up push failed for conv ${conv.id}:`, err);
+        log.error("Follow-up push failed", { conversationId: conv.id, err });
       }
     }
   } catch (err) {
-    log.error("Follow-up system error:", err);
+    log.error("Follow-up system error", err);
   }
 }
 
 // Run follow-up check every 2 hours
 setInterval(() => {
-  sendFollowUpMessages().catch((err) => log.error("Follow-up interval error:", err));
+  sendFollowUpMessages().catch((err) => log.error("Follow-up interval error", err));
 }, 2 * 60 * 60 * 1000);
