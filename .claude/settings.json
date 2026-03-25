@@ -19,9 +19,6 @@
       "Bash(pnpm:*)",
       "Bash(curl:*)",
       "Bash(wget:*)",
-      "Bash(firebase:*)",
-      "Bash(gcloud:*)",
-      "Bash(docker:*)",
       "Bash(pip:*)",
       "Bash(pip3:*)"
     ],
@@ -34,7 +31,18 @@
       "Bash(fdisk:*)",
       "Bash(kill:*)",
       "Bash(killall:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(npm publish:*)",
+      "Bash(npm unpublish:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker rmi:*)",
+      "Bash(docker system prune:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(gcloud:*)"
     ]
   },
   "plansDirectory": "./tasks",
