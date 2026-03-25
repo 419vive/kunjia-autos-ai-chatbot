@@ -375,6 +375,9 @@ a{color:#C4A265;text-decoration:underline}
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    if ((await import("./env")).ENV.dangerouslySkipPermissions) {
+      console.warn("[Auth] ⚠️  DANGEROUSLY_SKIP_PERMISSIONS is ON — all requests bypass auth as admin");
+    }
     console.log("[Security] All security layers active: Helmet, Rate Limiting, PII Protection");
     // Run initial 8891 sync on startup, then schedule every 6 hours
     try {
