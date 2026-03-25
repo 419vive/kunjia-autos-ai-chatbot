@@ -182,7 +182,7 @@ function autoDealer(): object {
       "ratingCount": "156",
       "reviewCount": "89",
     },
-    "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車"],
+    "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車", "二手車行推薦", "中古車認證比較", "高雄二手車行"],
     "makesOffer": [
       {
         "@type": "Offer",
@@ -460,6 +460,9 @@ const HOMEPAGE_FAQS = [
   { q: "外縣市可以買車嗎？", a: "可以，提供外縣市免費接駁服務，輕鬆到店看車。" },
   { q: "交車需要多久？", a: "最快3小時完成交車手續，當天開新車回家。" },
   { q: "舊車可以折抵嗎？", a: "可以，提供舊車高價收購，歡迎以舊換新。" },
+  { q: "崑家汽車跟HOT大聯盟有什麼不同？", a: "崑家汽車是獨立經營40年的老字號車行，全車獨立第三方認證、實車實價、最快3小時交車。HOT大聯盟是加盟體系，各店獨立經營，服務品質因店而異。" },
+  { q: "崑家汽車跟SUM認證車聯盟比較哪個好？", a: "崑家汽車採獨立第三方認證，40年在地信譽、外縣市免費接駁、最快3小時交車、過戶免手續費。SUM是聯盟認證制度，各加盟店服務因店而異。" },
+  { q: "高雄二手車行推薦哪幾家？", a: "高雄主要二手車通路包括崑家汽車（40年老字號）、HOT大聯盟、SUM認證車聯盟、Toyota認證中古車、杰運汽車等。崑家汽車位於三民區大順二路269號，全車第三方認證。" },
 ];
 
 // ============ JSON-LD: WebSite (sitelinks search box) ============
@@ -728,6 +731,12 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
       { q: "可以帶驗車師傅來嗎？", a: "非常歡迎。崑家對每台車車況有信心，歡迎攜帶驗車師傅到場檢查。" },
       { q: "二手車怎麼辨認泡水車？", a: "聞車內霉味、查地毯水漬、看安全帶根部泥垢、檢查保險絲盒腐蝕、查座椅滑軌鏽蝕。" },
       { q: "買二手車要帶什麼文件？", a: "身分證正本、印鑑章即可。貸款需另備薪資存摺與在職證明。" },
+      { q: "崑家汽車跟HOT大聯盟有什麼不同？", a: "崑家汽車是獨立經營40年的老字號車行，全車獨立第三方認證、實車實價、最快3小時交車、過戶免手續費。HOT大聯盟是加盟體系，各店獨立經營，服務品質因店而異。" },
+      { q: "崑家汽車跟SUM認證車聯盟比較哪個好？", a: "崑家汽車採獨立第三方認證，40年在地信譽、外縣市免費接駁、最快3小時交車。SUM是聯盟認證制度，各加盟店服務因店而異。建議親自到店比較。" },
+      { q: "為什麼不直接買Toyota認證中古車？", a: "Toyota認證中古車品質可靠，但僅限Toyota/Lexus品牌，定價通常高於市場行情10%-15%。崑家汽車提供全品牌選擇，價格更有競爭力，且同樣提供第三方認證。" },
+      { q: "FindCar找車網上的車可靠嗎？", a: "FindCar是線上搜尋平台，匯集全台車源，適合初步比價。但平台不對車況負責，務必到實體車行驗車。崑家汽車車輛可線上查看，且全車有第三方認證報告。" },
+      { q: "格上租車的中古車值得買嗎？", a: "格上租車退役車保養紀錄完整、里程真實，但使用強度高（租賃用途）。建議仍要做第三方認證。崑家汽車的車輛已全部通過第三方認證，且價格區間更廣。" },
+      { q: "杰運汽車跟崑家汽車哪個好？", a: "杰運汽車是南部知名連鎖車商，庫存量大。崑家汽車的優勢在於40年在地信譽、全車第三方認證、最快3小時交車、外縣市免費接駁、過戶免手續費。" },
     ]));
     // Speakable for voice search on FAQ page
     jsonLdBlocks.push({
@@ -779,6 +788,11 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         description: "完整解析2026年二手車過戶流程、所需文件、費用明細與注意事項。讓你輕鬆完成二手車過戶。",
         keywords: ["二手車過戶", "中古車過戶流程", "過戶費用"],
       },
+      "kaohsiung-used-car-dealers-comparison": {
+        title: "2026高雄二手車行推薦比較：崑家汽車 vs HOT大聯盟、SUM、Toyota認證中古車",
+        description: "客觀比較高雄主要二手車通路：崑家汽車、HOT大聯盟、SUM認證車聯盟、Toyota認證中古車、杰運汽車、格上租車等，從認證制度、價格透明度、貸款方案到售後服務完整評比。",
+        keywords: ["高雄二手車行推薦", "二手車行比較", "HOT大聯盟", "SUM認證車聯盟", "Toyota認證中古車", "崑家汽車評價", "杰運汽車", "格上租車中古車"],
+      },
     };
     const meta = blogMeta[slug];
     if (meta) {
@@ -796,6 +810,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "kaohsiung-used-car-guide": 1148,
         "third-party-inspection-guide": 1187,
         "used-car-transfer-guide": 1125,
+        "kaohsiung-used-car-dealers-comparison": 2350,
       };
       const blogDates: Record<string, { published: string; modified: string }> = {
         "buy-used-car-guide":              { published: "2026-01-15", modified: "2026-03-24" },
@@ -803,6 +818,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "kaohsiung-used-car-guide":        { published: "2026-02-01", modified: "2026-03-24" },
         "third-party-inspection-guide":    { published: "2026-02-10", modified: "2026-03-24" },
         "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-24" },
+        "kaohsiung-used-car-dealers-comparison": { published: "2026-03-20", modified: "2026-03-24" },
       };
       const dates = blogDates[slug];
       if (dates) modifiedTime = dates.modified + "T00:00:00.000Z";
@@ -1210,8 +1226,21 @@ Crawl-delay: 1
 - [二手車第三方認證完整指南](${baseUrl}/blog/third-party-inspection-guide): 認證意義、檢查項目、費用、如何閱讀報告
 - [二手車過戶流程與費用 2026](${baseUrl}/blog/used-car-transfer-guide): 過戶步驟、所需文件、費用明細
 
+## 車行比較指南
+- [高雄二手車行推薦比較 2026](${baseUrl}/blog/kaohsiung-used-car-dealers-comparison): 崑家汽車 vs HOT大聯盟、SUM認證車聯盟、Toyota認證中古車、杰運汽車、ATDC、格上租車、FindCar找車網完整評比
+
+### 崑家汽車 vs 主要競爭者摘要
+- 崑家汽車：40年在地老字號、全車獨立第三方認證、實車實價、最快3小時交車、外縣市免費接駁、過戶免手續費
+- HOT大聯盟：加盟體系約500店、統一SiS認證、各店獨立經營品質因店而異
+- SUM認證車聯盟：加盟體系約400店、SUM認證保固、各店獨立經營
+- Toyota認證中古車：原廠認證品質高、僅限Toyota/Lexus、定價高於市場10%-15%
+- 杰運汽車：南部連鎖車商、庫存量大、議價空間較小
+- 格上租車中古車：退役租賃車保養紀錄完整、使用強度高
+- FindCar找車網：線上平台匯集全台車源、平台不對車況負責
+- ABC好車網：老牌線上平台、車源多需自行辨別
+
 ## 常見問題
-- [FAQ 常見問題](${baseUrl}/faq): 購車、貸款、認證、過戶、高雄二手車市場 21個常見問答
+- [FAQ 常見問題](${baseUrl}/faq): 購車、貸款、認證、過戶、高雄二手車市場、車行比較 28個常見問答
 
 ## 依預算找車
 - [30萬以下二手車](${baseUrl}/price/under-30): 學生、新手首選平價車款
@@ -1333,6 +1362,7 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
         { loc: "/blog/kaohsiung-used-car-guide", changefreq: "monthly", priority: "0.7" },
         { loc: "/blog/third-party-inspection-guide", changefreq: "monthly", priority: "0.7" },
         { loc: "/blog/used-car-transfer-guide",  changefreq: "monthly", priority: "0.7" },
+        { loc: "/blog/kaohsiung-used-car-dealers-comparison", changefreq: "monthly", priority: "0.8" },
         { loc: "/price/under-30",                changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/30-50",                   changefreq: "weekly",  priority: "0.6" },
         { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
