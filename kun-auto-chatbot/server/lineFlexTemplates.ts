@@ -1253,6 +1253,14 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
         },
       });
     }
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💬 想和真人聊",
+        text: "我想跟真人業務聊聊這台車",
+      },
+    });
   } else if (ctx.hasAppointment) {
     // Customer wants to visit → show time slots + contact
     items.push({
@@ -1353,96 +1361,6 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   });
 
   return { items };
-}
-
-// ============ CSAT SATISFACTION SURVEY ============
-// Sends a satisfaction survey after conversation winds down
-
-export function buildCsatSurveyMessage(): any {
-  const starButtons = [1, 2, 3, 4, 5].map((score) => ({
-    type: "button",
-    action: {
-      type: "postback",
-      label: "⭐".repeat(score),
-      data: `csat_score=${score}`,
-      displayText: `${"⭐".repeat(score)} ${score}分`,
-    },
-    style: "secondary" as const,
-    height: "sm" as const,
-  }));
-
-  return {
-    type: "flex",
-    altText: "感謝您的諮詢！請幫我們評個分 😊",
-    contents: {
-      type: "bubble",
-      size: "mega",
-      header: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: "感謝您的諮詢！",
-            weight: "bold",
-            size: "lg",
-            color: "#FFFFFF",
-          },
-        ],
-        backgroundColor: "#1B3A5C",
-        paddingAll: "16px",
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        contents: [
-          {
-            type: "text",
-            text: "請幫我們評個分，讓服務更好 😊",
-            size: "sm",
-            color: "#333333",
-            wrap: true,
-            align: "center",
-          },
-          {
-            type: "separator",
-            margin: "md",
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "sm",
-            margin: "md",
-            contents: starButtons,
-          },
-        ],
-        paddingAll: "16px",
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: "有什麼建議也歡迎告訴我們 💬",
-            size: "xs",
-            color: "#AAAAAA",
-            align: "center",
-          },
-          {
-            type: "text",
-            text: "您的回饋是我們進步的動力",
-            size: "xs",
-            color: "#AAAAAA",
-            align: "center",
-            margin: "sm",
-          },
-        ],
-        paddingAll: "12px",
-      },
-    },
-  };
 }
 
 // Backward compat: single message version
