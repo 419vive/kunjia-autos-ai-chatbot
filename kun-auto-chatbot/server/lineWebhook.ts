@@ -10,6 +10,7 @@ import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 import { sanitizeChatMessage } from "./security";
+import { checkAndNotifyOwner, sendHumanHandoffNotification, getAssistantContentForTrigger } from "./lineNotifications";
 import { createLogger } from "./_core/logger";
 
 const log = createLogger("LINE");
@@ -1079,7 +1080,7 @@ async function processLineEvent(
     });
     log.info("Rule-based response", { preview: replyText.substring(0, 100) });
   } else {
-    log.info("LLM mode, calling Claude API...");
+    log.info("LLM mode, calling Claude API");
 
     // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others
     const vehicleKB = buildSmartVehicleKB(allVehicles, detection.vehicle);
@@ -1102,7 +1103,7 @@ async function processLineEvent(
     };
 
     const llmMessages = buildLLMMessages(promptContext, history.map(m => ({ role: m.role, content: m.content })));
-    log.info(`Dynamic prompt: ${llmMessages.length} messages, intents=${customerIntents.join(',') || 'none'}, vehicle=${detection.vehicle?.brand || 'none'}`);
+    log.debug("Dynamic prompt built", { messageCount: llmMessages.length, intents: customerIntents.join(',') || 'none', vehicle: detection.vehicle?.brand || 'none' });
 
     try {
       const response = await invokeLLM({ messages: llmMessages });
@@ -1121,9 +1122,9 @@ async function processLineEvent(
           leadScore: conversation!.leadScore ?? undefined,
         });
       }
-      log.info("LLM response:", replyText.substring(0, 100));
+      log.info("LLM response", { preview: replyText.substring(0, 100) });
     } catch (err) {
-      log.error("LLM error, falling back to rule-based reply:", err);
+      log.error("LLM error, falling back to rule-based reply", err);
       replyText = generateRuleBasedReply({
         userMessage,
         greeting,
@@ -1154,7 +1155,7 @@ async function processLineEvent(
     isHumanHandoff = true;
     // Remove the marker from the customer-facing message
     replyText = replyText.replace(/\s*\[HUMAN_HANDOFF\]\s*/g, '').trim();
-    log.info('🚨 HUMAN HANDOFF triggered! AI cannot answer this question.');
+    log.info("HUMAN HANDOFF triggered — AI cannot answer this question");
   }
   
   // Also detect if AI said "I'll check for you" type phrases (secondary detection)
@@ -1164,14 +1165,14 @@ async function processLineEvent(
     isHumanHandoff = true;
     // Append human handoff message to the reply
     replyText += '\n\n🙋‍♂️ 我已經通知專人了，真人客服馬上就到！';
-    log.info('🚨 HUMAN HANDOFF triggered (uncertainty detected in AI response).');
+    log.info("HUMAN HANDOFF triggered (uncertainty detected in AI response)");
   }
 
   // ============ FRUSTRATION-TRIGGERED EMPATHETIC RESPONSE ============
   if (frustration.frustrated && !isHumanHandoff) {
     isHumanHandoff = true;
     replyText = '不好意思讓你不方便了！我馬上幫你轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
-    log.info('😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
+    log.info("FRUSTRATION HANDOFF triggered", { confidence: frustration.confidence.toFixed(2) });
   }
 
   // Save assistant response
@@ -1204,7 +1205,7 @@ async function processLineEvent(
 
   // Reply via LINE API with contextual quick replies
   try {
-    log.info("Sending reply via LINE API...");
+    log.debug("Sending reply via LINE API");
     const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
       method: "POST",
       headers: {
@@ -1217,9 +1218,9 @@ async function processLineEvent(
       }),
     });
     const replyBody = await replyRes.text();
-    log.info(`Reply API response: ${replyRes.status} ${replyBody}`);
+    log.debug("Reply API response", { status: replyRes.status, body: replyBody });
   } catch (err) {
-    log.error("Reply failed:", err);
+    log.error("Reply failed", err);
   }
 
   // ============ HUMAN HANDOFF: Push notification to owner + staff ============
@@ -1248,7 +1249,7 @@ async function processLineEvent(
           }),
         });
       } catch (err) {
-        log.error("Handoff fallback push failed:", err);
+        log.error("Handoff fallback push failed", err);
       }
     }
     // Mark conversation so AI stops responding until staff resolves it
@@ -1474,7 +1475,7 @@ async function checkAndNotifyOwner(
 ) {
   // Skip notifications during human handoff — staff is already handling this customer
   if (conversation.status === 'human_handoff') {
-    log.info(`Skipping owner notification — conversation ${conversation.id} is in human_handoff mode`);
+    log.info("Skipping owner notification — conversation in human_handoff mode", { conversationId: conversation.id });
     return;
   }
 
@@ -1556,14 +1557,14 @@ async function checkAndNotifyOwner(
             }),
           });
           const pushBody = await pushRes.text();
-          log.info(`Sent Flex notification to [REDACTED] (milestone: ${newLevel}, score: ${score}). Phone: [REDACTED]. Response: ${pushRes.status}`);
+          log.info("Sent Flex notification to [REDACTED]", { milestone: newLevel, score, status: pushRes.status });
         } catch (pushErr) {
-          log.error(`Failed to push notification to [REDACTED]:`, pushErr);
+          log.error("Failed to push notification to [REDACTED]", pushErr);
         }
       }
     }
   } catch (err) {
-    log.error("Owner notification failed:", err);
+    log.error("Owner notification failed", err);
   }
 }
 
@@ -1756,7 +1757,7 @@ async function sendHumanHandoffNotification(
 ): Promise<boolean> {
   const customerName = conversation.customerName || "未知客戶";
   
-  log.info(`🚨 Sending HUMAN HANDOFF notification for customer: ${customerName}`);
+  log.info("Sending HUMAN HANDOFF notification", { customerName });
   
   try {
     // 1. Notify via system notification
@@ -1798,18 +1799,18 @@ async function sendHumanHandoffNotification(
             }),
           });
           const pushBody = await pushRes.text();
-          log.info(`🚨 Human handoff notification sent to [REDACTED]. Response: ${pushRes.status}`);
+          log.info("Human handoff notification sent to [REDACTED]", { status: pushRes.status });
         } catch (pushErr) {
-          log.error(`Failed to send human handoff notification:`, pushErr);
+          log.error("Failed to send human handoff notification", pushErr);
         }
       }
       return true;
     } else {
-      log.warn('No recipients configured for human handoff notification!');
+      log.warn("No recipients configured for human handoff notification");
       return false;
     }
   } catch (err) {
-    log.error("Human handoff notification failed:", err);
+    log.error("Human handoff notification failed", err);
     return false;
   }
 }
@@ -1886,7 +1887,7 @@ async function checkConversationRecovery() {
     // Skip nudge if conversation is in human_handoff mode
     const conv = await db.getConversationBySessionId(`line-${userId}`);
     if (conv?.status === 'human_handoff') {
-      log.info(`Skipping nudge for ${userId.slice(0, 8)}... — in human_handoff mode`);
+      log.info("Skipping nudge — in human_handoff mode", { userId: userId.slice(0, 8) });
       continue;
     }
 
@@ -1944,7 +1945,7 @@ async function checkConversationRecovery() {
 
       // Mark as nudged
       track.nudgeSent = true;
-      log.info(`Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
+      log.info("Nudge sent", { userId: userId.slice(0, 8), topic: track.lastTopic });
 
       // Save to conversation history
       const sessionId = `line-${userId}`;
@@ -1957,14 +1958,14 @@ async function checkConversationRecovery() {
         });
       }
     } catch (err) {
-      log.error(`Nudge failed for ${userId.slice(0, 8)}...:`, err);
+      log.error("Nudge failed", { userId: userId.slice(0, 8), err });
     }
   }
 }
 
 // Run conversation recovery check every 60 seconds
 setInterval(() => {
-  checkConversationRecovery().catch((err) => log.error("Recovery check error:", err));
+  checkConversationRecovery().catch((err) => log.error("Recovery check error", err));
 }, 60 * 1000);
 
 // ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
@@ -2048,7 +2049,7 @@ export async function sendFollowUpMessages() {
         });
 
         followUpCooldown.set(conv.id, now);
-        log.info(`📩 Follow-up sent to conv ${conv.id} (${greeting})`);
+        log.info("Follow-up sent", { conversationId: conv.id, greeting });
 
         // Save follow-up to conversation
         await db.addMessage({
@@ -2057,17 +2058,17 @@ export async function sendFollowUpMessages() {
           content: `[系統自動跟進] ${followUpText}`,
         });
       } catch (err) {
-        log.error(`Follow-up push failed for conv ${conv.id}:`, err);
+        log.error("Follow-up push failed", { conversationId: conv.id, err });
       }
     }
   } catch (err) {
-    log.error("Follow-up system error:", err);
+    log.error("Follow-up system error", err);
   }
 }
 
 // Run follow-up check every 2 hours
 setInterval(() => {
-  sendFollowUpMessages().catch((err) => log.error("Follow-up interval error:", err));
+  sendFollowUpMessages().catch((err) => log.error("Follow-up interval error", err));
 }, 2 * 60 * 60 * 1000);
 
 export { lineRouter };

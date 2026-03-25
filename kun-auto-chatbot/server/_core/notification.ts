@@ -50,7 +50,7 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Logs owner notification to console.
+ * Logs owner notification via structured logger.
  * LINE push notifications are handled separately in lineWebhook.ts and routers.ts.
  */
 export async function notifyOwner(
