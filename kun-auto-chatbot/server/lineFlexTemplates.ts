@@ -1218,41 +1218,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   const items: any[] = [];
 
   if (ctx.hasVehicle && ctx.vehicleName) {
-    // Customer is asking about a specific vehicle → show booking-focused actions
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "📅 預約看車",
-        text: "我想預約看車",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "💰 問貸款",
-        text: "我想了解貸款方案",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "uri",
-        label: "📞 直接撥打",
-        uri: "tel:0936812818",
-      },
-    });
-    if (ctx.vehicleExternalId) {
-      items.push({
-        type: "action",
-        action: {
-          type: "message",
-          label: "📸 看照片",
-          text: `看照片 ${ctx.vehicleExternalId}`,
-        },
-      });
-    }
+    // Customer is asking about a specific vehicle → only show human handoff option
     items.push({
       type: "action",
       action: {
