@@ -279,7 +279,9 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
   const reminders: string[] = [];
 
   // Vehicle-specific reminder
-  if (ctx.detection.type === 'context_missing') {
+  if (ctx.detection.type === 'inquiry_button' && !ctx.detection.vehicle) {
+    reminders.push(`客人點了詢問按鈕但這台車不在庫存中（可能已售出）→ 告知已售出，問客人要不要看其他車，絕對不要回覆其他車的資訊`);
+  } else if (ctx.detection.type === 'context_missing') {
     reminders.push(`客人似乎在問跟進問題但不確定是哪台車 → 自然地問「你問的是哪一台呢？」並列出在售車款讓客人選`);
   } else if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
     const v = ctx.detection.vehicle;

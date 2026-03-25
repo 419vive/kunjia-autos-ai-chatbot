@@ -48,6 +48,11 @@ export function generateRuleBasedReply(ctx: RuleContext): string {
     return buildVehicleInquiryReply(detection.vehicle, greeting, customerContact);
   }
 
+  // === Priority 1.5: Inquiry button clicked but vehicle not in DB (likely sold) ===
+  if (detection.type === "inquiry_button" && !detection.vehicle) {
+    return `${greeting}不好意思，這台車目前已經不在我們的庫存了，可能已經售出囉 😅\n\n不過我們還有很多好車可以看！你可以點下方「看車庫存」瀏覽目前在售的車輛，或告訴我你想找什麼條件的車，我幫你推薦！🚗`;
+  }
+
   // === Priority 2: Specific vehicle + specific question ===
   if (detection.vehicle && detection.questionType !== "general") {
     return buildVehicleAnswerReply(detection, greeting);

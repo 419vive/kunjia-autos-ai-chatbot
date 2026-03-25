@@ -407,7 +407,7 @@ export function detectVehicleFromMessage(
   // ============ Layer 1: "我想詢問這台車" button format ============
   // NOTE: Button text contains specs like "1.7L" which would pollute questionType.
   // Force questionType to 'general' for inquiry buttons — the customer is inquiring, not asking a specific question.
-  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)萬/);
+  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)\s*萬/);
   if (inquiryMatch) {
     const [, nameStr, yearStr] = inquiryMatch;
     const matchedVehicle = allVehicles.find(v => {
@@ -599,6 +599,24 @@ ${phoneNote}
 規則：
 - 一段話，不分段不換行，不用句點（。），不用markdown
 - 絕對禁止推薦其他車款`;
+  }
+
+  if (detection.type === 'inquiry_button' && !v) {
+    // Customer clicked inquiry button but the vehicle is not in our DB (e.g. already sold)
+    // Extract car info directly from the user's message to acknowledge correctly
+    return `
+
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
+
+客人點了「詢問這台車」按鈕，但這台車目前不在我們的庫存中（可能已售出）
+客人的原始訊息：「${userMessage}」
+
+回覆規則：
+1. 先告訴客人這台車目前已經不在庫存了（可能已售出）
+2. 問客人有沒有想找類似的車款，或有什麼其他條件
+3. 可以建議看看目前的在售車輛（「看車庫存」）
+4. 一段話，不分段不換行，不用句點（。），不用markdown
+5. 絕對不要回覆其他車的資訊，除非客人主動問`;
   }
 
   if (detection.type === 'mentioned' && v) {
