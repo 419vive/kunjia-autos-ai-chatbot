@@ -283,6 +283,8 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     reminders.push(`客人點了詢問按鈕但這台車不在庫存中（可能已售出）→ 告知已售出，問客人要不要看其他車，絕對不要回覆其他車的資訊`);
   } else if (ctx.detection.type === 'context_missing') {
     reminders.push(`客人似乎在問跟進問題但不確定是哪台車 → 自然地問「你問的是哪一台呢？」並列出在售車款讓客人選`);
+  } else if (ctx.detection.type === 'fallback') {
+    reminders.push(`無法判斷客人意圖 → 簡短回應並引導客人瀏覽庫存，例如「你可以點下方選單的看車庫存瀏覽目前在售的車款，或告訴我你想找什麼車！」`);
   } else if (ctx.detection.type !== 'none' && ctx.detection.vehicle) {
     const v = ctx.detection.vehicle;
     if (ctx.detection.type === 'inquiry_button') {
@@ -299,7 +301,7 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     if (ctx.customerContact) {
       reminders.push('客人要預約看車 → 告知我們業務會盡快火速聯繫安排看車，不要推薦車款');
     } else {
-      reminders.push('🔴 客人要預約看車 → 直接要電話 + 說「我們業務會盡快火速與您聯繫」，不要推薦車款！🔴');
+      reminders.push('🔴 客人要預約看車 → 直接要電話 + 說「我們業務會盡快火速與你聯繫」，不要推薦車款！🔴');
     }
   }
   if (ctx.intents.includes('address')) {
@@ -336,13 +338,16 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     reminders.push('客人問貸款 → 轉真人，加入 [HUMAN_HANDOFF]');
   }
 
-  // Multi-question reminder
-  if (reminders.length >= 2) {
-    reminders.unshift(`⚠️ 客人同時問了 ${reminders.length} 個問題，每個都必須回答！`);
-  }
+  // Count intent-related reminders before adding format reminders
+  const intentReminderCount = reminders.length;
 
   // Universal format reminder — ALWAYS added
-  reminders.push('🔴 格式規則：80字以內、不分段不換行、不用句點（。）、不用markdown（**粗體**、列表、---）、不用「您」用「你」、用名字稱呼客人！');
+  reminders.push('🔴 格式規則：簡潔回覆、不分段不換行、不用句點（。）、不用markdown（**粗體**、列表、---）、不用「您」用「你」、用名字稱呼客人！');
+
+  // Multi-question reminder (based on intent reminders only)
+  if (intentReminderCount >= 2) {
+    reminders.unshift(`⚠️ 客人同時問了 ${intentReminderCount} 個問題，每個都必須回答！`);
+  }
   if (!ctx.isFirstMessage) {
     reminders.push('🔴 不是第一次對話！禁止說「你好」「歡迎」！直接回應內容！');
   }

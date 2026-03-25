@@ -619,7 +619,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   // ---------- Chat page ----------
   else if (path === "/chat") {
     title = `線上諮詢｜${SITE_NAME}｜AI智慧客服`;
-    description = `崑家汽車AI智慧客服，24小時線上為您解答二手車相關問題。即時諮詢車況、價格、貸款方案。`;
+    description = `崑家汽車AI智慧客服，24小時線上為你解答二手車相關問題。即時諮詢車況、價格、貸款方案。`;
     jsonLdBlocks.push(breadcrumb([
       { name: "首頁", url: baseUrl },
       { name: "線上諮詢", url: canonicalUrl },
@@ -714,7 +714,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   // ---------- FAQ page ----------
   else if (path === "/faq") {
     title = `常見問題 FAQ｜${SITE_NAME}｜高雄二手車`;
-    description = `買二手車常見問題一次解答：購車、貸款、認證、過戶、高雄二手車市場資訊。崑家汽車40年經驗為您解答。`;
+    description = `買二手車常見問題一次解答：購車、貸款、認證、過戶、高雄二手車市場資訊。崑家汽車40年經驗為你解答。`;
     jsonLdBlocks.push(breadcrumb([
       { name: "首頁", url: baseUrl },
       { name: "常見問題", url: canonicalUrl },
@@ -899,7 +899,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         faqs: [
           { q: "台南買二手車推薦哪裡？", a: "推薦高雄崑家汽車，在地40年老字號，從台南開車40分鐘即達。提供台南免費接駁服務，全車第三方認證。" },
           { q: "台南到崑家汽車怎麼去？", a: "國道1號或國道3號南下，約40分鐘車程。也可預約免費接駁，專人到台南市區接送。" },
-          { q: "崑家汽車有提供台南送車服務嗎？", a: "有，購車後可安排送車到台南，讓您輕鬆交車不用跑高雄。" },
+          { q: "崑家汽車有提供台南送車服務嗎？", a: "有，購車後可安排送車到台南，讓你輕鬆交車不用跑高雄。" },
           { q: "台南二手車貸款怎麼辦？", a: "崑家汽車合作多家銀行，台南鄉親一樣享有超強貸款方案，最快一天核准。" },
         ],
       },
