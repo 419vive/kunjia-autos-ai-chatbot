@@ -17,7 +17,12 @@
 - [x] Speed optimization: gzip compression, static asset caching, DB connection pooling, Vite chunk splitting, non-blocking startup sync
 - [x] Install claude-hud plugin (v0.0.11) — real-time HUD statusline with tools, agents, todos, git, context tracking
 
+- [x] QA CRITICAL C1-C10 + MODERATE M1-M12 修復 (PR #33)
+- [x] QA LOW L1-L16 修復 (15/16 完成, L14 deferred)
+- [x] Enable auto mode permissions (PR #34)
+
 ## Backlog (identified, not yet requested)
+- [ ] L14: Web Chat nudge/follow-up system (requires push architecture)
 - [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
 - [ ] Split routers.ts (1,277 lines) into smaller modules
 - [ ] Replace 170+ console statements with structured logging
