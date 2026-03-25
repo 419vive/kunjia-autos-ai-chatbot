@@ -530,7 +530,7 @@ export const appRouter = router({
 
         // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
         const customerIntentsWeb = detectCustomerIntents(input.message);
-        const intentInstructionsWeb = buildIntentInstructions(customerIntentsWeb, input.message, '人客');
+        const intentInstructionsWeb = buildIntentInstructions(customerIntentsWeb, input.message, '人客', conversation!.customerContact, detectionWeb.vehicle);
         console.log(`[WebChat IntentDetection] intents=${customerIntentsWeb.join(', ') || 'none'}`);
 
         // ============ RULE-BASED MODE (skip LLM if enabled) ============
