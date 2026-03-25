@@ -4,7 +4,6 @@ import { createServer } from "http";
 import net from "net";
 import compression from "compression";
 import helmet from "helmet";
-import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { lineRouter } from "../lineWebhook";

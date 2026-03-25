@@ -274,7 +274,7 @@ describe('vehicleDetectionService', () => {
       // Should include the vehicle name
       expect(prompt).toContain('BMW X1');
       // Should prohibit recommending other vehicles
-      expect(prompt).toContain('絕對禁止推薦其他車款');
+      expect(prompt).toContain('禁止推薦其他車款');
     });
 
     it('should include vehicle details for inquiry_button type', () => {
@@ -300,7 +300,7 @@ describe('vehicleDetectionService', () => {
       const detection = detectVehicleFromMessage('BMW X1 多少錢', mockVehicles);
       const prompt = buildTargetVehiclePrompt(detection, 'BMW X1 多少錢');
       expect(prompt).toContain('最後指令');
-      expect(prompt).toContain('覆蓋所有其他規則');
+      expect(prompt).toContain('最高優先級');
     });
   });
 
