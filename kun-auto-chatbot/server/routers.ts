@@ -475,14 +475,20 @@ export const appRouter = router({
         }
         
         const convId = conversation!.id;
-        
+
+        // If conversation is in human_handoff mode, save message but don't generate AI response
+        if (conversation!.status === 'human_handoff') {
+          await db.addMessage({ conversationId: convId, role: "user", content: sanitizedMessage });
+          return { reply: "目前由真人業務為你服務中，請稍候！", isHumanHandoff: true };
+        }
+
         // Save user message (sanitized)
         await db.addMessage({
           conversationId: convId,
           role: "user",
           content: sanitizedMessage,
         });
-        
+
         // Auto-detect phone number from message
         const detectedPhone = detectPhoneNumber(sanitizedMessage);
         if (detectedPhone && !conversation!.customerContact) {
@@ -832,8 +838,9 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
             console.log('[Chat] \ud83d\udea8 HUMAN HANDOFF triggered (uncertainty detected in web chatbot).');
           }
           
-          // If human handoff triggered, send LINE push to owner + staff
+          // If human handoff triggered, update DB status and send LINE push to owner + staff
           if (isHumanHandoff) {
+            await db.updateConversation(conversation!.id, { status: 'human_handoff' });
             try {
               const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
               const ownerUserId = process.env.LINE_OWNER_USER_ID;

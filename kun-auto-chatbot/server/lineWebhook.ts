@@ -440,9 +440,10 @@ async function processLineEvent(
           const messages = await db.getMessagesByConversation(conversation.id, 20);
           // Find last vehicle they asked about
           const vehicleRegex = /(?:詢問|看|了解|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/;
+          const inquiryRegex = /我想詢問這台車[：:]\s*\n?\s*([A-Za-z][\w\s-]+?)\s+\d{4}年/;
           let lastVehicle: string | null = null;
           for (const msg of messages.reverse()) {
-            const match = msg.content.match(vehicleRegex);
+            const match = msg.content.match(vehicleRegex) || msg.content.match(inquiryRegex);
             if (match) { lastVehicle = match[1]; break; }
           }
 
@@ -846,6 +847,17 @@ async function processLineEvent(
 
       const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
       await checkAndNotifyOwner(conversation!, userMessage, channelAccessToken, ownerUserId, phoneJustFound);
+      return;
+    } else {
+      // Vehicle not found — reply with a helpful message instead of falling through
+      await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+        body: JSON.stringify({
+          replyToken,
+          messages: [{ type: "text", text: "不好意思，這台車的照片目前無法顯示，可能已經下架囉！你可以點下方「看車庫存」看看其他好車" }],
+        }),
+      });
       return;
     }
   }
@@ -1714,7 +1726,7 @@ function detectConversationTopic(message: string): ConversationTrack["lastTopic"
 }
 
 function detectVehicleNameFromMessage(message: string): string | undefined {
-  const match = message.match(/(Toyota|Honda|Ford|BMW|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|Mazda|Nissan|Lexus|Benz|Mercedes|Audi|Volvo)\s*([\w\-]+)/i);
+  const match = message.match(/(Toyota|Honda|Ford|BMW|Kia|Hyundai|Suzuki|Mitsubishi|Volkswagen|VW|Mazda|Nissan|Lexus|Benz|Mercedes|Audi|Volvo|豐田|本田|福特|現代|鈴木|三菱|福斯|馬自達|日產|賓士|奧迪|富豪)\s*([\w\-\u4e00-\u9fff]+)/i);
   if (match) return `${match[1]} ${match[2]}`;
   return undefined;
 }
@@ -1756,6 +1768,13 @@ async function checkConversationRecovery() {
     if (track.nudgeSent) continue;
     if (track.messageCount < 2) continue;
     if (elapsed < FIVE_MIN || elapsed > EIGHT_MIN) continue;
+
+    // Skip nudge if conversation is in human_handoff mode
+    const conv = await db.getConversationBySessionId(`line-${userId}`);
+    if (conv?.status === 'human_handoff') {
+      console.log(`[LINE] Skipping nudge for ${userId.slice(0, 8)}... — in human_handoff mode`);
+      continue;
+    }
 
     // Build contextual nudge message
     let nudgeText: string;
@@ -1854,14 +1873,21 @@ export async function sendFollowUpMessages() {
     for (const conv of allConvs) {
       if (!conv.sessionId?.startsWith("line-")) continue;
       if (conv.leadStatus === "converted" || conv.leadStatus === "lost") continue;
+      if (conv.status === 'human_handoff') continue;
       if ((conv.leadScore || 0) < 30) continue; // Only follow up engaged users
 
-      // Check cooldown (max once per 48h)
+      // Check cooldown (max once per 48h) — also check DB to survive restarts
       const lastFollowUp = followUpCooldown.get(conv.id) || 0;
       if (now - lastFollowUp < 2 * ONE_DAY) continue;
 
       // Check last message time
       const messages = await db.getMessagesByConversation(conv.id, 5);
+
+      // DB-based cooldown: if last assistant message was within 48h, skip (survives restart)
+      const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+      if (lastAssistantMsg && Date.now() - new Date(lastAssistantMsg.createdAt).getTime() < 48 * 60 * 60 * 1000) {
+        continue; // Already followed up recently
+      }
       if (messages.length === 0) continue;
       const lastMsg = messages[messages.length - 1];
       const lastMsgTime = new Date(lastMsg.createdAt || 0).getTime();
