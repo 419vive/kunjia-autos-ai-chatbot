@@ -115,9 +115,23 @@ export default function LoanInquiry() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Validate phone: Taiwan mobile (09xxxxxxxx) or LINE ID (any non-empty string)
+  const isPhoneValid = (phone: string): boolean => {
+    const cleaned = phone.replace(/[\s\-]/g, "");
+    // Accept Taiwan mobile format or LINE ID (at least 3 chars)
+    return /^09\d{8}$/.test(cleaned) || cleaned.length >= 3;
+  };
+
+  const [phoneError, setPhoneError] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.customerName || !form.phone) return;
+    if (!isPhoneValid(form.phone)) {
+      setPhoneError("請輸入正確的手機號碼（09開頭10碼）或 LINE ID");
+      return;
+    }
+    setPhoneError("");
     mutation.mutate({
       vehicleId: vehicleId ? Number(vehicleId) : undefined,
       vehicleName: vehicleName || undefined,
@@ -252,8 +266,9 @@ export default function LoanInquiry() {
               value={form.phone}
               onChange={(e) => update("phone")(e.target.value)}
               placeholder="手機號碼或 LINE ID"
-              className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              className={`mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors ${phoneError ? "border-red-500" : ""}`}
             />
+            {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
           </div>
 
           {/* Gender */}

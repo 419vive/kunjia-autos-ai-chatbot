@@ -389,7 +389,7 @@ export function buildPhotoCarousel(vehicle: Vehicle): any[] {
  * Returns the externalId or null.
  */
 export function detectPhotoTrigger(message: string): string | null {
-  const match = message.match(/^看照片\s+(\d+)$/);
+  const match = message.match(/^看照片\s+(\S+)$/);
   return match ? match[1] : null;
 }
 
@@ -1218,14 +1218,18 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
   const items: any[] = [];
 
   if (ctx.hasVehicle && ctx.vehicleName) {
-    // Customer is asking about a specific vehicle → only show human handoff option
+    // Customer asking about a specific vehicle → show relevant engagement options
     items.push({
       type: "action",
-      action: {
-        type: "message",
-        label: "💬 想和真人聊這台車",
-        text: "我想跟真人業務聊聊這台車",
-      },
+      action: { type: "message", label: "📅 預約看這台車", text: `我想預約去看 ${ctx.vehicleName}` },
+    });
+    items.push({
+      type: "action",
+      action: { type: "message", label: "💰 算貸款", text: `${ctx.vehicleName} 可以貸款嗎？月付大概多少？` },
+    });
+    items.push({
+      type: "action",
+      action: { type: "message", label: "💬 想和真人聊這台車", text: "我想跟真人業務聊聊這台車" },
     });
   } else if (ctx.hasAppointment) {
     // Customer wants to visit → show time slots + contact
@@ -1298,7 +1302,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       const lastCar = ctx.previousVehicles[0];
       items.push({
         type: "action",
-        action: { type: "message", label: `🔙 再看${lastCar.slice(0, 6)}`, text: `我想了解 ${lastCar}` },
+        action: { type: "message", label: `🔙 再看${lastCar.slice(0, 13)}`, text: `我想了解 ${lastCar}` },
       });
     } else {
       items.push({
@@ -1308,23 +1312,17 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
     }
   }
 
-  // Always add FAQ at the end (pick top 2 most useful)
-  items.push({
-    type: "action",
-    action: {
-      type: "message",
-      label: "🛡️ 車況保障？",
-      text: FAQ_ITEMS[0].triggerText,
-    },
-  });
-  items.push({
-    type: "action",
-    action: {
-      type: "message",
-      label: "🔄 舊車換新",
-      text: FAQ_ITEMS[4].triggerText,
-    },
-  });
+  // Add FAQ only in general conversation (not when asking about a specific vehicle or booking)
+  if (!ctx.hasVehicle && !ctx.hasAppointment) {
+    items.push({
+      type: "action",
+      action: { type: "message", label: "🛡️ 車況保障？", text: FAQ_ITEMS[0].triggerText },
+    });
+    items.push({
+      type: "action",
+      action: { type: "message", label: "🔄 舊車換新", text: FAQ_ITEMS[4].triggerText },
+    });
+  }
 
   return { items };
 }
