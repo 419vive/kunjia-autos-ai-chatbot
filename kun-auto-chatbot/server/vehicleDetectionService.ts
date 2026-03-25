@@ -845,7 +845,8 @@ export function buildIntentInstructions(
   intents: CustomerIntent[],
   userMessage: string,
   greeting: string,
-  customerContact?: string | null
+  customerContact?: string | null,
+  detectedVehicle?: { brand: string; model: string } | null
 ): string {
   if (intents.length === 0) {
     // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
@@ -862,6 +863,7 @@ export function buildIntentInstructions(
   
   // ============ APPOINTMENT INTENT ============
   if (intents.includes('appointment')) {
+    const vehicleCtx = detectedVehicle ? `\n【⭐ 客人要預約看的車：${detectedVehicle.brand} ${detectedVehicle.model}】只能談這台車！` : '';
     // Detect time period from message
     const lower = userMessage.toLowerCase();
     
@@ -873,7 +875,7 @@ export function buildIntentInstructions(
       const phonePart = customerContact
         ? `客人已留電話 ${customerContact}，告知我們業務會盡快聯繫。`
         : `🔴 客人還沒留電話！確認時間後直接要電話：「方便留個電話嗎？我們業務會盡快火速與你聯繫確認！📞」`;
-      instructions.push(`🔴 預約指令：客人提到了具體時間，直接確認該時間。
+      instructions.push(`🔴 預約指令：客人提到了具體時間，直接確認該時間。${vehicleCtx}
 ${phonePart}
 告知「我們業務會盡快火速與你聯繫，幫你安排看車！」
 🚫 不要推薦車款！客人要的是預約，不是推薦！`);
@@ -887,7 +889,7 @@ ${phonePart}
 不要囉嗦推薦車款或給時段選項，客人要來看車就是有意願了，直接要電話才是正確做法！`;
       
       instructions.push(`🔴 預約看車指令（最高優先級！）：
-客人想預約看車！動機明確！你必須：
+客人想預約看車！動機明確！${vehicleCtx}你必須：
 1. 簡短肯定客人的決定（一句話）
 2. ${phoneInstruction}
 3. 回覆控制在 60 字以內，簡潔有力！

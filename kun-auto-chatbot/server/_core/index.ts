@@ -183,7 +183,7 @@ async function startServer() {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: process.env.NODE_ENV === "production"
-          ? ["'self'"]
+          ? ["'self'", "'unsafe-inline'"] // unsafe-inline needed for Vite's module preload in LINE in-app browser
           : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-eval only for Vite HMR in dev
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],

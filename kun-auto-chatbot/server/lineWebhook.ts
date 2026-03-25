@@ -1083,7 +1083,7 @@ async function processLineEvent(
 
     // Build target vehicle prompt (will be placed at the END of system prompt for recency bias)
     const targetVehiclePrompt = buildTargetVehiclePrompt(detection, userMessage, conversation!.customerContact);
-    const intentInstructions = buildIntentInstructions(customerIntents, userMessage, greeting, conversation!.customerContact);
+    const intentInstructions = buildIntentInstructions(customerIntents, userMessage, greeting, conversation!.customerContact, detection.vehicle);
 
     const promptContext: PromptContext = {
       greeting,
