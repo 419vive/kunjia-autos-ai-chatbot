@@ -9,6 +9,7 @@ import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
+import { sanitizeChatMessage } from "./security";
 
 // ============ PHONE NUMBER DETECTION ============
 
@@ -457,7 +458,7 @@ async function processLineEvent(
                 { type: "action", action: { type: "message", label: "🔍 看最新車輛", text: "我想看車，有什麼車可以推薦？" } },
                 { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
                 { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
-                ...(lastVehicle ? [{ type: "action" as const, action: { type: "message" as const, label: `🚗 再看${lastVehicle.slice(0, 6)}`, text: `我想了解 ${lastVehicle}` } }] : []),
+                ...(lastVehicle ? [{ type: "action" as const, action: { type: "message" as const, label: `🚗 再看${lastVehicle.slice(0, 13)}`, text: `我想了解 ${lastVehicle}` } }] : []),
                 { type: "action", action: { type: "message", label: "💬 隨便問問", text: "你好，我想了解崑家汽車" } },
               ],
             }},
@@ -638,16 +639,48 @@ async function processLineEvent(
 
   // ============ POSTBACK EVENT ============
   if (event.type === "postback") {
+    const postbackData = event.postback?.data || "";
+    console.log(`[LINE] Postback received: ${postbackData} from user ${event.source?.userId}`);
+    // Parse postback data and handle known actions
+    const params = new URLSearchParams(postbackData);
+    const action = params.get("action");
+    if (action) {
+      console.log(`[LINE] Postback action: ${action}`);
+    }
     return;
   }
 
   if (event.type !== "message" || event.message?.type !== "text") {
-    console.log(`[LINE] Skipping event type: ${event.type}, message type: ${event.message?.type}`);
+    const msgType = event.message?.type;
+    console.log(`[LINE] Non-text message: ${event.type}, type: ${msgType}`);
+    // Respond to non-text messages (sticker, location, video, audio) instead of silently discarding
+    if (event.type === "message" && msgType && ["sticker", "location", "video", "audio", "file"].includes(msgType)) {
+      const replyToken = event.replyToken;
+      const typeResponses: Record<string, string> = {
+        sticker: "收到你的貼圖了！有什麼車的問題想問的嗎？阿家隨時在 😊",
+        location: "收到你的位置了！我們崑家汽車在高雄市，地址是高雄市鳳山區建國路三段47號，歡迎來店賞車！",
+        video: "收到你的影片了！如果是想問某台車的資訊，可以直接告訴阿家車款名稱喔！",
+        audio: "收到你的語音了！目前阿家還沒辦法聽語音，麻煩用文字告訴我你想了解什麼車 🙏",
+        file: "收到你的檔案了！如果有什麼車的問題，歡迎直接用文字問阿家喔！",
+      };
+      const responseText = typeResponses[msgType] || "收到！有什麼車的問題歡迎直接問阿家 😊";
+      if (replyToken) {
+        try {
+          await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+            body: JSON.stringify({ replyToken, messages: [{ type: "text", text: responseText }] }),
+          });
+        } catch (err) {
+          console.error("[LINE] Non-text reply failed:", err);
+        }
+      }
+    }
     return;
   }
 
   const userId = event.source?.userId;
-  const userMessage = event.message.text;
+  const userMessage = sanitizeChatMessage(event.message.text);
   const replyToken = event.replyToken;
   const messageId = event.message?.id;
 
@@ -1097,6 +1130,7 @@ async function processLineEvent(
   replyText = replyText.replace(/\*\*/g, '');
   replyText = replyText.replace(/^\s*[-*]\s+/gm, '');
   replyText = replyText.replace(/^---+$/gm, '');
+  replyText = replyText.replace(/^#+\s+/gm, '');            // Remove ## heading markdown
   // Remove periods (unnatural in LINE chat)
   replyText = replyText.replace(/。/g, '');
   // Collapse all newlines into spaces for single-line output (不分段 rule)
@@ -1464,11 +1498,11 @@ async function checkAndNotifyOwner(
   const content = `客戶：${conversation.customerName || "未知"}\n渠道：LINE\n電話：${conversation.customerContact || "未提供"}\n訊息：${userMessage}\n\n${score >= 120 ? "⚠️ 此客戶購買意願極高，請立刻聯繫！" : "請盡快聯繫！"}`;
 
   try {
-    await notifyOwner({ title, content });
-    
-    // Update notifiedOwner to current milestone level
+    // Update DB BEFORE sending notification to prevent duplicates on crash
     const newLevel = Math.max(currentNotifiedLevel, newMilestoneLevel);
     await db.updateConversation(conversation.id, { notifiedOwner: newLevel });
+
+    await notifyOwner({ title, content });
 
     // Build recipient list: owner + additional notify users
     const recipientIds: string[] = [];
@@ -1774,6 +1808,10 @@ interface ConversationTrack {
   nudgeSent: boolean;
 }
 
+// NOTE: In-memory tracker — nudge state is lost on restart.
+// This is acceptable for short-term nudges (5-8 min window) but means
+// a restart mid-conversation may cause a missed nudge or duplicate.
+// For production scale, consider persisting to DB or Redis.
 const conversationTracker = new Map<string, ConversationTrack>();
 
 function detectConversationTopic(message: string): ConversationTrack["lastTopic"] {

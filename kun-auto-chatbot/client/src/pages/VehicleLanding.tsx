@@ -666,7 +666,7 @@ export default function VehicleLanding() {
         </div>
       </div>
 
-      <StickyBookingBar />
+      <StickyBookingBar vehicleId={vehicleId ?? undefined} vehicleName={vehicle ? `${vehicle.brand} ${vehicle.model}` : undefined} />
 
       {/* Proactive chat nudge after 15s */}
       <ProactiveChatTrigger vehicleName={name} delay={15000} />

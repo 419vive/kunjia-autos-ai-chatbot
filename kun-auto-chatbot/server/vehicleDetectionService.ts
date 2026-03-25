@@ -191,6 +191,8 @@ export function getQuestionAnswer(vehicle: any, questionType: QuestionType): str
         : '年份這個資訊目前沒有，歡迎來電詢問';
     case 'availability':
       return '目前還在喔！';
+    case 'photos':
+      return '想看這台車的照片嗎？點下方「看所有照片」按鈕可以看完整照片，也歡迎直接來店裡看實車！';
     case 'explanation':
       return ''; // Explanation answers are handled by getTermExplanation
     default:
@@ -246,7 +248,7 @@ function normalizeForMatching(message: string): string {
   let normalized = message;
   // Replace Chinese brand names with English equivalents
   for (const [alias, brand] of Object.entries(BRAND_ALIASES)) {
-    normalized = normalized.replace(new RegExp(alias, 'gi'), brand);
+    normalized = normalized.replace(new RegExp(alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), brand);
   }
   return normalized;
 }
