@@ -6,6 +6,9 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
+import { createLogger } from "./logger";
+
+const log = createLogger("AdminAuth");
 
 const ADMIN_OPEN_ID = "local-admin";
 const BCRYPT_ROUNDS = 12;
@@ -26,7 +29,7 @@ function safeCompare(a: string, b: string): boolean {
  */
 export async function seedAdminUser() {
   if (!ENV.adminPassword) {
-    console.warn("[Auth] ADMIN_PASSWORD not set — admin login disabled");
+    log.warn("ADMIN_PASSWORD not set — admin login disabled");
     return;
   }
 
@@ -41,9 +44,9 @@ export async function seedAdminUser() {
       loginMethod: "local",
       lastSignedIn: new Date(),
     });
-    console.log(`[Auth] Admin user seeded (username: ${ENV.adminUsername})`);
+    log.info(`Admin user seeded (username: ${ENV.adminUsername})`);
   } catch (err) {
-    console.error("[Auth] Failed to seed admin user:", err);
+    log.error("Failed to seed admin user", { error: err });
   }
 }
 
@@ -83,7 +86,7 @@ export function registerAdminAuthRoutes(app: Express) {
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ADMIN_SESSION_TTL_MS });
       res.json({ success: true });
     } catch (err) {
-      console.error("[Auth] Login failed:", err);
+      log.error("Login failed", { error: err });
       res.status(500).json({ error: "Login failed" });
     }
   });

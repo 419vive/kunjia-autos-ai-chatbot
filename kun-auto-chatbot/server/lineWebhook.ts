@@ -10,6 +10,9 @@ import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 import { sanitizeChatMessage } from "./security";
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("LINE");
 
 // ============ PHONE NUMBER DETECTION ============
 
@@ -156,13 +159,13 @@ async function downloadLineImage(messageId: string, channelAccessToken: string):
       headers: { Authorization: `Bearer ${channelAccessToken}` },
     });
     if (!res.ok) {
-      console.error(`[LINE Image] Download failed: ${res.status}`);
+      log.error("Image download failed", { status: res.status });
       return null;
     }
     const arrayBuf = await res.arrayBuffer();
     return Buffer.from(arrayBuf);
   } catch (err) {
-    console.error("[LINE Image] Download error:", err);
+    log.error("Image download error", err);
     return null;
   }
 }
@@ -199,13 +202,13 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
 
     if (!res.ok) {
       const errorBody = await res.text().catch(() => "");
-      console.error(`[LINE Image] Gemini Vision error: ${res.status}`, errorBody.substring(0, 300));
+      log.error("Gemini Vision error", { status: res.status, body: errorBody.substring(0, 300) });
       return null;
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
-    console.log("[LINE Image] Gemini Vision raw response:", content.substring(0, 500));
+    log.debug("Gemini Vision raw response", { content: content.substring(0, 500) });
 
     // Extract JSON from response (may have markdown code block wrapping)
     const jsonMatch = content.match(/\{[\s\S]*?\}/);
@@ -223,7 +226,7 @@ async function identifyVehicleFromImage(imageBase64: string): Promise<{ brand: s
     }
     return null;
   } catch (err) {
-    console.error("[LINE Image] Vision identification error:", err);
+    log.error("Vision identification error", err);
     return null;
   }
 }
@@ -314,14 +317,14 @@ const lineRouter = Router();
 // LINE Webhook verification & message handling
 // Route matches the Webhook URL set in LINE Developers Console: /api/line/webhook
 lineRouter.post("/api/line/webhook", async (req: Request, res: Response) => {
-  console.log("[LINE Webhook] Received request");
+  log.info("Webhook received request");
   try {
     const channelSecret = process.env.LINE_CHANNEL_SECRET;
     const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     const ownerUserId = process.env.LINE_OWNER_USER_ID;
 
     if (!channelSecret || !channelAccessToken) {
-      console.warn("[LINE] Missing LINE credentials, skipping webhook");
+      log.warn("Missing LINE credentials, skipping webhook");
       res.status(200).json({ status: "ok", message: "LINE not configured" });
       return;
     }
@@ -329,7 +332,7 @@ lineRouter.post("/api/line/webhook", async (req: Request, res: Response) => {
     // Verify signature using raw body string (SECURITY: reject invalid signatures)
     const signature = req.headers["x-line-signature"] as string;
     if (!signature) {
-      console.warn("[LINE] Missing x-line-signature header, rejecting request");
+      log.warn("Missing x-line-signature header, rejecting request");
       res.status(200).json({ status: "ok" }); // Return 200 to avoid LINE retries
       return;
     }
@@ -342,13 +345,13 @@ lineRouter.post("/api/line/webhook", async (req: Request, res: Response) => {
     const sigValid = hash.length === signature.length &&
       crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
     if (!sigValid) {
-      console.warn("[LINE] Invalid webhook signature, rejecting request");
+      log.warn("Invalid webhook signature, rejecting request");
       res.status(200).json({ status: "ok" }); // Return 200 to avoid LINE retries
       return;
     }
 
     const events = req.body?.events || [];
-    console.log(`[LINE Webhook] Processing ${events.length} events`);
+    log.info("Processing events", { count: events.length });
 
     // Respond immediately to LINE (LINE requires 200 within 1 second)
     res.status(200).json({ status: "ok" });
@@ -358,11 +361,11 @@ lineRouter.post("/api/line/webhook", async (req: Request, res: Response) => {
       try {
         await processLineEvent(event, channelAccessToken, ownerUserId);
       } catch (err) {
-        console.error("[LINE] Error processing event:", err);
+        log.error("Error processing event", err);
       }
     }
   } catch (err) {
-    console.error("[LINE Webhook] Error:", err);
+    log.error("Webhook error", err);
     if (!res.headersSent) {
       res.status(200).json({ status: "ok" });
     }
@@ -377,7 +380,7 @@ async function processLineEvent(
   // ============ UNFOLLOW EVENT: Track unfollow ============
   if (event.type === "unfollow") {
     const userId = event.source?.userId;
-    console.log(`[LINE] 👋 Unfollower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    log.info("Unfollower", { userId: userId ? userId.slice(0, 8) + '...' : 'unknown' });
     const conv = userId ? await db.getConversationBySessionId(`line-${userId}`) : null;
     db.addAnalyticsEvent({
       conversationId: conv?.id ?? null,
@@ -392,7 +395,7 @@ async function processLineEvent(
   // ============ FOLLOW EVENT: Send welcome + FAQ progressive carousel ============
   if (event.type === "follow") {
     const userId = event.source?.userId;
-    console.log(`[LINE] 🎉 New follower: ${userId ? userId.slice(0, 8) + '...' : 'unknown'}`);
+    log.info("New follower", { userId: userId ? userId.slice(0, 8) + '...' : 'unknown' });
     // Track follow event
     db.addAnalyticsEvent({
       conversationId: null,
@@ -463,7 +466,7 @@ async function processLineEvent(
               ],
             }},
           ];
-          console.log(`[LINE] 🔄 Returning user welcome sent (last vehicle: ${lastVehicle || "none"})`);
+          log.info("Returning user welcome sent", { lastVehicle: lastVehicle || "none" });
         } else {
           // NEW USER: standard welcome
           welcomeMessages = buildFollowWelcomeMessages();
@@ -480,9 +483,9 @@ async function processLineEvent(
           }),
         });
         const pushBody = await pushRes.text();
-        console.log(`[LINE] Follow welcome push response: ${pushRes.status} ${pushBody}`);
+        log.debug("Follow welcome push response", { status: pushRes.status, body: pushBody });
       } catch (err) {
-        console.error("[LINE] Follow event handling failed:", err);
+        log.error("Follow event handling failed", err);
       }
     }
     return;
@@ -505,32 +508,32 @@ async function processLineEvent(
       const handoffAge = Date.now() - new Date(imageConv.updatedAt).getTime();
       const HANDOFF_TIMEOUT_MS = 30 * 60 * 1000;
       if (handoffAge <= HANDOFF_TIMEOUT_MS) {
-        console.log(`[LINE Image] Conversation ${imageConv.id} is in human_handoff mode, skipping image processing`);
+        log.info("Conversation in human_handoff mode, skipping image processing", { conversationId: imageConv.id });
         return;
       }
       // Expired — reactivate and continue processing
-      console.log(`[LINE Image] Conversation ${imageConv.id} handoff expired, reactivating AI`);
+      log.info("Conversation handoff expired, reactivating AI", { conversationId: imageConv.id });
       await db.updateConversation(imageConv.id, { status: 'active' });
     }
 
-    console.log(`[LINE Image] Received image message from ${userId.slice(0, 8)}...`);
+    log.info("Received image message", { userId: userId.slice(0, 8) });
     showTypingIndicator(userId, channelAccessToken);
 
     try {
       // 1. Download image from LINE
       const imageBuffer = await downloadLineImage(imageMessageId, channelAccessToken);
       if (!imageBuffer) {
-        console.warn("[LINE Image] Could not download image, skipping");
+        log.warn("Could not download image, skipping");
         return;
       }
 
       const imageBase64 = imageBuffer.toString("base64");
-      console.log(`[LINE Image] Downloaded image, size: ${imageBuffer.length} bytes`);
+      log.debug("Downloaded image", { size: imageBuffer.length });
 
       // 2. Use Gemini Vision to identify the vehicle
       const identified = await identifyVehicleFromImage(imageBase64);
       if (!identified) {
-        console.log("[LINE Image] Could not identify vehicle from image");
+        log.info("Could not identify vehicle from image");
         // Reply with a helpful message
         await fetch("https://api.line.me/v2/bot/message/reply", {
           method: "POST",

@@ -17,6 +17,9 @@ import { trackingRouter } from "../trackingApi";
 import { registerAdminAuthRoutes, seedAdminUser } from "./adminAuth";
 import { createSeoRouter } from "../seo";
 import mysql from "mysql2/promise";
+import { createLogger } from "./logger";
+
+const log = createLogger("Server");
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,12 +42,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function runMigrations() {
   if (!process.env.DATABASE_URL) {
-    console.warn("[Database] DATABASE_URL not set, skipping migrations");
+    log.warn("DATABASE_URL not set, skipping migrations");
     return;
   }
   let conn: mysql.Connection | null = null;
   try {
-    console.log("[Database] Running migrations...");
+    log.info("Running database migrations...");
     conn = await mysql.createConnection(process.env.DATABASE_URL);
 
     // Create tables if they don't exist
@@ -135,9 +138,9 @@ async function runMigrations() {
       INDEX idx_pageviews_path (path(191))
     )`);
 
-    console.log("[Database] Migrations completed successfully");
+    log.info("Migrations completed successfully");
   } catch (error) {
-    console.error("[Database] Migration failed:", error);
+    log.error("Migration failed:", { error });
   } finally {
     if (conn) await conn.end();
   }
@@ -386,7 +389,7 @@ a{color:#C4A265;text-decoration:underline}
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    log.info(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
   // Run database migrations before starting
@@ -396,22 +399,22 @@ a{color:#C4A265;text-decoration:underline}
   await seedAdminUser();
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-    console.log("[Security] All security layers active: Helmet, Rate Limiting, PII Protection");
+    log.info(`Server running on http://localhost:${port}/`);
+    log.info("All security layers active: Helmet, Rate Limiting, PII Protection");
     // Run initial 8891 sync in background (non-blocking) — server handles requests immediately
-    console.log("[Sync] Running initial 8891 vehicle sync (background)...");
+    log.info("Running initial 8891 vehicle sync (background)...");
     sync8891()
-      .then(result => console.log("[Sync] Initial sync completed:", result))
-      .catch(err => console.error("[Sync] Initial sync failed:", err));
+      .then(result => log.info("Initial sync completed", { result }))
+      .catch(err => log.error("Initial sync failed", { error: err }));
     startSyncScheduler(6);
     // Auto-deploy Rich Menu on startup to keep it in sync with code
     const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     if (lineToken) {
       deployRichMenu(lineToken)
-        .then(r => console.log(`[RichMenu] Auto-deployed on startup: ${r.richMenuId}`))
-        .catch(err => console.error("[RichMenu] Auto-deploy failed:", err));
+        .then(r => log.info(`Rich menu auto-deployed on startup: ${r.richMenuId}`))
+        .catch(err => log.error("Rich menu auto-deploy failed", { error: err }));
     }
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(err => log.error("Failed to start server", { error: err }));

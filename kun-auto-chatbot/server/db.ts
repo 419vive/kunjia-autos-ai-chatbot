@@ -12,6 +12,9 @@ import {
   loanInquiries, InsertLoanInquiry,
   appointments, InsertAppointment,
 } from "../drizzle/schema";
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("Database");
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -30,7 +33,7 @@ export async function getDb() {
       });
       _db = drizzle(pool);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      log.warn("Failed to connect", { error });
       _db = null;
     }
   }
@@ -42,7 +45,7 @@ export async function getDb() {
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
+  if (!db) { log.warn("Cannot upsert user: database not available"); return; }
   try {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
@@ -61,7 +64,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
     await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-  } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
+  } catch (error) { log.error("Failed to upsert user", { error }); throw error; }
 }
 
 export async function getUserByOpenId(openId: string) {

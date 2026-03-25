@@ -1,4 +1,7 @@
 import { ENV } from "./env";
+import { createLogger } from "./logger";
+
+const log = createLogger("LLM");
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -155,7 +158,7 @@ const LLM_MAX_RETRIES = 2; // retry up to 2 times on transient errors
  * Includes timeout (30s) and retry logic (2 retries on 429/5xx).
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  console.log("[LLM] API key configured:", !!ENV.googleAiApiKey);
+  log.debug("API key configured:", { configured: !!ENV.googleAiApiKey });
   if (!ENV.googleAiApiKey) {
     throw new Error("GOOGLE_AI_API_KEY is not configured");
   }
@@ -198,12 +201,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
         // Retry on rate limit (429) or server errors (5xx)
         if ((response.status === 429 || response.status >= 500) && attempt < LLM_MAX_RETRIES) {
           const backoff = (attempt + 1) * 1000;
-          console.warn(`[LLM] Retrying (attempt ${attempt + 1}) after ${response.status}, backoff ${backoff}ms`);
+          log.warn(`Retrying (attempt ${attempt + 1}) after ${response.status}, backoff ${backoff}ms`);
           await new Promise(r => setTimeout(r, backoff));
           lastError = new Error(`Google AI API error (${response.status}): ${errorText}`);
           continue;
         }
-        console.error("[LLM] API error:", response.status, errorText.substring(0, 500));
+        log.error(`API error: ${response.status} ${errorText.substring(0, 500)}`);
         throw new Error(`Google AI API error (${response.status}): ${errorText}`);
       }
 
@@ -213,7 +216,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       if (err.name === "AbortError") {
         lastError = new Error(`LLM request timed out after ${LLM_TIMEOUT_MS}ms`);
         if (attempt < LLM_MAX_RETRIES) {
-          console.warn(`[LLM] Timeout, retrying (attempt ${attempt + 1})`);
+          log.warn(`Timeout, retrying (attempt ${attempt + 1})`);
           continue;
         }
       }
@@ -224,7 +227,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       lastError = err;
       if (attempt < LLM_MAX_RETRIES) {
         const backoff = (attempt + 1) * 1000;
-        console.warn(`[LLM] Error, retrying (attempt ${attempt + 1}), backoff ${backoff}ms:`, err.message);
+        log.warn(`Error, retrying (attempt ${attempt + 1}), backoff ${backoff}ms: ${err.message}`);
         await new Promise(r => setTimeout(r, backoff));
         continue;
       }

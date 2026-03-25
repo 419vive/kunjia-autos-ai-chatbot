@@ -15,6 +15,12 @@ import { deployRichMenu, getRichMenuStatus, cancelDefaultRichMenu } from "./line
 import { sanitizeChatMessage, sanitizeSearchQuery, maskPhone, maskName, maskPIIInText, logSecurityEvent, getSecurityEvents } from "./security";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
+import { createLogger } from "./_core/logger";
+
+const leadLog = createLogger("LeadNotify");
+const loanLog = createLogger("LoanNotify");
+const appointLog = createLogger("AppointmentNotify");
+const chatLog = createLogger("WebChat");
 
 // ============ VEHICLE KNOWLEDGE BASE FOR LLM ============
 
@@ -214,12 +220,12 @@ async function checkAndNotifyOwner(conversationId: number, conversation: any, ph
             }),
           });
         } catch (pushErr) {
-          console.error(`[Web Lead Notify] LINE push to ${recipientId} failed:`, pushErr);
+          leadLog.error("LINE push failed", { recipientId, error: String(pushErr) });
         }
       }
     }
   } catch (err) {
-    console.error("[Lead Notify] Failed:", err);
+    leadLog.error("Notification failed", { error: String(err) });
   }
 }
 
@@ -333,7 +339,7 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
-          console.log(`[Loan Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientCount: ${recipientIds.length}`);
+          loanLog.debug("LINE push config", { channelAccessToken: channelAccessToken ? "SET" : "MISSING", recipientCount: recipientIds.length });
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
@@ -343,14 +349,14 @@ export const appRouter = router({
                   body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
                 });
                 const resBody = await res.text();
-                console.log(`[Loan Notify] LINE push to ${recipientId}: ${res.status} ${resBody}`);
+                loanLog.debug("LINE push result", { recipientId, status: res.status, body: resBody });
               } catch (pushErr) {
-                console.error(`[Loan Notify] LINE push failed for ${recipientId}:`, pushErr);
+                loanLog.error("LINE push failed", { recipientId, error: String(pushErr) });
               }
             }
           }
         } catch (err) {
-          console.error("[Loan Inquiry Notify] Failed:", err);
+          loanLog.error("Inquiry notification failed", { error: String(err) });
         }
 
         return { success: true, id };
@@ -411,7 +417,7 @@ export const appRouter = router({
               if (!recipientIds.includes(id)) recipientIds.push(id);
             });
           }
-          console.log(`[Appointment Notify] channelAccessToken: ${channelAccessToken ? "SET" : "MISSING"}, recipientCount: ${recipientIds.length}`);
+          appointLog.debug("LINE push config", { channelAccessToken: channelAccessToken ? "SET" : "MISSING", recipientCount: recipientIds.length });
           if (channelAccessToken && recipientIds.length > 0) {
             for (const recipientId of recipientIds) {
               try {
@@ -421,14 +427,14 @@ export const appRouter = router({
                   body: JSON.stringify({ to: recipientId, messages: [{ type: "text", text: `${title}\n\n${content}` }] }),
                 });
                 const resBody = await res.text();
-                console.log(`[Appointment Notify] LINE push to ${recipientId}: ${res.status} ${resBody}`);
+                appointLog.debug("LINE push result", { recipientId, status: res.status, body: resBody });
               } catch (pushErr) {
-                console.error(`[Appointment Notify] LINE push failed for ${recipientId}:`, pushErr);
+                appointLog.error("LINE push failed", { recipientId, error: String(pushErr) });
               }
             }
           }
         } catch (err) {
-          console.error("[Appointment Notify] Failed:", err);
+          appointLog.error("Notification failed", { error: String(err) });
         }
 
         return { success: true, id };
@@ -494,7 +500,7 @@ export const appRouter = router({
         if (detectedPhone && !conversation!.customerContact) {
           await db.updateConversation(convId, { customerContact: detectedPhone });
           conversation = { ...conversation!, customerContact: detectedPhone };
-          console.log(`[Chat] Phone number detected and saved: [REDACTED]`);
+          chatLog.info("Phone number detected and saved");
         }
         
         // Score the message
@@ -520,7 +526,7 @@ export const appRouter = router({
         // Pass conversation history so follow-up questions can resolve to previously discussed vehicles
         const historyForDetection = history.map((m: any) => ({ role: m.role, content: m.content }));
         const detectionWeb = detectVehicleFromMessage(input.message, allVehiclesForDetection, historyForDetection, vIndex);
-        console.log(`[WebChat VehicleDetection] type=${detectionWeb.type}, vehicle=${detectionWeb.vehicle?.brand || 'none'} ${detectionWeb.vehicle?.model || ''}, question=${detectionWeb.questionType}, answer=${detectionWeb.directAnswer}`);
+        chatLog.debug("VehicleDetection result", { type: detectionWeb.type, vehicle: `${detectionWeb.vehicle?.brand || 'none'} ${detectionWeb.vehicle?.model || ''}`.trim(), questionType: detectionWeb.questionType, directAnswer: detectionWeb.directAnswer });
         
         // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others
         const vehicleKB = buildSmartVehicleKB(allVehiclesForDetection, detectionWeb.vehicle);
@@ -531,11 +537,11 @@ export const appRouter = router({
         // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
         const customerIntentsWeb = detectCustomerIntents(input.message);
         const intentInstructionsWeb = buildIntentInstructions(customerIntentsWeb, input.message, '人客', conversation!.customerContact, detectionWeb.vehicle);
-        console.log(`[WebChat IntentDetection] intents=${customerIntentsWeb.join(', ') || 'none'}`);
+        chatLog.debug("IntentDetection result", { intents: customerIntentsWeb.join(', ') || 'none' });
 
         // ============ RULE-BASED MODE (skip LLM if enabled) ============
         if (isRuleBasedMode()) {
-          console.log("[WebChat] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
+          chatLog.info("Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
           const ruleReply = generateRuleBasedReply({
             userMessage: sanitizedMessage,
             greeting: '人客',
@@ -828,14 +834,14 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
           if (assistantContent.includes('[HUMAN_HANDOFF]')) {
             isHumanHandoff = true;
             assistantContent = assistantContent.replace(/\s*\[HUMAN_HANDOFF\]\s*/g, '').trim();
-            console.log('[Chat] \ud83d\udea8 HUMAN HANDOFF triggered (web chatbot)!');
+            chatLog.info("HUMAN HANDOFF triggered (web chatbot)");
           }
           // Secondary detection: AI said "I'll check for you" type phrases
           const uncertaintyPatterns = /我幫你確認一下|我幫你問問|我幫你查|我不太確定|這個我要確認|我幫您確認|我幫您查/;
           if (!isHumanHandoff && uncertaintyPatterns.test(assistantContent)) {
             isHumanHandoff = true;
             assistantContent += '\n\n\ud83d\ude4b\u200d\u2642\ufe0f 我已經通知專人了，真人客服馬上就到！';
-            console.log('[Chat] \ud83d\udea8 HUMAN HANDOFF triggered (uncertainty detected in web chatbot).');
+            chatLog.info("HUMAN HANDOFF triggered (uncertainty detected in web chatbot)");
           }
           
           // If human handoff triggered, update DB status and send LINE push to owner + staff
@@ -867,8 +873,8 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${channelAccessToken}` },
                         body: JSON.stringify({ to: recipientId, messages: [textNotification] }),
                       });
-                      console.log(`[Chat] \ud83d\udea8 Human handoff notification sent to LINE recipient.`);
-                    } catch (e) { console.error('[Chat] Human handoff push failed:', e); }
+                      chatLog.info("Human handoff notification sent to LINE recipient");
+                    } catch (e) { chatLog.error("Human handoff push failed", { error: String(e) }); }
                   }
                 }
               }
@@ -877,7 +883,7 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
                 content: `客戶：${conversation?.customerName || '網站訪客'}\n問題：${sanitizedMessage}\n\nAI 無法回答此問題，請立即回覆！`,
               });
             } catch (notifyErr) {
-              console.error('[Chat] Human handoff notification error:', notifyErr);
+              chatLog.error("Human handoff notification error", { error: String(notifyErr) });
             }
           }
           
@@ -913,7 +919,7 @@ ${targetVehiclePromptWeb}${intentInstructionsWeb}`;
             conversationId: convId,
           };
         } catch (err: any) {
-          console.error("[Chat] LLM error, falling back to rule-based reply:", err);
+          chatLog.error("LLM error, falling back to rule-based reply", { error: String(err) });
           const fallback = generateRuleBasedReply({
             userMessage: sanitizedMessage,
             greeting: '人客',
