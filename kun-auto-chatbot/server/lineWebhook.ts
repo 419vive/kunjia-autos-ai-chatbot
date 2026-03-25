@@ -496,6 +496,22 @@ async function processLineEvent(
 
     if (!userId || !replyToken || !imageMessageId) return;
 
+    // C6: Check if conversation is in human_handoff mode — skip AI image processing
+    const imageSessionId = `line-${userId}`;
+    const imageConv = await db.getConversationBySessionId(imageSessionId);
+    if (imageConv && imageConv.status === 'human_handoff') {
+      // Check timeout same as text messages
+      const handoffAge = Date.now() - new Date(imageConv.updatedAt).getTime();
+      const HANDOFF_TIMEOUT_MS = 30 * 60 * 1000;
+      if (handoffAge <= HANDOFF_TIMEOUT_MS) {
+        console.log(`[LINE Image] Conversation ${imageConv.id} is in human_handoff mode, skipping image processing`);
+        return;
+      }
+      // Expired — reactivate and continue processing
+      console.log(`[LINE Image] Conversation ${imageConv.id} handoff expired, reactivating AI`);
+      await db.updateConversation(imageConv.id, { status: 'active' });
+    }
+
     console.log(`[LINE Image] Received image message from ${userId.slice(0, 8)}...`);
     showTypingIndicator(userId, channelAccessToken);
 
@@ -697,9 +713,19 @@ async function processLineEvent(
   // should reactivate AI — customer is starting a new interaction
   if (conversation && conversation.status === 'human_handoff') {
     const isRichMenuAction = !!detectRichMenuTrigger(userMessage);
-    const isNewInquiry = /我想詢問這台車|我想了解\s/.test(userMessage);
-    if (isRichMenuAction || isNewInquiry) {
-      console.log(`[LINE] Conversation ${convId} was in human_handoff but user started new interaction, reactivating AI`);
+    const isNewInquiry = /我想詢問這台車|我想了解/.test(userMessage);
+
+    // C5: Auto-reactivate if handoff has been active for more than 30 minutes
+    const handoffAge = Date.now() - new Date(conversation.updatedAt).getTime();
+    const HANDOFF_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+    const isHandoffExpired = handoffAge > HANDOFF_TIMEOUT_MS;
+
+    if (isRichMenuAction || isNewInquiry || isHandoffExpired) {
+      if (isHandoffExpired) {
+        console.log(`[LINE] Conversation ${convId} handoff expired after 30min, reactivating AI`);
+      } else {
+        console.log(`[LINE] Conversation ${convId} was in human_handoff but user started new interaction, reactivating AI`);
+      }
       await db.updateConversation(convId, { status: 'active' });
     } else {
       console.log(`[LINE] Conversation ${convId} is in human_handoff mode, AI skipping`);
@@ -709,13 +735,24 @@ async function processLineEvent(
   }
 
   // ============ HUMAN HANDOFF TRIGGER: User requests real human ============
-  const humanHandoffPattern = /想跟真人|想和真人|找真人業務|我想跟真人業務聊聊這台車/;
+  const humanHandoffPattern = /想跟真人|想和真人|找真人|要真人|真人客服|人工客服|轉真人|不想跟機器人|找人處理|我想跟真人業務聊聊這台車/;
   if (humanHandoffPattern.test(userMessage)) {
     console.log(`[LINE] 🚨 User requested human handoff: ${userId.slice(0, 8)}...`);
     // Save user message
     await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
-    // Reply to user
-    const handoffReply = "好的沒問題！我已經通知業務了，賴先生會盡快跟你聯繫！";
+    // Extract vehicle context from recent messages before notifying staff
+    const recentMessages = await db.getMessagesByConversation(convId, 10);
+    const vehicleContext = recentMessages.reverse().find(m =>
+      m.content.match(/我想詢問這台車|BMW|Toyota|Honda|Volkswagen|Mitsubishi|Mazda|Nissan|Kia|Hyundai|Ford|Suzuki/)
+    );
+    const handoffUserMessage = vehicleContext
+      ? `${userMessage}\n（近期詢問車輛：${vehicleContext.content.slice(0, 60)}）`
+      : userMessage;
+    // C7: Notify staff first, then adjust reply based on whether notification was sent
+    const notificationSent = await sendHumanHandoffNotification(conversation!, handoffUserMessage, "", channelAccessToken, ownerUserId);
+    const handoffReply = notificationSent
+      ? "好的沒問題！我已經通知業務了，賴先生會盡快跟你聯繫！"
+      : "目前業務不在線上，你可以直接撥打 0936-812-818 找賴先生";
     await db.addMessage({ conversationId: convId, role: "assistant", content: handoffReply });
     try {
       await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -732,8 +769,6 @@ async function processLineEvent(
     } catch (err) {
       console.error("[LINE] Human handoff reply failed:", err);
     }
-    // Notify staff
-    await sendHumanHandoffNotification(conversation!, userMessage, handoffReply, channelAccessToken, ownerUserId);
     // Update conversation status
     await db.updateConversation(convId, { status: 'human_handoff' });
     return;
@@ -1062,10 +1097,10 @@ async function processLineEvent(
   replyText = replyText.replace(/\*\*/g, '');
   replyText = replyText.replace(/^\s*[-*]\s+/gm, '');
   replyText = replyText.replace(/^---+$/gm, '');
-  // Remove periods at end of sentences (unnatural in LINE chat)
-  replyText = replyText.replace(/。/g, '！');
-  // Collapse multiple newlines into one
-  replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();
+  // Remove periods (unnatural in LINE chat)
+  replyText = replyText.replace(/。/g, '');
+  // Collapse all newlines into spaces for single-line output (不分段 rule)
+  replyText = replyText.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
   // ============ HUMAN HANDOFF DETECTION ============
   // Check if AI flagged [HUMAN_HANDOFF] in its response
@@ -1089,7 +1124,7 @@ async function processLineEvent(
   // ============ FRUSTRATION-TRIGGERED EMPATHETIC RESPONSE ============
   if (frustration.frustrated && !isHumanHandoff) {
     isHumanHandoff = true;
-    replyText = '不好意思讓您不方便了！我馬上幫您轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
+    replyText = '不好意思讓你不方便了！我馬上幫你轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
     console.log('[LINE] 😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
   }
 
@@ -1143,13 +1178,33 @@ async function processLineEvent(
 
   // ============ HUMAN HANDOFF: Push notification to owner + staff ============
   if (isHumanHandoff) {
-    await sendHumanHandoffNotification(
+    const notificationSent = await sendHumanHandoffNotification(
       conversation!,
       userMessage,
       replyText,
       channelAccessToken,
       ownerUserId
     );
+    // C7: If no recipients were configured, send fallback message with phone number
+    if (!notificationSent) {
+      const fallbackText = "目前業務不在線上，你可以直接撥打 0936-812-818 找賴先生";
+      await db.addMessage({ conversationId: convId, role: "assistant", content: fallbackText });
+      try {
+        await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [{ type: "text", text: fallbackText }],
+          }),
+        });
+      } catch (err) {
+        console.error("[LINE] Handoff fallback push failed:", err);
+      }
+    }
     // Mark conversation so AI stops responding until staff resolves it
     await db.updateConversation(convId, { status: 'human_handoff' });
   }
@@ -1646,7 +1701,7 @@ async function sendHumanHandoffNotification(
   aiResponse: string,
   channelAccessToken: string,
   ownerUserId?: string
-) {
+): Promise<boolean> {
   const customerName = conversation.customerName || "未知客戶";
   
   console.log(`[LINE] 🚨 Sending HUMAN HANDOFF notification for customer: ${customerName}`);
@@ -1696,11 +1751,14 @@ async function sendHumanHandoffNotification(
           console.error(`[LINE] Failed to send human handoff notification:`, pushErr);
         }
       }
+      return true;
     } else {
       console.warn('[LINE] No recipients configured for human handoff notification!');
+      return false;
     }
   } catch (err) {
     console.error("[LINE] Human handoff notification failed:", err);
+    return false;
   }
 }
 
