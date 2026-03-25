@@ -172,6 +172,17 @@
             "statusMessage": "SessionStart"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/git-context-inject.sh",
+            "timeout": 10000,
+            "once": true,
+            "statusMessage": "Injecting git context (Layer 3)"
+          }
+        ]
       }
     ],
     "SessionEnd": [
