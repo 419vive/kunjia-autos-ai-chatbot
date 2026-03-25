@@ -654,7 +654,16 @@ async function processLineEvent(
     const msgType = event.message?.type;
     console.log(`[LINE] Non-text message: ${event.type}, type: ${msgType}`);
     // Respond to non-text messages (sticker, location, video, audio) instead of silently discarding
+    // But respect human_handoff — don't reply if human is handling the conversation
     if (event.type === "message" && msgType && ["sticker", "location", "video", "audio", "file"].includes(msgType)) {
+      const nonTextUserId = event.source?.userId;
+      if (nonTextUserId) {
+        const nonTextConv = await db.getConversationBySessionId(`line-${nonTextUserId}`);
+        if (nonTextConv?.status === 'human_handoff') {
+          console.log(`[LINE] Non-text message from ${nonTextUserId.slice(0,8)}... — in human_handoff mode, skipping`);
+          return;
+        }
+      }
       const replyToken = event.replyToken;
       const typeResponses: Record<string, string> = {
         sticker: "收到你的貼圖了！有什麼車的問題想問的嗎？阿家隨時在 😊",
@@ -1460,6 +1469,12 @@ async function checkAndNotifyOwner(
   ownerUserId?: string,
   phoneJustDetected?: boolean
 ) {
+  // Skip notifications during human handoff — staff is already handling this customer
+  if (conversation.status === 'human_handoff') {
+    console.log(`[LINE] Skipping owner notification — conversation ${conversation.id} is in human_handoff mode`);
+    return;
+  }
+
   const score = conversation.leadScore || 0;
   const currentNotifiedLevel = conversation.notifiedOwner || 0;
   const newMilestoneLevel = getMilestoneLevel(score);

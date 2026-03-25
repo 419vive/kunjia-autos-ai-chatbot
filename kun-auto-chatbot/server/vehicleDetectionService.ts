@@ -362,25 +362,34 @@ export function extractVehicleFromHistory(
     });
     if (foundModel) return foundModel;
 
-    // Try "我想詢問這台車" button format
+    // Try "我想詢問這台車" button format (same regex as main detection)
     const inquiryMatch = content.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
     if (inquiryMatch) {
-      const [, nameStr] = inquiryMatch;
-      return allVehicles.find(v => nameStr.includes(v.brand) || nameStr.includes(v.model)) || null;
+      const [, nameStr, yearStr] = inquiryMatch;
+      return matchVehicleByName(nameStr, allVehicles, yearStr);
     }
 
     return null;
   };
 
-  // Single pass: scan from newest to oldest, regardless of role.
-  // The most recent message that mentions a vehicle IS the current context.
-  // This correctly handles: customer asked about BMW X1 → bot replied about BMW X1 → customer asks "價錢"
-  // → the bot's response (newest with a vehicle) points to BMW X1.
+  // Two-pass strategy to prevent context bleed:
+  // Pass 1: Only search USER messages (most reliable — user explicitly mentioned a vehicle)
   for (let i = conversationHistory.length - 1; i >= 0; i--) {
     const msg = conversationHistory[i];
+    if (msg.role !== 'user') continue;
     const found = findInMessage(msg.content || '');
     if (found) {
-      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in ${msg.role} message at index ${i}`);
+      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in user message at index ${i}`);
+      return found;
+    }
+  }
+  // Pass 2: If no user message has a vehicle, check assistant messages (fallback)
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    const msg = conversationHistory[i];
+    if (msg.role !== 'assistant') continue;
+    const found = findInMessage(msg.content || '');
+    if (found) {
+      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in assistant message at index ${i} (fallback)`);
       return found;
     }
   }
@@ -420,10 +429,14 @@ function matchVehicleByName(nameStr: string, allVehicles: any[], yearStr?: strin
   );
   if (strict) return strict;
 
-  // Tier 3: brand OR model (last resort)
-  return allVehicles.find(v =>
-    nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase())
-  ) || null;
+  // Tier 3: brand only (if exactly one vehicle of that brand — avoids false positives)
+  for (const v of allVehicles) {
+    if (nameUpper.includes(v.brand.toUpperCase())) {
+      const sameBrand = allVehicles.filter(o => o.brand.toUpperCase() === v.brand.toUpperCase());
+      if (sameBrand.length === 1) return sameBrand[0];
+    }
+  }
+  return null;
 }
 
 export function detectVehicleFromMessage(
@@ -445,7 +458,7 @@ export function detectVehicleFromMessage(
   // 2. Short format without price: "我想詢問這台車：BMW X1 2014年" (from photo carousel tap)
   // 3. No-price format: price is "面議"/"電洽" (non-numeric)
   // Note: price group is non-capturing — we only need name + year for matching
-  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*(?:[\d.]+)\s*萬/);
+  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*[\d.\s]+萬/);
   const inquiryShortMatch = !inquiryFullMatch && userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
   const inquiryMatch = inquiryFullMatch || inquiryShortMatch;
   if (inquiryMatch) {
