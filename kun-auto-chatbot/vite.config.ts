@@ -13,13 +13,30 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
-      // Eliminate KaTeX font bloat — this car dealership chatbot doesn't need LaTeX math
+      // Eliminate KaTeX bloat — this car dealership chatbot doesn't need LaTeX math.
+      // 1. Replace KaTeX CSS (pulls in ~1.2 MB of fonts) with an empty stylesheet.
       "katex/dist/katex.min.css": path.resolve(
         import.meta.dirname,
         "client",
         "src",
         "lib",
         "katex-empty.css",
+      ),
+      // 2. Replace rehype-katex (pulls in ~600 KB katex JS) with a no-op rehype plugin.
+      "rehype-katex": path.resolve(
+        import.meta.dirname,
+        "client",
+        "src",
+        "lib",
+        "rehype-katex-noop.js",
+      ),
+      // 3. Replace katex itself in case anything else imports it directly.
+      katex: path.resolve(
+        import.meta.dirname,
+        "client",
+        "src",
+        "lib",
+        "katex-noop.js",
       ),
     },
   },
