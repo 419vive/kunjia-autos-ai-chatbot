@@ -394,6 +394,36 @@ export function extractVehicleFromHistory(
  * Pass an optional `vehicleIndex` (from `buildVehicleIndex`) to skip
  * repeated O(N) scans. Falls back to linear search if index not provided.
  */
+/**
+ * Shared helper: match a vehicle by name string with 3-tier fallback.
+ * 1. Year + name (if yearStr provided)
+ * 2. Brand AND model (strict)
+ * 3. Brand OR model (loose)
+ */
+function matchVehicleByName(nameStr: string, allVehicles: any[], yearStr?: string): any | null {
+  const nameUpper = nameStr.toUpperCase();
+
+  // Tier 1: year + name
+  if (yearStr) {
+    const byYear = allVehicles.find(v => {
+      const nameMatch = nameStr.includes(v.brand) || nameStr.includes(v.model) || `${v.brand} ${v.model}`.includes(nameStr);
+      return nameMatch && String(v.modelYear) === yearStr;
+    });
+    if (byYear) return byYear;
+  }
+
+  // Tier 2: brand AND model
+  const strict = allVehicles.find(v =>
+    nameUpper.includes(v.brand.toUpperCase()) && nameUpper.includes(v.model.toUpperCase())
+  );
+  if (strict) return strict;
+
+  // Tier 3: brand OR model (last resort)
+  return allVehicles.find(v =>
+    nameUpper.includes(v.brand.toUpperCase()) || nameUpper.includes(v.model.toUpperCase())
+  ) || null;
+}
+
 export function detectVehicleFromMessage(
   userMessage: string,
   allVehicles: any[],
@@ -407,20 +437,30 @@ export function detectVehicleFromMessage(
   // ============ Layer 1: "我想詢問這台車" button format ============
   // NOTE: Button text contains specs like "1.7L" which would pollute questionType.
   // Force questionType to 'general' for inquiry buttons — the customer is inquiring, not asking a specific question.
-  const inquiryMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)萬/);
+  //
+  // Two regex variants:
+  // 1. Full format with price: "我想詢問這台車：BMW X1 2014年\n售價：37.8 萬"
+  // 2. Short format without price: "我想詢問這台車：BMW X1 2014年" (from photo carousel tap)
+  // 3. No-price format: price is "面議"/"電洽" (non-numeric)
+  // Note: price group is non-capturing — we only need name + year for matching
+  const inquiryFullMatch = userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*(?:[\d.]+)\s*萬/);
+  const inquiryShortMatch = !inquiryFullMatch && userMessage.match(/我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年/);
+  const inquiryMatch = inquiryFullMatch || inquiryShortMatch;
   if (inquiryMatch) {
     const [, nameStr, yearStr] = inquiryMatch;
-    const matchedVehicle = allVehicles.find(v => {
-      const nameMatch = nameStr.includes(v.brand) || nameStr.includes(v.model) || `${v.brand} ${v.model}`.includes(nameStr);
-      const yearMatch = String(v.modelYear) === yearStr;
-      return nameMatch && yearMatch;
-    }) || allVehicles.find(v => {
-      return nameStr.includes(v.brand) || nameStr.includes(v.model);
-    });
+    const matchedVehicle = matchVehicleByName(nameStr, allVehicles, yearStr);
+    return { type: 'inquiry_button', vehicle: matchedVehicle, questionType: 'general', directAnswer: '', termExplanation: '' };
+  }
 
-    // inquiry_button always uses 'general' — the button text contains specs (e.g. "1.7L")
-    // that would falsely trigger displacement/price detection
-    return { type: 'inquiry_button', vehicle: matchedVehicle || null, questionType: 'general', directAnswer: '', termExplanation: '' };
+  // ============ Layer 1b: "我想了解 {brand} {model}" button format ============
+  // From photo carousel fallback, quick reply buttons, etc.
+  const learnMatch = userMessage.match(/^我想了解\s+(.+)$/);
+  if (learnMatch) {
+    const nameStr = learnMatch[1].trim();
+    const matchedVehicle = matchVehicleByName(nameStr, allVehicles);
+    if (matchedVehicle) {
+      return { type: 'inquiry_button', vehicle: matchedVehicle, questionType: 'general', directAnswer: '', termExplanation: '' };
+    }
   }
 
   // ============ Layer 2: Brand + Model mention (indexed or linear) ============
@@ -599,6 +639,24 @@ ${phoneNote}
 規則：
 - 一段話，不分段不換行，不用句點（。），不用markdown
 - 絕對禁止推薦其他車款`;
+  }
+
+  if (detection.type === 'inquiry_button' && !v) {
+    // Customer clicked inquiry button but the vehicle is not in our DB (e.g. already sold)
+    // Extract car info directly from the user's message to acknowledge correctly
+    return `
+
+## ❗❗❗ 最後指令（最高優先級）❗❗❗
+
+客人點了「詢問這台車」按鈕，但這台車目前不在我們的庫存中（可能已售出）
+客人的原始訊息：「${userMessage}」
+
+回覆規則：
+1. 先告訴客人這台車目前已經不在庫存了（可能已售出）
+2. 問客人有沒有想找類似的車款，或有什麼其他條件
+3. 可以建議看看目前的在售車輛（「看車庫存」）
+4. 一段話，不分段不換行，不用句點（。），不用markdown
+5. 絕對不要回覆其他車的資訊，除非客人主動問`;
   }
 
   if (detection.type === 'mentioned' && v) {

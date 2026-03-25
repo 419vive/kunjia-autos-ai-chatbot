@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 describe('CoV: Vehicle Detection from LINE Messages', () => {
   
   // The ACTUAL regex used in lineWebhook.ts (FIXED version)
-  const currentRegex = /我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)萬/;
+  const currentRegex = /我想詢問這台車[：:][\s\S]*?([A-Za-z][\w\s-]+?)\s+(\d{4})年[\s\S]*?售價[：:]\s*([\d.]+)\s*萬/;
   
   // ============ CoV Step 1: Test with EXACT message from screenshot ============
   describe('CoV Step 1: Exact message format from LINE screenshot', () => {
