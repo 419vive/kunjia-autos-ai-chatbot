@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import compression from "compression";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -151,6 +152,20 @@ async function startServer() {
   app.get("/googlef2e64034e5f53215.html", (_req, res) => {
     res.type("text/html").send("google-site-verification: googlef2e64034e5f53215.html");
   });
+
+  // ============================================================
+  // PERFORMANCE: Gzip/Brotli compression for all responses
+  // Reduces bandwidth ~70% for HTML, JSON, CSS, JS
+  // ============================================================
+  app.use(compression({
+    level: 6, // Balance between compression ratio and CPU usage
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req, _res) => {
+      // Don't compress LINE webhook responses (they're small and latency-sensitive)
+      if (req.path === "/api/line/webhook") return false;
+      return compression.filter(req, _res);
+    },
+  }));
 
   // ============================================================
   // SECURITY LAYER 1: HTTP Security Headers (Helmet)
