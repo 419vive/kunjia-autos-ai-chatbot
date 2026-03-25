@@ -171,6 +171,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     model: GEMINI_MODEL,
     max_tokens: maxTokens,
     messages: openaiMessages,
+    temperature: 0.3, // Low temperature to follow instructions strictly and reduce hallucination
   };
 
   let lastError: Error | null = null;

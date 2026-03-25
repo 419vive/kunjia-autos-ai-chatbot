@@ -287,7 +287,8 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     const v = ctx.detection.vehicle;
     if (ctx.detection.type === 'inquiry_button') {
       // HIGH-INTENT: customer clicked inquiry button — affirm + 3 engaging questions
-      reminders.push(`客人點按鈕問【${v.brand} ${v.model}】→ 肯定選擇 + 帶出車輛重點（售價、年份、排氣量）+ 提供3個不同面向讓客人選（如車況、預約看車、貸款）`);
+      reminders.push(`🔴 客人點按鈕問【${v.brand} ${v.model}】→ 只能回覆這台車！肯定選擇 + 帶出車輛重點（售價${v.priceDisplay || v.price + '萬'}、${v.modelYear || ''}年、${v.displacement || ''}）+ 提供3個不同面向讓客人選（如車況、預約看車、貸款）🔴`);
+      reminders.push(`🔴 忽略之前對話中提到的其他車輛！客人現在問的是【${v.brand} ${v.model}】，絕對禁止回覆其他車的資訊！🔴`);
     } else {
       reminders.push(`客人正在問【${v.brand} ${v.model}】，你必須針對這台車回答，禁止推薦其他車`);
     }
@@ -371,8 +372,14 @@ export function buildLLMMessages(
   messages.push({ role: "system", content: systemPrompt });
 
   // 2. Conversation history (all except the last message)
+  // When inquiry_button detected (user clicked a specific car), truncate history to last 2 messages
+  // to prevent previous vehicle discussions from contaminating the LLM response.
   if (conversationHistory.length > 1) {
-    const historyWithoutLast = conversationHistory.slice(0, -1);
+    let historyWithoutLast = conversationHistory.slice(0, -1);
+    if (ctx.detection.type === 'inquiry_button') {
+      // New vehicle inquiry — only keep last 2 exchanges to reduce contamination
+      historyWithoutLast = historyWithoutLast.slice(-2);
+    }
     for (const m of historyWithoutLast) {
       messages.push({
         role: m.role as "user" | "assistant",
