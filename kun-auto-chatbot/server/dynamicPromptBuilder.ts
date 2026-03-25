@@ -377,8 +377,9 @@ export function buildLLMMessages(
   if (conversationHistory.length > 1) {
     let historyWithoutLast = conversationHistory.slice(0, -1);
     if (ctx.detection.type === 'inquiry_button') {
-      // New vehicle inquiry — only keep last 2 exchanges to reduce contamination
-      historyWithoutLast = historyWithoutLast.slice(-2);
+      // New vehicle inquiry — clear ALL history to prevent contamination.
+      // Previous conversation about other vehicles is irrelevant and actively harmful.
+      historyWithoutLast = [];
     }
     for (const m of historyWithoutLast) {
       messages.push({
