@@ -4,7 +4,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, buildCsatSurveyMessage, type ConversationContext } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -263,20 +263,6 @@ function isDuplicate(messageId: string): boolean {
   return false;
 }
 
-// ============ CSAT SATISFACTION SURVEY STATE ============
-// Track per-user conversation activity for CSAT survey timing
-
-interface CsatUserState {
-  lastSurveyTime: number;   // Timestamp of last CSAT survey sent
-  lastMessageTime: number;  // Timestamp of last user message
-  messageCount: number;     // Number of messages in current conversation window
-}
-
-const csatState = new Map<string, CsatUserState>();
-const CSAT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
-const CSAT_INACTIVITY_MS = 5 * 60 * 1000;     // 5 minutes
-const CSAT_MIN_MESSAGES = 3;                    // Minimum messages before survey
-
 // ============ FRUSTRATION / EMOTION DETECTION ============
 
 // Track recent questions per user for repeat detection
@@ -321,74 +307,6 @@ export function detectFrustration(message: string, userId?: string): { frustrate
 
   return { frustrated: confidence > 0.6, confidence };
 }
-
-// ============ CSAT INACTIVITY CHECK TIMER ============
-// Periodically check for users who should receive CSAT surveys
-
-async function checkCsatInactivity() {
-  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!channelAccessToken) return;
-
-  const now = Date.now();
-
-  for (const [userId, state] of Array.from(csatState.entries())) {
-    // Skip if not enough messages
-    if (state.messageCount < CSAT_MIN_MESSAGES) continue;
-
-    // Skip if last message was less than 5 minutes ago (still active)
-    if (now - state.lastMessageTime < CSAT_INACTIVITY_MS) continue;
-
-    // Skip if CSAT already sent in last 24 hours
-    if (state.lastSurveyTime > 0 && now - state.lastSurveyTime < CSAT_COOLDOWN_MS) continue;
-
-    // Send CSAT survey
-    try {
-      const csatMessage = buildCsatSurveyMessage();
-      const pushRes = await fetch("https://api.line.me/v2/bot/message/push", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${channelAccessToken}`,
-        },
-        body: JSON.stringify({
-          to: userId,
-          messages: [csatMessage],
-        }),
-      });
-      const pushBody = await pushRes.text();
-      console.log(`[CSAT] Survey sent to ${userId.slice(0, 8)}... Response: ${pushRes.status} ${pushBody}`);
-
-      // Update state
-      state.lastSurveyTime = now;
-      state.messageCount = 0; // Reset message count after survey
-
-      // Log analytics
-      const sessionId = `line-${userId}`;
-      const conv = await db.getConversationBySessionId(sessionId);
-      if (conv) {
-        db.addAnalyticsEvent({
-          conversationId: conv.id,
-          userId,
-          eventCategory: "csat",
-          eventAction: "survey_sent",
-          channel: "line",
-        });
-        await db.addMessage({
-          conversationId: conv.id,
-          role: "assistant",
-          content: "[系統自動] 已發送滿意度調查",
-        });
-      }
-    } catch (err) {
-      console.error(`[CSAT] Failed to send survey to ${userId.slice(0, 8)}...:`, err);
-    }
-  }
-}
-
-// Run CSAT inactivity check every 60 seconds
-setInterval(() => {
-  checkCsatInactivity().catch((err) => console.error("[CSAT] Inactivity check error:", err));
-}, 60 * 1000);
 
 const lineRouter = Router();
 
@@ -701,116 +619,8 @@ async function processLineEvent(
     return;
   }
 
-  // ============ POSTBACK EVENT: Handle CSAT score submission ============
+  // ============ POSTBACK EVENT ============
   if (event.type === "postback") {
-    const userId = event.source?.userId;
-    const postbackData = event.postback?.data || "";
-    const replyToken = event.replyToken;
-
-    console.log(`[LINE] Postback from ${userId ? userId.slice(0, 8) + '...' : 'unknown'}: ${postbackData}`);
-
-    // Handle CSAT score postback
-    const csatMatch = postbackData.match(/^csat_score=(\d)$/);
-    if (csatMatch && userId && replyToken) {
-      const score = parseInt(csatMatch[1], 10);
-      console.log(`[CSAT] Score received: ${score} from ${userId.slice(0, 8)}...`);
-
-      // Log to analytics
-      const sessionId = `line-${userId}`;
-      const conv = await db.getConversationBySessionId(sessionId);
-      db.addAnalyticsEvent({
-        conversationId: conv?.id ?? null,
-        userId,
-        eventCategory: "csat",
-        eventAction: "score",
-        eventLabel: String(score),
-        channel: "line",
-      });
-
-      // Build thank-you reply based on score
-      let thankYouText: string;
-      if (score >= 4) {
-        thankYouText = "謝謝你的肯定！有需要隨時找阿家 🙏";
-      } else if (score === 3) {
-        thankYouText = "感謝回饋！我們會繼續改進 💪";
-      } else {
-        thankYouText = "抱歉讓你不滿意 😥 阿家本人會盡快聯繫你了解情況";
-      }
-
-      // Reply with thank you
-      try {
-        await fetch("https://api.line.me/v2/bot/message/reply", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${channelAccessToken}`,
-          },
-          body: JSON.stringify({
-            replyToken,
-            messages: [{ type: "text", text: thankYouText }],
-          }),
-        });
-      } catch (err) {
-        console.error("[CSAT] Reply failed:", err);
-      }
-
-      // For low scores (1-2), notify owner
-      if (score <= 2 && conv) {
-        const ownerUserId = process.env.LINE_OWNER_USER_ID;
-        const customerName = conv.customerName || "未知客戶";
-        await notifyOwner({
-          title: "😥 客戶不滿意通知",
-          content: `客戶 ${customerName} 給了 ${score} 分的評價。\n請盡快聯繫了解情況。`,
-        });
-
-        // Push notification to owner via LINE
-        const recipientIds: string[] = [];
-        if (ownerUserId) recipientIds.push(ownerUserId);
-        const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
-        if (additionalIds) {
-          const extras = additionalIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
-          for (const extraId of extras) {
-            if (!recipientIds.includes(extraId)) recipientIds.push(extraId);
-          }
-        }
-
-        for (const recipientId of recipientIds) {
-          try {
-            await fetch("https://api.line.me/v2/bot/message/push", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${channelAccessToken}`,
-              },
-              body: JSON.stringify({
-                to: recipientId,
-                messages: [{
-                  type: "text",
-                  text: `😥 客戶不滿意！\n客戶：${customerName}\n評分：${"⭐".repeat(score)}（${score}分）\n\n請盡快聯繫了解情況`,
-                }],
-              }),
-            });
-          } catch (pushErr) {
-            console.error("[CSAT] Owner notification push failed:", pushErr);
-          }
-        }
-      }
-
-      // Save to conversation
-      if (conv) {
-        await db.addMessage({
-          conversationId: conv.id,
-          role: "user",
-          content: `[CSAT評分] ${"⭐".repeat(score)}（${score}分）`,
-        });
-        await db.addMessage({
-          conversationId: conv.id,
-          role: "assistant",
-          content: thankYouText,
-        });
-      }
-    }
-
     return;
   }
 
@@ -881,6 +691,46 @@ async function processLineEvent(
 
   const convId = conversation!.id;
 
+  // ============ HUMAN HANDOFF MODE: AI should not respond ============
+  if (conversation && conversation.status === 'human_handoff') {
+    console.log(`[LINE] Conversation ${convId} is in human_handoff mode, AI skipping`);
+    // Still save the message to DB for staff to see
+    await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
+    // Don't reply — human staff is handling
+    return;
+  }
+
+  // ============ HUMAN HANDOFF TRIGGER: User requests real human ============
+  const humanHandoffPattern = /想跟真人|想和真人|找真人業務|我想跟真人業務聊聊這台車/;
+  if (humanHandoffPattern.test(userMessage)) {
+    console.log(`[LINE] 🚨 User requested human handoff: ${userId.slice(0, 8)}...`);
+    // Save user message
+    await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
+    // Reply to user
+    const handoffReply = "好的沒問題！我已經通知業務了，賴先生會盡快跟你聯繫！";
+    await db.addMessage({ conversationId: convId, role: "assistant", content: handoffReply });
+    try {
+      await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          replyToken,
+          messages: [{ type: "text", text: handoffReply }],
+        }),
+      });
+    } catch (err) {
+      console.error("[LINE] Human handoff reply failed:", err);
+    }
+    // Notify staff
+    await sendHumanHandoffNotification(conversation!, userMessage, handoffReply, channelAccessToken, ownerUserId);
+    // Update conversation status
+    await db.updateConversation(convId, { status: 'human_handoff' });
+    return;
+  }
+
   // Save user message FIRST
   const savedMsg = await db.addMessage({
     conversationId: convId,
@@ -891,12 +741,6 @@ async function processLineEvent(
 
   // Track conversation for short-term recovery nudges
   updateConversationTracker(userId, userMessage);
-
-  // ============ UPDATE CSAT STATE ============
-  const currentCsat = csatState.get(userId) || { lastSurveyTime: 0, lastMessageTime: 0, messageCount: 0 };
-  currentCsat.lastMessageTime = Date.now();
-  currentCsat.messageCount += 1;
-  csatState.set(userId, currentCsat);
 
   // ============ FRUSTRATION DETECTION ============
   const frustration = detectFrustration(userMessage, userId);
@@ -1287,6 +1131,8 @@ async function processLineEvent(
       channelAccessToken,
       ownerUserId
     );
+    // Mark conversation so AI stops responding until staff resolves it
+    await db.updateConversation(convId, { status: 'human_handoff' });
   }
 
   // Notify owner for hot leads

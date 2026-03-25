@@ -64,7 +64,7 @@ export const conversations = mysqlTable("conversations", {
   customerName: varchar("customerName", { length: 128 }),
   customerContact: varchar("customerContact", { length: 256 }),
   channel: mysqlEnum("channel", ["web", "line", "facebook", "youtube", "other"]).default("web").notNull(),
-  status: mysqlEnum("status", ["active", "closed", "follow_up"]).default("active").notNull(),
+  status: mysqlEnum("status", ["active", "closed", "follow_up", "human_handoff"]).default("active").notNull(),
   leadScore: int("leadScore").default(0),
   leadStatus: mysqlEnum("leadStatus", ["new", "qualified", "hot", "converted", "lost"]).default("new").notNull(),
   tags: text("tags"),
