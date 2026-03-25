@@ -692,12 +692,19 @@ async function processLineEvent(
   const convId = conversation!.id;
 
   // ============ HUMAN HANDOFF MODE: AI should not respond ============
+  // Exception: Rich Menu triggers (看車庫存, 預約賞車 etc.) and new vehicle inquiries
+  // should reactivate AI — customer is starting a new interaction
   if (conversation && conversation.status === 'human_handoff') {
-    console.log(`[LINE] Conversation ${convId} is in human_handoff mode, AI skipping`);
-    // Still save the message to DB for staff to see
-    await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
-    // Don't reply — human staff is handling
-    return;
+    const isRichMenuAction = !!detectRichMenuTrigger(userMessage);
+    const isNewInquiry = /我想詢問這台車|我想了解\s/.test(userMessage);
+    if (isRichMenuAction || isNewInquiry) {
+      console.log(`[LINE] Conversation ${convId} was in human_handoff but user started new interaction, reactivating AI`);
+      await db.updateConversation(convId, { status: 'active' });
+    } else {
+      console.log(`[LINE] Conversation ${convId} is in human_handoff mode, AI skipping`);
+      await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
+      return;
+    }
   }
 
   // ============ HUMAN HANDOFF TRIGGER: User requests real human ============
