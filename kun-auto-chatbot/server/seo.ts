@@ -57,6 +57,11 @@ function escJson(str: string): string {
   return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
 
+/** Stable daily ISO timestamp — avoids per-request fluctuation that search engines flag as manipulation */
+function getStableDailyTimestamp(): string {
+  return new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
+}
+
 // ============ HELPER: Parse photo URLs ============
 
 function parseFirstPhoto(raw: string | null | undefined): string {
@@ -511,6 +516,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
   let ogImage = `${baseUrl}/og-default.jpg`;
   let canonicalUrl = `${baseUrl}${path === "/" ? "" : path}`;
   let robotsMeta = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+  let modifiedTime = getStableDailyTimestamp(); // default: stable daily; overridden by blog-specific dates
   const jsonLdBlocks: object[] = [autoDealer(), websiteSchema()];
 
   // ---------- Vehicle detail page ----------
@@ -799,6 +805,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         "used-car-transfer-guide":         { published: "2026-02-20", modified: "2026-03-24" },
       };
       const dates = blogDates[slug];
+      if (dates) modifiedTime = dates.modified + "T00:00:00.000Z";
 
       // Person schema for author E-E-A-T (named expert > generic org = higher citation)
       jsonLdBlocks.push({
@@ -991,8 +998,8 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <meta name="twitter:description" content="${escAttr(description)}" />
     <meta name="twitter:image" content="${escAttr(ogImage)}" />
 
-    <!-- Freshness signal (stable daily timestamp to avoid manipulation flags) -->
-    <meta property="article:modified_time" content="${new Date().toISOString().split("T")[0] + "T00:00:00.000Z"}" />
+    <!-- Freshness signal -->
+    <meta property="article:modified_time" content="${modifiedTime}" />
 
     <!-- Additional SEO -->
     <meta name="geo.region" content="TW-KHH" />
@@ -1023,23 +1030,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
 
-  // Inject noscript fallback for AI crawlers that can't execute JS (69% of them)
-  const noscriptContent = `<noscript>
-<div itemscope itemtype="https://schema.org/AutoDealer">
-  <h1 itemprop="name">${escAttr(SITE_NAME)} — ${escAttr(title)}</h1>
-  <p itemprop="description">${escAttr(description)}</p>
-  <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
-    <span itemprop="streetAddress">${BUSINESS_ADDRESS}</span>
-    <span itemprop="addressLocality">高雄市三民區</span>
-    <span itemprop="addressCountry">TW</span>
-  </div>
-  <span itemprop="telephone">${BUSINESS_PHONE}</span>
-  <a href="${baseUrl}/blog" itemprop="url">購車攻略</a>
-  <a href="${baseUrl}/faq">常見問題</a>
-</div>
-</noscript>`;
-  result = result.replace('<div id="root">', `${noscriptContent}\n<div id="root">`);
-
+  // Noscript fallback lives in client/index.html (single source of truth)
   return result;
 }
 
@@ -1249,9 +1240,9 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
     const baseUrl = getBaseUrl();
     let vehicleSection = "";
     try {
+      // getAllVehicles() already filters status='available' at DB level and caches for 2min
       const vehicles = await db.getAllVehicles();
-      const available = vehicles.filter((v: any) => v.status === "available");
-      vehicleSection = available.slice(0, 30).map((v: any) =>
+      vehicleSection = vehicles.slice(0, 30).map((v: any) =>
         `- [${v.brand} ${v.model} ${v.modelYear || ""}](${baseUrl}/vehicle/${v.id}): ${v.priceDisplay || v.price + "萬"}${v.mileage ? "、里程" + v.mileage : ""}${v.color ? "、" + v.color : ""}${v.transmission ? "、" + v.transmission : ""}`
       ).join("\n");
     } catch { /* ignore */ }
