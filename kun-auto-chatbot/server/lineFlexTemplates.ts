@@ -45,12 +45,12 @@ function buildVehicleBubble(v: Vehicle): any {
   const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`;
 
   const footerButtons: any[] = [
-    // Primary CTA: 了解更多 → 車輛詳情頁（有 3 個意圖問題 + 照片 + 完整資訊）
+    // Primary CTA: 了解車子細節/規格 → 車輛詳情頁（有 3 個意圖問題 + 照片 + 完整資訊）
     {
       type: "button",
       action: {
         type: "uri",
-        label: "👉 了解更多",
+        label: "👉 了解車子細節/規格",
         uri: vehicleDetailUrl,
       },
       style: "primary",
