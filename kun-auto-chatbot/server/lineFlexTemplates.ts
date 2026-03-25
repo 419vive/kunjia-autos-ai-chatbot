@@ -262,6 +262,180 @@ export function buildVehicleCarousel(
   return messages[0] || null;
 }
 
+// ============ CAR INQUIRY RESPONSE (inquiry_button flow) ============
+// When customer clicks "LINE 問這台車", send: short intro + specs + "want to chat with human?" button
+
+export function buildCarInquiryMessages(vehicle: Vehicle, customerName: string | null): any[] {
+  const photos = parsePhotoUrls(vehicle);
+  const photoUrl = photos[0] || "https://via.placeholder.com/800x600?text=No+Photo";
+  const priceText = vehicle.priceDisplay || `${vehicle.price}萬`;
+  const specs: string[] = [];
+  if (vehicle.modelYear) specs.push(`${vehicle.modelYear}年`);
+  if (vehicle.mileage) specs.push(`里程 ${vehicle.mileage}`);
+  if (vehicle.displacement) specs.push(`排氣量 ${vehicle.displacement}`);
+  if (vehicle.transmission) specs.push(vehicle.transmission);
+  if (vehicle.fuelType) specs.push(vehicle.fuelType);
+  if (vehicle.color) specs.push(vehicle.color);
+
+  const greeting = customerName ? `${customerName} 你好！` : '你好！';
+  const specsList = specs.map(s => `  ${s}`).join('\n');
+
+  // Message 1: Short intro text + specs
+  const introText = `${greeting} 👋\n\n這台 ${vehicle.brand} ${vehicle.model} 很不錯的選擇！\n\n🚗 ${vehicle.brand} ${vehicle.model}\n💰 售價：${priceText}\n📋 車輛規格：\n${specsList}\n\n🔒 第三方認證 ｜ 實車實價 ｜ 支援貸款`;
+
+  const messages: any[] = [
+    { type: "text", text: introText },
+  ];
+
+  // Message 2: Vehicle Flex card (photo + specs + CTA buttons)
+  const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${vehicle.id}`;
+  const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${vehicle.id}&vehicle=${encodeURIComponent(`${vehicle.brand} ${vehicle.model}`)}`;
+  const photoCount = photos.length;
+
+  const cardButtons: any[] = [
+    {
+      type: "button",
+      action: { type: "uri", label: "👉 了解更多", uri: vehicleDetailUrl },
+      style: "primary",
+      color: "#C4A265",
+      height: "md",
+    },
+    {
+      type: "button",
+      action: { type: "uri", label: "📅 預約看車", uri: bookUrl },
+      style: "secondary",
+    },
+  ];
+
+  if (photoCount > 1) {
+    cardButtons.push({
+      type: "button",
+      action: { type: "message", label: `📸 看所有照片 (${photoCount}張)`, text: `看照片 ${vehicle.externalId}` },
+      style: "secondary",
+    });
+  }
+
+  if (vehicle.videoUrl) {
+    cardButtons.push({
+      type: "button",
+      action: { type: "uri", label: "🎬 看影片", uri: String(vehicle.videoUrl) },
+      style: "secondary",
+    });
+  }
+
+  const vehicleCard = {
+    type: "flex",
+    altText: `${vehicle.brand} ${vehicle.model} ${priceText}`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      hero: {
+        type: "image",
+        url: photoUrl,
+        size: "full",
+        aspectRatio: "4:3",
+        aspectMode: "cover",
+        action: { type: "uri", label: "查看詳情", uri: vehicleDetailUrl },
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          { type: "text", text: `${vehicle.brand} ${vehicle.model}`, weight: "bold", size: "lg", wrap: true, maxLines: 2 },
+          { type: "text", text: specs.slice(0, 4).join(" · "), size: "xs", color: "#999999", wrap: true, maxLines: 2 },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [{ type: "text", text: priceText, size: "xl", weight: "bold", color: "#C4A265" }],
+            margin: "md",
+          },
+          { type: "text", text: "🔒 第三方認證 | 實車實價 | 支援貸款", size: "xxs", color: "#999999", wrap: true, margin: "sm" },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: cardButtons,
+      },
+    },
+  };
+  messages.push(vehicleCard);
+
+  // Message 3: "Want to chat with a real person?" confirm button
+  messages.push(buildHumanChatConfirmFlex(vehicle));
+
+  return messages;
+}
+
+/**
+ * Build a Flex confirm bubble asking if customer wants to talk to a real sales person.
+ * Uses postback action so clicking doesn't pollute the chat with text.
+ */
+export function buildHumanChatConfirmFlex(vehicle: Vehicle): any {
+  return {
+    type: "flex",
+    altText: "會想要跟我們真人業務聊聊這台車嗎？😁",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "會想要跟我們真人業務聊聊這台車嗎？😁",
+            weight: "bold",
+            size: "md",
+            wrap: true,
+            align: "center",
+          },
+          {
+            type: "text",
+            text: "賴先生本人親自為你服務！",
+            size: "sm",
+            color: "#888888",
+            align: "center",
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "md",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "postback",
+              label: "好啊！找真人聊 🙋",
+              data: `want_human=${vehicle.id}&vehicle=${encodeURIComponent(`${vehicle.brand} ${vehicle.model}`)}`,
+              displayText: "好啊！我想跟真人業務聊聊 🙋",
+            },
+            style: "primary",
+            color: "#06C755",
+            height: "sm",
+          },
+          {
+            type: "button",
+            action: {
+              type: "postback",
+              label: "先自己看看",
+              data: `want_human=no&vehicle=${encodeURIComponent(`${vehicle.brand} ${vehicle.model}`)}`,
+              displayText: "我先自己看看 👀",
+            },
+            style: "secondary",
+            height: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
 // ============ PHOTO CAROUSEL ============
 // Sends all photos of a specific vehicle as an image carousel
 
