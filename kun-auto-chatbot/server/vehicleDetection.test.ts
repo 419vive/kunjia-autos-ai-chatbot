@@ -86,7 +86,7 @@ describe('vehicleDetectionService', () => {
 
     it('should return fallback for missing data', () => {
       const vehicleNoDisplacement = { ...vehicle, displacement: null };
-      expect(getQuestionAnswer(vehicleNoDisplacement, 'displacement')).toBe('排氣量資料我幫你確認一下');
+      expect(getQuestionAnswer(vehicleNoDisplacement, 'displacement')).toBe('排氣量這個資訊目前沒有，歡迎來電詢問');
     });
   });
 

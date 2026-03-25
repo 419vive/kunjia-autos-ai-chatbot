@@ -162,33 +162,33 @@ export function getQuestionAnswer(vehicle: any, questionType: QuestionType): str
     case 'displacement':
       return vehicle.displacement 
         ? `排氣量是 ${vehicle.displacement}` 
-        : '排氣量資料我幫你確認一下';
+        : '排氣量這個資訊目前沒有，歡迎來電詢問';
     case 'price':
       return `售價 ${vehicle.priceDisplay || vehicle.price + '萬'}`;
     case 'mileage':
       return vehicle.mileage 
         ? `里程 ${vehicle.mileage}` 
-        : '里程數我幫你確認一下';
+        : '里程數這個資訊目前沒有，歡迎來電詢問';
     case 'transmission':
       return vehicle.transmission 
         ? `變速箱是 ${vehicle.transmission}` 
-        : '變速箱資料我幫你確認一下';
+        : '變速箱這個資訊目前沒有，歡迎來電詢問';
     case 'fuel':
       return vehicle.fuelType 
         ? `燃料類型是 ${vehicle.fuelType}` 
-        : '燃料資料我幫你確認一下';
+        : '燃料這個資訊目前沒有，歡迎來電詢問';
     case 'features':
       return vehicle.features 
         ? `配備包含：${vehicle.features}` 
-        : '配備資料我幫你確認一下';
+        : '配備這個資訊目前沒有，歡迎來電詢問';
     case 'color':
       return vehicle.color 
         ? `顏色是 ${vehicle.color}` 
-        : '顏色資料我幫你確認一下';
+        : '顏色這個資訊目前沒有，歡迎來電詢問';
     case 'year':
       return vehicle.modelYear 
         ? `${vehicle.modelYear}年份` 
-        : '年份資料我幫你確認一下';
+        : '年份這個資訊目前沒有，歡迎來電詢問';
     case 'availability':
       return '目前還在喔！';
     case 'explanation':
@@ -857,18 +857,18 @@ export function buildIntentInstructions(
       // Customer mentioned a specific time
       const phonePart = customerContact
         ? `客人已留電話 ${customerContact}，告知我們業務會盡快聯繫。`
-        : `🔴 客人還沒留電話！確認時間後直接要電話：「方便留個電話嗎？我們業務會盡快火速與您聯繫確認！📞」`;
+        : `🔴 客人還沒留電話！確認時間後直接要電話：「方便留個電話嗎？我們業務會盡快火速與你聯繫確認！📞」`;
       instructions.push(`🔴 預約指令：客人提到了具體時間，直接確認該時間。
 ${phonePart}
-告知「我們業務會盡快火速與您聯繫，幫您安排看車！」
+告知「我們業務會盡快火速與你聯繫，幫你安排看車！」
 🚫 不要推薦車款！客人要的是預約，不是推薦！`);
     } else {
       // No specific time — ask for phone FIRST, then say sales rep will arrange
       const phoneInstruction = customerContact 
-        ? `客人已留電話 ${customerContact}，不需要再問電話。直接告知：「我們業務會盡快火速與您聯繫，幫您安排看車時間！」`
+        ? `客人已留電話 ${customerContact}，不需要再問電話。直接告知：「我們業務會盡快火速與你聯繫，幫你安排看車時間！」`
         : `🔴🔴🔴 客人還沒留電話！必須直接要電話！🔴🔴🔴
 用這個句式（可微調）：
-「想來看車太好了！方便留個電話嗎？我們業務會盡快火速與您聯繫，幫您安排看車時間！📞」
+「想來看車太好了！方便留個電話嗎？我們業務會盡快火速與你聯繫，幫你安排看車時間！📞」
 不要囉嗦推薦車款或給時段選項，客人要來看車就是有意願了，直接要電話才是正確做法！`;
       
       instructions.push(`🔴 預約看車指令（最高優先級！）：
