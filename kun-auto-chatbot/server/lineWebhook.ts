@@ -4,7 +4,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
-import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, buildCsatSurveyMessage, type ConversationContext } from "./lineFlexTemplates";
+import { detectRichMenuTrigger, buildRichMenuResponseMessages, detectPhotoTrigger, buildPhotoCarousel, buildFollowWelcomeMessages, buildFaqCarousel, detectFaqTrigger, buildFaqAnswerMessages, buildContextualQuickReply, buildVehicleCarouselMessages, buildCsatSurveyMessage, buildCarInquiryMessages, type ConversationContext } from "./lineFlexTemplates";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { detectVehicleFromMessage, buildSmartVehicleKB, buildTargetVehiclePrompt, detectCustomerIntents, buildIntentInstructions, buildVehicleIndex } from "./vehicleDetectionService";
 import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
@@ -811,6 +811,199 @@ async function processLineEvent(
       }
     }
 
+    // ============ Handle "want human chat" postback ============
+    const wantHumanMatch = postbackData.match(/^want_human=(.+?)&vehicle=(.+)$/);
+    if (wantHumanMatch && userId && replyToken) {
+      const [, vehicleIdOrNo, vehicleNameEncoded] = wantHumanMatch;
+      const vehicleName = decodeURIComponent(vehicleNameEncoded);
+
+      const sessionId = `line-${userId}`;
+      const conv = await db.getConversationBySessionId(sessionId);
+
+      if (vehicleIdOrNo === 'no') {
+        // Customer chose "先自己看看" — just acknowledge
+        console.log(`[LINE] Customer declined human chat for ${vehicleName}`);
+        try {
+          await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${channelAccessToken}`,
+            },
+            body: JSON.stringify({
+              replyToken,
+              messages: [{ type: "text", text: `沒問題！有任何問題隨時問我就好 😊\n\n想看更多車可以點下方選單的「看車庫存」喔！` }],
+            }),
+          });
+        } catch (err) {
+          console.error("[LINE] Decline human reply failed:", err);
+        }
+
+        if (conv) {
+          await db.addMessage({ conversationId: conv.id, role: "user", content: `[選擇] 先自己看看 ${vehicleName}` });
+          await db.addMessage({ conversationId: conv.id, role: "assistant", content: `沒問題！有任何問題隨時問我就好 😊` });
+        }
+      } else {
+        // Customer wants to talk to real human!
+        console.log(`[LINE] 🙋 Customer WANTS HUMAN CHAT for ${vehicleName}!`);
+
+        // 1. Set human_takeover flag on conversation
+        if (conv) {
+          const existingTags = conv.tags || '';
+          const newTags = existingTags ? `${existingTags},human_takeover` : 'human_takeover';
+          await db.updateConversation(conv.id, { tags: newTags });
+
+          await db.addMessage({ conversationId: conv.id, role: "user", content: `[選擇] 想跟真人業務聊 ${vehicleName}` });
+          await db.addMessage({ conversationId: conv.id, role: "assistant", content: `好的！我已經通知賴先生了，他會盡快親自跟你聊這台 ${vehicleName} 🙌` });
+
+          // Lead score boost (+25 for wanting human contact — very high intent)
+          const humanScore = 25;
+          const newScore = (conv.leadScore || 0) + humanScore;
+          const newStatus = newScore >= 80 ? "hot" : newScore >= 50 ? "qualified" : "new";
+          await db.updateConversation(conv.id, { leadScore: newScore, leadStatus: newStatus });
+          await db.addLeadEvent({
+            conversationId: conv.id,
+            eventType: "want_human_chat",
+            scoreChange: humanScore,
+            reason: `🙋 要求真人業務：想聊 ${vehicleName}`,
+          });
+
+          db.addAnalyticsEvent({
+            conversationId: conv.id,
+            userId,
+            eventCategory: "human_handoff",
+            eventAction: `want_human_chat`,
+            eventLabel: vehicleName,
+            channel: "line",
+          });
+        }
+
+        // 2. Reply to customer
+        try {
+          await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${channelAccessToken}`,
+            },
+            body: JSON.stringify({
+              replyToken,
+              messages: [{ type: "text", text: `好的！我已經通知賴先生了，他會盡快親自跟你聊這台 ${vehicleName} 🙌\n\n真人業務馬上就到，請稍等一下！` }],
+            }),
+          });
+        } catch (err) {
+          console.error("[LINE] Human chat reply failed:", err);
+        }
+
+        // 3. Push notification to owner + staff
+        const customerName = conv?.customerName || "未知客戶";
+        const customerPhone = conv?.customerContact || "未提供";
+
+        // System notification
+        await notifyOwner({
+          title: `🙋 客人想跟真人聊！`,
+          content: `客戶：${customerName}\n電話：${customerPhone}\n想聊的車：${vehicleName}\n\n請立即到 LINE 官方帳號回覆客人！`,
+        });
+
+        // LINE push notification to owner + additional staff
+        const recipientIds: string[] = [];
+        const ownerUserId = process.env.LINE_OWNER_USER_ID;
+        if (ownerUserId) recipientIds.push(ownerUserId);
+
+        const additionalIds = process.env.LINE_ADDITIONAL_NOTIFY_USER_IDS;
+        if (additionalIds) {
+          const extras = additionalIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
+          for (const extraId of extras) {
+            if (!recipientIds.includes(extraId)) recipientIds.push(extraId);
+          }
+        }
+
+        // Build notification flex for owner
+        const notifFlex = {
+          type: "flex",
+          altText: `🙋 ${customerName} 想跟真人聊 ${vehicleName}`,
+          contents: {
+            type: "bubble",
+            size: "kilo",
+            body: {
+              type: "box",
+              layout: "vertical",
+              spacing: "md",
+              contents: [
+                { type: "text", text: "🙋 客人想跟真人業務聊！", weight: "bold", size: "lg", color: "#06C755" },
+                { type: "text", text: "請立即到 LINE 官方帳號回覆", size: "xs", color: "#FF6600", weight: "bold", margin: "sm" },
+                { type: "separator", margin: "md" },
+                {
+                  type: "box", layout: "vertical", margin: "lg", spacing: "sm",
+                  contents: [
+                    {
+                      type: "box", layout: "horizontal",
+                      contents: [
+                        { type: "text", text: "客戶", size: "sm", color: "#555555", flex: 2 },
+                        { type: "text", text: customerName, size: "sm", color: "#111111", flex: 5, weight: "bold" },
+                      ],
+                    },
+                    {
+                      type: "box", layout: "horizontal",
+                      contents: [
+                        { type: "text", text: "電話", size: "sm", color: "#555555", flex: 2 },
+                        { type: "text", text: customerPhone, size: "sm", color: customerPhone !== "未提供" ? "#111111" : "#AAAAAA", flex: 5, weight: customerPhone !== "未提供" ? "bold" : "regular" },
+                      ],
+                    },
+                    {
+                      type: "box", layout: "horizontal",
+                      contents: [
+                        { type: "text", text: "想聊的車", size: "sm", color: "#555555", flex: 2 },
+                        { type: "text", text: vehicleName, size: "sm", color: "#C4A265", flex: 5, weight: "bold" },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            footer: {
+              type: "box",
+              layout: "vertical",
+              spacing: "sm",
+              contents: [
+                ...(customerPhone !== "未提供" ? [{
+                  type: "button" as const,
+                  action: { type: "uri" as const, label: `📞 撥打 ${customerPhone}`, uri: `tel:${customerPhone.replace(/[-\s]/g, '')}` },
+                  style: "primary" as const,
+                  color: "#06C755",
+                }] : []),
+                {
+                  type: "button",
+                  action: { type: "uri", label: "💬 開啟LINE聊天室", uri: "https://chat.line.biz/" },
+                  style: "primary",
+                  color: "#1B3A5C",
+                },
+              ],
+            },
+          },
+        };
+
+        for (const recipientId of recipientIds) {
+          try {
+            await fetch("https://api.line.me/v2/bot/message/push", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${channelAccessToken}`,
+              },
+              body: JSON.stringify({
+                to: recipientId,
+                messages: [notifFlex],
+              }),
+            });
+            console.log(`[LINE] 🙋 Human chat notification sent to recipient`);
+          } catch (pushErr) {
+            console.error("[LINE] Human chat notification push failed:", pushErr);
+          }
+        }
+      }
+    }
+
     return;
   }
 
@@ -888,6 +1081,14 @@ async function processLineEvent(
     content: userMessage,
   });
   console.log(`[LINE] Saved user message: id=${savedMsg.id}, convId=${convId}`);
+
+  // ============ HUMAN TAKEOVER CHECK ============
+  // If a real human agent has taken over this conversation, AI should not respond
+  const conversationTags = conversation!.tags || '';
+  if (conversationTags.includes('human_takeover')) {
+    console.log(`[LINE] 🚫 Human takeover active for ${userId.slice(0, 8)}... — AI will NOT respond.`);
+    return; // Let the real human handle it
+  }
 
   // Track conversation for short-term recovery nudges
   updateConversationTracker(userId, userMessage);
@@ -1113,6 +1314,71 @@ async function processLineEvent(
   const historyForDetection = history.map(m => ({ role: m.role, content: m.content }));
   const detection = detectVehicleFromMessage(userMessage, allVehicles, historyForDetection, vIndex);
   console.log(`[VehicleDetection] type=${detection.type}, vehicle=${detection.vehicle?.brand || 'none'} ${detection.vehicle?.model || ''}, question=${detection.questionType}, answer=${detection.directAnswer}`);
+
+  // ============ CAR INQUIRY BUTTON → SHORT INTRO + SPECS + "WANT HUMAN?" ============
+  // When customer clicks "💬 LINE 問這台車", skip LLM and send structured response directly
+  if (detection.type === 'inquiry_button' && detection.vehicle) {
+    const v = detection.vehicle;
+    console.log(`[LINE] 🚗 Car inquiry button: ${v.brand} ${v.model} — sending intro + specs + human chat option`);
+
+    // Build the 3-part response: intro text + vehicle card + human chat confirm
+    const inquiryMessages = buildCarInquiryMessages(v, customerName);
+
+    // Save assistant response for history
+    const priceText = v.priceDisplay || `${v.price}萬`;
+    await db.addMessage({
+      conversationId: convId,
+      role: "assistant",
+      content: `[🚗 已發送 ${v.brand} ${v.model} ${priceText} 車輛介紹 + 真人業務選項]`,
+    });
+
+    // Track analytics
+    db.addAnalyticsEvent({
+      conversationId: convId,
+      userId,
+      eventCategory: "car_inquiry",
+      eventAction: `inquiry_button_${v.brand}_${v.model}`,
+      eventLabel: priceText,
+      channel: "line",
+    });
+
+    // Lead score boost for inquiry button click (+15)
+    const inquiryScore = 15;
+    const newScore = (conversation!.leadScore || 0) + inquiryScore;
+    const newStatus = newScore >= 80 ? "hot" : newScore >= 50 ? "qualified" : "new";
+    await db.updateConversation(convId, { leadScore: newScore, leadStatus: newStatus });
+    await db.addLeadEvent({
+      conversationId: convId,
+      eventType: "car_inquiry_button",
+      scoreChange: inquiryScore,
+      reason: `🚗 問車按鈕：詢問 ${v.brand} ${v.model}`,
+    });
+    conversation = { ...conversation!, leadScore: newScore };
+
+    // Reply with the structured messages
+    try {
+      const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${channelAccessToken}`,
+        },
+        body: JSON.stringify({
+          replyToken,
+          messages: inquiryMessages.slice(0, 5), // LINE max 5 messages
+        }),
+      });
+      const replyBody = await replyRes.text();
+      console.log(`[LINE] Car inquiry reply: ${replyRes.status} ${replyBody}`);
+    } catch (err) {
+      console.error("[LINE] Car inquiry reply failed:", err);
+    }
+
+    // Still check for owner notification on hot leads
+    const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
+    await checkAndNotifyOwner(conversation!, userMessage, channelAccessToken, ownerUserId, phoneJustFound);
+    return; // Done - skip LLM
+  }
 
   // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
   const customerIntents = detectCustomerIntents(userMessage);
