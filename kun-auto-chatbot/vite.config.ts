@@ -13,6 +13,14 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      // Eliminate KaTeX font bloat — this car dealership chatbot doesn't need LaTeX math
+      "katex/dist/katex.min.css": path.resolve(
+        import.meta.dirname,
+        "client",
+        "src",
+        "lib",
+        "katex-empty.css",
+      ),
     },
   },
   envDir: path.resolve(import.meta.dirname),

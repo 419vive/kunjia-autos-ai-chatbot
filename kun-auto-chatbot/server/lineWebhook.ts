@@ -10,12 +10,13 @@ import { buildLLMMessages, type PromptContext } from "./dynamicPromptBuilder";
 import { isRuleBasedMode, generateRuleBasedReply } from "./ruleBasedReply";
 import { sanitizeChatMessage } from "./security";
 import { checkAndNotifyOwner, sendHumanHandoffNotification, getAssistantContentForTrigger } from "./lineNotifications";
-import { updateConversationTracker, sendFollowUpMessages, conversationTracker } from "./lineNudgeFollowUp";
+import { updateConversationTracker, sendFollowUpMessages } from "./lineNudgeFollowUp";
 import { createLogger } from "./_core/logger";
 import { detectPhoneNumber, detectGenderFromName, getGenderGreeting, getNameGreeting, showTypingIndicator, downloadLineImage, identifyVehicleFromImage, findMatchingVehicles, isDuplicate } from "./lineHelpers";
 
-// Re-export helpers that other modules import from lineWebhook
-export { detectPhoneNumber, detectGenderFromName, getGenderGreeting, getNameGreeting };
+// Re-export for backward compatibility (used by routers.ts and tests)
+export { detectPhoneNumber, detectGenderFromName, getGenderGreeting, getNameGreeting } from "./lineHelpers";
+export { updateConversationTracker, sendFollowUpMessages } from "./lineNudgeFollowUp";
 
 const log = createLogger("LINE");
 

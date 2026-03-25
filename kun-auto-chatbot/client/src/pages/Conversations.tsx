@@ -17,7 +17,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
-import { Streamdown } from "streamdown";
+import { Streamdown, defaultRehypePlugins } from "streamdown";
+
+// Exclude KaTeX rehype plugin — LaTeX math is unnecessary for a car dealership chatbot
+const { katex: _katex, ...rehypePluginsNoKatex } = defaultRehypePlugins;
+const rehypePlugins = Object.values(rehypePluginsNoKatex);
 
 const CHANNEL_LABELS: Record<string, string> = {
   all: "全部渠道",
@@ -186,7 +190,7 @@ function ConversationDetail({ id, onBack }: { id: number; onBack: () => void }) 
                         : "bg-muted"
                     }`}
                   >
-                    <Streamdown>{msg.content}</Streamdown>
+                    <Streamdown rehypePlugins={rehypePlugins}>{msg.content}</Streamdown>
                     <p className="mt-1 text-[10px] opacity-60">
                       {new Date(msg.createdAt).toLocaleTimeString("zh-TW")}
                     </p>
