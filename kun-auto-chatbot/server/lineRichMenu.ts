@@ -4,6 +4,10 @@
  * via the LINE Messaging API.
  */
 
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("RichMenu");
+
 const LINE_API_BASE = "https://api.line.me/v2/bot";
 const LINE_API_DATA_BASE = "https://api-data.line.me/v2/bot";
 
@@ -114,7 +118,7 @@ export async function deleteRichMenu(accessToken: string, richMenuId: string): P
  */
 export async function createRichMenu(accessToken: string): Promise<string> {
   const body = buildRichMenuObject();
-  console.log("[RichMenu] Creating rich menu...");
+  log.info("Creating rich menu...");
 
   const res = await fetch(`${LINE_API_BASE}/richmenu`, {
     method: "POST",
@@ -131,7 +135,7 @@ export async function createRichMenu(accessToken: string): Promise<string> {
   }
 
   const data = await res.json();
-  console.log(`[RichMenu] Created: ${data.richMenuId}`);
+  log.info(`Created: ${data.richMenuId}`);
   return data.richMenuId;
 }
 
@@ -142,7 +146,7 @@ export async function uploadRichMenuImage(
   accessToken: string,
   richMenuId: string
 ): Promise<void> {
-  console.log(`[RichMenu] Downloading image from CDN...`);
+  log.info("Downloading image from CDN...");
 
   // Download image from CDN
   const imgRes = await fetch(RICH_MENU_IMAGE_URL);
@@ -150,10 +154,10 @@ export async function uploadRichMenuImage(
     throw new Error(`Failed to download rich menu image: ${imgRes.status}`);
   }
   const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-  console.log(`[RichMenu] Image downloaded: ${imgBuffer.length} bytes`);
+  log.info(`Image downloaded: ${imgBuffer.length} bytes`);
 
   // Upload to LINE
-  console.log(`[RichMenu] Uploading image to LINE for menu ${richMenuId}...`);
+  log.info(`Uploading image to LINE for menu ${richMenuId}...`);
   const uploadRes = await fetch(
     `${LINE_API_DATA_BASE}/richmenu/${richMenuId}/content`,
     {
@@ -171,7 +175,7 @@ export async function uploadRichMenuImage(
     throw new Error(`Failed to upload rich menu image: ${uploadRes.status} ${errText}`);
   }
 
-  console.log(`[RichMenu] Image uploaded successfully`);
+  log.info("Image uploaded successfully");
 }
 
 /**
@@ -181,7 +185,7 @@ export async function setDefaultRichMenu(
   accessToken: string,
   richMenuId: string
 ): Promise<void> {
-  console.log(`[RichMenu] Setting ${richMenuId} as default...`);
+  log.info(`Setting ${richMenuId} as default...`);
 
   const res = await fetch(
     `${LINE_API_BASE}/user/all/richmenu/${richMenuId}`,
@@ -196,7 +200,7 @@ export async function setDefaultRichMenu(
     throw new Error(`Failed to set default rich menu: ${res.status} ${errText}`);
   }
 
-  console.log(`[RichMenu] Default rich menu set successfully`);
+  log.info("Default rich menu set successfully");
 }
 
 /**

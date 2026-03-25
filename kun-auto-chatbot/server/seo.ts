@@ -7,6 +7,9 @@
  */
 import { Router } from "express";
 import * as db from "./db";
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("SEO");
 
 // ============ IndexNow: Instant URL notification to Bing/Yandex ============
 
@@ -28,7 +31,7 @@ export async function submitIndexNow(urls: string[]): Promise<void> {
       }),
     });
   } catch (err) {
-    console.error("[IndexNow] Submission failed:", err);
+    log.error("IndexNow submission failed", { error: err });
   }
 }
 
@@ -564,7 +567,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         ]));
       }
     } catch (err) {
-      console.error("[SEO] Failed to fetch vehicle for meta tags:", err);
+      log.error("Failed to fetch vehicle for meta tags", { error: err });
     }
   }
 
@@ -612,7 +615,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
         });
       }
     } catch (err) {
-      console.error("[SEO] Failed to fetch vehicles for ItemList:", err);
+      log.error("Failed to fetch vehicles for ItemList", { error: err });
     }
   }
 
@@ -1402,7 +1405,7 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
         );
         vehicleEntries = [...vehicleEntries, ...brandEntries];
       } catch (err) {
-        console.error("[SEO] Failed to fetch vehicles for sitemap:", err);
+        log.error("Failed to fetch vehicles for sitemap", { error: err });
       }
 
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1419,7 +1422,7 @@ ${vehicleEntries.join("\n")}
 
       res.type("application/xml").send(xml);
     } catch (err) {
-      console.error("[SEO] Sitemap generation failed:", err);
+      log.error("Sitemap generation failed", { error: err });
       res.status(500).type("text/plain").send("Sitemap generation failed");
     }
   });

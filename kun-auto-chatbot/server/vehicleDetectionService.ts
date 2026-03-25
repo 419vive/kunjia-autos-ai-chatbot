@@ -13,6 +13,10 @@
  * 4. 加入明確的 Q&A 映射（客人問 cc 數 → 回答排氣量）
  */
 
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("VehicleDetection");
+
 // ============ BRAND ALIASES (Chinese → English) ============
 
 export const BRAND_ALIASES: Record<string, string> = {
@@ -379,7 +383,7 @@ export function extractVehicleFromHistory(
     if (msg.role !== 'user') continue;
     const found = findInMessage(msg.content || '');
     if (found) {
-      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in user message at index ${i}`);
+      log.debug(`extractVehicleFromHistory: found ${found.brand} ${found.model} in user message at index ${i}`);
       return found;
     }
   }
@@ -389,7 +393,7 @@ export function extractVehicleFromHistory(
     if (msg.role !== 'assistant') continue;
     const found = findInMessage(msg.content || '');
     if (found) {
-      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in assistant message at index ${i} (fallback)`);
+      log.debug(`extractVehicleFromHistory: found ${found.brand} ${found.model} in assistant message at index ${i} (fallback)`);
       return found;
     }
   }
@@ -525,12 +529,12 @@ export function detectVehicleFromMessage(
       if (historyVehicle) {
         const directAnswer = getQuestionAnswer(historyVehicle, questionType);
         const termExplanation = getTermExplanation(userMessage, historyVehicle);
-        console.log(`[VehicleDetection] Context-aware: resolved "${userMessage}" to ${historyVehicle.brand} ${historyVehicle.model} from conversation history`);
+        log.debug(`Context-aware: resolved "${userMessage}" to ${historyVehicle.brand} ${historyVehicle.model} from conversation history`);
         return { type: 'context', vehicle: historyVehicle, questionType, directAnswer, termExplanation };
       }
       // Follow-up detected but no vehicle in history → special fallback
       // So LLM knows to ask "你問的是哪一台呢？" instead of giving a generic greeting
-      console.log(`[VehicleDetection] Follow-up question detected but no vehicle in history: "${userMessage}"`);
+      log.debug(`Follow-up question detected but no vehicle in history: "${userMessage}"`);
       return { type: 'context_missing', vehicle: null, questionType, directAnswer: '', termExplanation: '' };
     }
   }

@@ -1,6 +1,9 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { addPageView, updatePageViewDuration } from "./db";
+import { createLogger } from "./_core/logger";
+
+const log = createLogger("Tracking");
 
 const trackingRouter = Router();
 
@@ -116,7 +119,7 @@ trackingRouter.post("/api/track", async (req: Request, res: Response) => {
 
     res.json({ ok: true, sessionHash });
   } catch (err) {
-    console.error("[Tracking] Error:", err);
+    log.error("Error recording page view", { error: err });
     res.json({ ok: true }); // Don't fail the client
   }
 });

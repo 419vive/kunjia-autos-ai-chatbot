@@ -559,12 +559,12 @@ async function processLineEvent(
         return;
       }
 
-      console.log(`[LINE Image] Identified vehicle: ${identified.brand} ${identified.model}`);
+      log.info("Identified vehicle", { brand: identified.brand, model: identified.model });
 
       // 3. Match against inventory
       const allVehicles = await db.getAllVehicles();
       const matches = findMatchingVehicles(identified, allVehicles);
-      console.log(`[LINE Image] Found ${matches.length} matching vehicles in inventory`);
+      log.info("Found matching vehicles in inventory", { count: matches.length });
 
       if (matches.length > 0) {
         // 4. Reply with matching vehicle Flex cards
@@ -635,7 +635,7 @@ async function processLineEvent(
           : `已辨識為 ${identified.brand} ${identified.model}，但目前無庫存` });
       }
     } catch (err) {
-      console.error("[LINE Image] Processing error:", err);
+      log.error("Image processing error", err);
     }
     return;
   }
@@ -643,19 +643,19 @@ async function processLineEvent(
   // ============ POSTBACK EVENT ============
   if (event.type === "postback") {
     const postbackData = event.postback?.data || "";
-    console.log(`[LINE] Postback received: ${postbackData} from user ${event.source?.userId}`);
+    log.info("Postback received", { data: postbackData, userId: event.source?.userId });
     // Parse postback data and handle known actions
     const params = new URLSearchParams(postbackData);
     const action = params.get("action");
     if (action) {
-      console.log(`[LINE] Postback action: ${action}`);
+      log.debug("Postback action", { action });
     }
     return;
   }
 
   if (event.type !== "message" || event.message?.type !== "text") {
     const msgType = event.message?.type;
-    console.log(`[LINE] Non-text message: ${event.type}, type: ${msgType}`);
+    log.debug("Non-text message", { eventType: event.type, msgType });
     // Respond to non-text messages (sticker, location, video, audio) instead of silently discarding
     // But respect human_handoff — don't reply if human is handling the conversation
     if (event.type === "message" && msgType && ["sticker", "location", "video", "audio", "file"].includes(msgType)) {
@@ -663,7 +663,7 @@ async function processLineEvent(
       if (nonTextUserId) {
         const nonTextConv = await db.getConversationBySessionId(`line-${nonTextUserId}`);
         if (nonTextConv?.status === 'human_handoff') {
-          console.log(`[LINE] Non-text message from ${nonTextUserId.slice(0,8)}... — in human_handoff mode, skipping`);
+          log.debug("Non-text message in human_handoff mode, skipping", { userId: nonTextUserId.slice(0,8) });
           return;
         }
       }
@@ -684,7 +684,7 @@ async function processLineEvent(
             body: JSON.stringify({ replyToken, messages: [{ type: "text", text: responseText }] }),
           });
         } catch (err) {
-          console.error("[LINE] Non-text reply failed:", err);
+          log.error("Non-text reply failed", err);
         }
       }
     }
@@ -696,16 +696,16 @@ async function processLineEvent(
   const replyToken = event.replyToken;
   const messageId = event.message?.id;
 
-  console.log(`[LINE] Message from ${userId ? userId.slice(0,8) + '...' : 'unknown'}: [message length: ${userMessage?.length || 0}]`);
+  log.info("Message received", { userId: userId ? userId.slice(0,8) : 'unknown', messageLength: userMessage?.length || 0 });
 
   if (!userId || !userMessage || !replyToken) {
-    console.warn("[LINE] Missing userId, message, or replyToken");
+    log.warn("Missing userId, message, or replyToken");
     return;
   }
 
   // Deduplication: skip if we already processed this message (LINE retry)
   if (messageId && isDuplicate(messageId)) {
-    console.log(`[LINE] Duplicate message ${messageId}, skipping`);
+    log.debug("Duplicate message, skipping", { messageId });
     return;
   }
 
@@ -731,10 +731,10 @@ async function processLineEvent(
       if (profileRes.ok) {
         const profile = await profileRes.json();
         customerName = profile.displayName;
-        console.log(`[LINE] Got profile: [name retrieved]`);
+        log.debug("Got profile: [name retrieved]");
       }
     } catch (err) {
-      console.warn("[LINE] Failed to get profile:", err);
+      log.warn("Failed to get profile", err);
     }
 
     const created = await db.createConversation({
@@ -767,13 +767,13 @@ async function processLineEvent(
 
     if (isRichMenuAction || isNewInquiry || isHandoffExpired) {
       if (isHandoffExpired) {
-        console.log(`[LINE] Conversation ${convId} handoff expired after 30min, reactivating AI`);
+        log.info("Conversation handoff expired after 30min, reactivating AI", { conversationId: convId });
       } else {
-        console.log(`[LINE] Conversation ${convId} was in human_handoff but user started new interaction, reactivating AI`);
+        log.info("Conversation in human_handoff but user started new interaction, reactivating AI", { conversationId: convId });
       }
       await db.updateConversation(convId, { status: 'active' });
     } else {
-      console.log(`[LINE] Conversation ${convId} is in human_handoff mode, AI skipping`);
+      log.info("Conversation is in human_handoff mode, AI skipping", { conversationId: convId });
       await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
       return;
     }
@@ -782,7 +782,7 @@ async function processLineEvent(
   // ============ HUMAN HANDOFF TRIGGER: User requests real human ============
   const humanHandoffPattern = /想跟真人|想和真人|找真人|要真人|真人客服|人工客服|轉真人|不想跟機器人|找人處理|我想跟真人業務聊聊這台車/;
   if (humanHandoffPattern.test(userMessage)) {
-    console.log(`[LINE] 🚨 User requested human handoff: ${userId.slice(0, 8)}...`);
+    log.info("User requested human handoff", { userId: userId.slice(0, 8) });
     // Save user message
     await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
     // Extract vehicle context from recent messages before notifying staff
@@ -812,7 +812,7 @@ async function processLineEvent(
         }),
       });
     } catch (err) {
-      console.error("[LINE] Human handoff reply failed:", err);
+      log.error("Human handoff reply failed", err);
     }
     // Update conversation status
     await db.updateConversation(convId, { status: 'human_handoff' });
@@ -825,7 +825,7 @@ async function processLineEvent(
     role: "user",
     content: userMessage,
   });
-  console.log(`[LINE] Saved user message: id=${savedMsg.id}, convId=${convId}`);
+  log.debug("Saved user message", { id: savedMsg.id, convId });
 
   // Track conversation for short-term recovery nudges
   updateConversationTracker(userId, userMessage);
@@ -833,7 +833,7 @@ async function processLineEvent(
   // ============ FRUSTRATION DETECTION ============
   const frustration = detectFrustration(userMessage, userId);
   if (frustration.frustrated) {
-    console.log(`[LINE] Frustration detected (confidence: ${frustration.confidence.toFixed(2)}) from ${userId.slice(0, 8)}...`);
+    log.info("Frustration detected", { confidence: frustration.confidence.toFixed(2), userId: userId.slice(0, 8) });
     db.addAnalyticsEvent({
       conversationId: convId,
       userId,
@@ -849,7 +849,7 @@ async function processLineEvent(
   if (detectedPhone && !conversation!.customerContact) {
     await db.updateConversation(convId, { customerContact: detectedPhone });
     conversation = { ...conversation!, customerContact: detectedPhone };
-    console.log(`[LINE] Phone number detected and saved: [REDACTED]`);
+    log.info("Phone number detected and saved: [REDACTED]");
   }
 
   // Score the message (8-dimension model)
@@ -884,14 +884,14 @@ async function processLineEvent(
     const newStatus = newScore >= 80 ? "hot" : newScore >= 50 ? "qualified" : "new";
     await db.updateConversation(convId, { leadScore: newScore, leadStatus: newStatus });
     conversation = { ...conversation!, leadScore: newScore };
-    console.log(`[LINE] Lead score updated: +${scoreDelta} = ${newScore} (${newStatus})`);
+    log.info("Lead score updated", { delta: scoreDelta, newScore, newStatus });
   }
 
   // ============ CHECK IF THIS IS A PHOTO TRIGGER ============
   const photoExternalId = detectPhotoTrigger(userMessage);
 
   if (photoExternalId) {
-    console.log(`[LINE] Photo trigger detected for externalId: ${photoExternalId}`);
+    log.info("Photo trigger detected", { externalId: photoExternalId });
     db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "photo_view", eventAction: `看照片 ${photoExternalId}`, channel: "line" });
 
     const allVehicles = await db.getAllVehicles();
@@ -907,7 +907,7 @@ async function processLineEvent(
       });
 
       try {
-        console.log(`[LINE] Sending ${photoMessages.length} photo messages...`);
+        log.debug("Sending photo messages", { count: photoMessages.length });
         const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
           method: "POST",
           headers: {
@@ -920,9 +920,9 @@ async function processLineEvent(
           }),
         });
         const replyBody = await replyRes.text();
-        console.log(`[LINE] Photo reply response: ${replyRes.status} ${replyBody}`);
+        log.debug("Photo reply response", { status: replyRes.status, body: replyBody });
       } catch (err) {
-        console.error("[LINE] Photo reply failed:", err);
+        log.error("Photo reply failed", err);
       }
 
       const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
@@ -946,7 +946,7 @@ async function processLineEvent(
   const faqItem = detectFaqTrigger(userMessage);
 
   if (faqItem) {
-    console.log(`[LINE] FAQ trigger detected: #${faqItem.id} ${faqItem.title}`);
+    log.info("FAQ trigger detected", { id: faqItem.id, title: faqItem.title });
     db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "faq_click", eventAction: faqItem.title, eventLabel: faqItem.shortQuestion, channel: "line" });
 
     // Lead score +10 for each FAQ interaction (shows engagement)
@@ -961,7 +961,7 @@ async function processLineEvent(
       reason: `🏆 FAQ互動：點擊了「${faqItem.title}」問題`,
     });
     conversation = { ...conversation!, leadScore: newScore };
-    console.log(`[LINE] FAQ lead score: +${faqScore} = ${newScore}`);
+    log.debug("FAQ lead score", { delta: faqScore, newScore });
 
     // Build answer reveal + follow-up question menu
     const faqMessages = buildFaqAnswerMessages(faqItem);
@@ -985,9 +985,9 @@ async function processLineEvent(
         }),
       });
       const replyBody = await replyRes.text();
-      console.log(`[LINE] FAQ answer reply: ${replyRes.status} ${replyBody}`);
+      log.debug("FAQ answer reply", { status: replyRes.status, body: replyBody });
     } catch (err) {
-      console.error("[LINE] FAQ reply failed:", err);
+      log.error("FAQ reply failed", err);
     }
 
     const phoneJustFound = !!(detectedPhone && detectedPhone === conversation!.customerContact);
@@ -999,7 +999,7 @@ async function processLineEvent(
   const trigger = detectRichMenuTrigger(userMessage);
 
   if (trigger) {
-    console.log(`[LINE] Rich Menu trigger detected: ${trigger.type} (${trigger.label})`);
+    log.info("Rich Menu trigger detected", { type: trigger.type, label: trigger.label });
     db.addAnalyticsEvent({ conversationId: convId, userId, eventCategory: "rich_menu", eventAction: trigger.label || trigger.type, channel: "line" });
 
     // Fetch vehicles for carousel-type triggers
@@ -1017,7 +1017,7 @@ async function processLineEvent(
 
       // Reply with multiple Flex Messages (supports >12 vehicles)
       try {
-        console.log(`[LINE] Sending ${flexMessages.length} Flex Message(s) reply...`);
+        log.debug("Sending Flex Message(s) reply", { count: flexMessages.length });
         const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
           method: "POST",
           headers: {
@@ -1030,9 +1030,9 @@ async function processLineEvent(
           }),
         });
         const replyBody = await replyRes.text();
-        console.log(`[LINE] Flex reply response: ${replyRes.status} ${replyBody}`);
+        log.debug("Flex reply response", { status: replyRes.status, body: replyBody });
       } catch (err) {
-        console.error("[LINE] Flex reply failed:", err);
+        log.error("Flex reply failed", err);
       }
 
       // Still do owner notification check
@@ -1046,7 +1046,7 @@ async function processLineEvent(
 
   const allHistory = await db.getMessagesByConversation(convId, 100);
   const history = allHistory.slice(-10);
-  console.log(`[LINE] History: total=${allHistory.length}, using last ${history.length} messages`);
+  log.debug("History loaded", { total: allHistory.length, using: history.length });
 
   const allVehicles = await db.getAllVehicles();
   const vIndex = buildVehicleIndex(allVehicles);
@@ -1055,11 +1055,11 @@ async function processLineEvent(
   // Pass conversation history so follow-up questions can resolve to previously discussed vehicles
   const historyForDetection = history.map(m => ({ role: m.role, content: m.content }));
   const detection = detectVehicleFromMessage(userMessage, allVehicles, historyForDetection, vIndex);
-  console.log(`[VehicleDetection] type=${detection.type}, vehicle=${detection.vehicle?.brand || 'none'} ${detection.vehicle?.model || ''}, question=${detection.questionType}, answer=${detection.directAnswer}`);
+  log.debug("Vehicle detection result", { type: detection.type, vehicle: `${detection.vehicle?.brand || 'none'} ${detection.vehicle?.model || ''}`.trim(), question: detection.questionType, answer: detection.directAnswer });
 
   // ============ INTENT DETECTION v7: Detect customer intents and inject focused instructions ============
   const customerIntents = detectCustomerIntents(userMessage);
-  console.log(`[IntentDetection] intents=${customerIntents.join(', ') || 'none'}`);
+  log.debug("Intent detection result", { intents: customerIntents.join(', ') || 'none' });
 
   const greeting = getNameGreeting(customerName, customerGender);
 
@@ -1068,7 +1068,7 @@ async function processLineEvent(
 
   // ============ RULE-BASED MODE vs LLM MODE ============
   if (isRuleBasedMode()) {
-    console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
+    log.info("Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
     replyText = generateRuleBasedReply({
       userMessage,
       greeting,
@@ -1077,9 +1077,9 @@ async function processLineEvent(
       customerContact: conversation!.customerContact,
       leadScore: conversation!.leadScore ?? undefined,
     });
-    console.log("[LINE] Rule-based response:", replyText.substring(0, 100));
+    log.info("Rule-based response", { preview: replyText.substring(0, 100) });
   } else {
-    console.log("[LINE] LLM mode, calling Claude API...");
+    log.info("LLM mode, calling Claude API...");
 
     // Build smart vehicle KB: if target vehicle detected, show it prominently and abbreviate others
     const vehicleKB = buildSmartVehicleKB(allVehicles, detection.vehicle);
@@ -1102,7 +1102,7 @@ async function processLineEvent(
     };
 
     const llmMessages = buildLLMMessages(promptContext, history.map(m => ({ role: m.role, content: m.content })));
-    console.log(`[LINE] Dynamic prompt: ${llmMessages.length} messages, intents=${customerIntents.join(',') || 'none'}, vehicle=${detection.vehicle?.brand || 'none'}`);
+    log.info(`Dynamic prompt: ${llmMessages.length} messages, intents=${customerIntents.join(',') || 'none'}, vehicle=${detection.vehicle?.brand || 'none'}`);
 
     try {
       const response = await invokeLLM({ messages: llmMessages });
@@ -1111,7 +1111,7 @@ async function processLineEvent(
           ? response.choices[0].message.content
           : "";
       if (!replyText) {
-        console.warn("[LINE] LLM returned empty content, falling back to rule-based reply");
+        log.warn("LLM returned empty content, falling back to rule-based reply");
         replyText = generateRuleBasedReply({
           userMessage,
           greeting,
@@ -1121,9 +1121,9 @@ async function processLineEvent(
           leadScore: conversation!.leadScore ?? undefined,
         });
       }
-      console.log("[LINE] LLM response:", replyText.substring(0, 100));
+      log.info("LLM response:", replyText.substring(0, 100));
     } catch (err) {
-      console.error("[LINE] LLM error, falling back to rule-based reply:", err);
+      log.error("LLM error, falling back to rule-based reply:", err);
       replyText = generateRuleBasedReply({
         userMessage,
         greeting,
@@ -1154,7 +1154,7 @@ async function processLineEvent(
     isHumanHandoff = true;
     // Remove the marker from the customer-facing message
     replyText = replyText.replace(/\s*\[HUMAN_HANDOFF\]\s*/g, '').trim();
-    console.log('[LINE] 🚨 HUMAN HANDOFF triggered! AI cannot answer this question.');
+    log.info('🚨 HUMAN HANDOFF triggered! AI cannot answer this question.');
   }
   
   // Also detect if AI said "I'll check for you" type phrases (secondary detection)
@@ -1164,14 +1164,14 @@ async function processLineEvent(
     isHumanHandoff = true;
     // Append human handoff message to the reply
     replyText += '\n\n🙋‍♂️ 我已經通知專人了，真人客服馬上就到！';
-    console.log('[LINE] 🚨 HUMAN HANDOFF triggered (uncertainty detected in AI response).');
+    log.info('🚨 HUMAN HANDOFF triggered (uncertainty detected in AI response).');
   }
 
   // ============ FRUSTRATION-TRIGGERED EMPATHETIC RESPONSE ============
   if (frustration.frustrated && !isHumanHandoff) {
     isHumanHandoff = true;
     replyText = '不好意思讓你不方便了！我馬上幫你轉給阿家本人處理 🙏\n\n真人客服馬上就到，請稍等一下！';
-    console.log('[LINE] 😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
+    log.info('😤 FRUSTRATION HANDOFF triggered (confidence: ' + frustration.confidence.toFixed(2) + ')');
   }
 
   // Save assistant response
@@ -1204,7 +1204,7 @@ async function processLineEvent(
 
   // Reply via LINE API with contextual quick replies
   try {
-    console.log("[LINE] Sending reply via LINE API...");
+    log.info("Sending reply via LINE API...");
     const replyRes = await fetch("https://api.line.me/v2/bot/message/reply", {
       method: "POST",
       headers: {
@@ -1217,9 +1217,9 @@ async function processLineEvent(
       }),
     });
     const replyBody = await replyRes.text();
-    console.log(`[LINE] Reply API response: ${replyRes.status} ${replyBody}`);
+    log.info(`Reply API response: ${replyRes.status} ${replyBody}`);
   } catch (err) {
-    console.error("[LINE] Reply failed:", err);
+    log.error("Reply failed:", err);
   }
 
   // ============ HUMAN HANDOFF: Push notification to owner + staff ============
@@ -1248,7 +1248,7 @@ async function processLineEvent(
           }),
         });
       } catch (err) {
-        console.error("[LINE] Handoff fallback push failed:", err);
+        log.error("Handoff fallback push failed:", err);
       }
     }
     // Mark conversation so AI stops responding until staff resolves it
@@ -1474,7 +1474,7 @@ async function checkAndNotifyOwner(
 ) {
   // Skip notifications during human handoff — staff is already handling this customer
   if (conversation.status === 'human_handoff') {
-    console.log(`[LINE] Skipping owner notification — conversation ${conversation.id} is in human_handoff mode`);
+    log.info(`Skipping owner notification — conversation ${conversation.id} is in human_handoff mode`);
     return;
   }
 
@@ -1556,14 +1556,14 @@ async function checkAndNotifyOwner(
             }),
           });
           const pushBody = await pushRes.text();
-          console.log(`[LINE] Sent Flex notification to [REDACTED] (milestone: ${newLevel}, score: ${score}). Phone: [REDACTED]. Response: ${pushRes.status}`);
+          log.info(`Sent Flex notification to [REDACTED] (milestone: ${newLevel}, score: ${score}). Phone: [REDACTED]. Response: ${pushRes.status}`);
         } catch (pushErr) {
-          console.error(`[LINE] Failed to push notification to [REDACTED]:`, pushErr);
+          log.error(`Failed to push notification to [REDACTED]:`, pushErr);
         }
       }
     }
   } catch (err) {
-    console.error("[LINE] Owner notification failed:", err);
+    log.error("Owner notification failed:", err);
   }
 }
 
@@ -1756,7 +1756,7 @@ async function sendHumanHandoffNotification(
 ): Promise<boolean> {
   const customerName = conversation.customerName || "未知客戶";
   
-  console.log(`[LINE] 🚨 Sending HUMAN HANDOFF notification for customer: ${customerName}`);
+  log.info(`🚨 Sending HUMAN HANDOFF notification for customer: ${customerName}`);
   
   try {
     // 1. Notify via system notification
@@ -1798,18 +1798,18 @@ async function sendHumanHandoffNotification(
             }),
           });
           const pushBody = await pushRes.text();
-          console.log(`[LINE] 🚨 Human handoff notification sent to [REDACTED]. Response: ${pushRes.status}`);
+          log.info(`🚨 Human handoff notification sent to [REDACTED]. Response: ${pushRes.status}`);
         } catch (pushErr) {
-          console.error(`[LINE] Failed to send human handoff notification:`, pushErr);
+          log.error(`Failed to send human handoff notification:`, pushErr);
         }
       }
       return true;
     } else {
-      console.warn('[LINE] No recipients configured for human handoff notification!');
+      log.warn('No recipients configured for human handoff notification!');
       return false;
     }
   } catch (err) {
-    console.error("[LINE] Human handoff notification failed:", err);
+    log.error("Human handoff notification failed:", err);
     return false;
   }
 }
@@ -1886,7 +1886,7 @@ async function checkConversationRecovery() {
     // Skip nudge if conversation is in human_handoff mode
     const conv = await db.getConversationBySessionId(`line-${userId}`);
     if (conv?.status === 'human_handoff') {
-      console.log(`[LINE] Skipping nudge for ${userId.slice(0, 8)}... — in human_handoff mode`);
+      log.info(`Skipping nudge for ${userId.slice(0, 8)}... — in human_handoff mode`);
       continue;
     }
 
@@ -1944,7 +1944,7 @@ async function checkConversationRecovery() {
 
       // Mark as nudged
       track.nudgeSent = true;
-      console.log(`[LINE Recovery] Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
+      log.info(`Nudge sent to ${userId.slice(0, 8)}... (topic: ${track.lastTopic})`);
 
       // Save to conversation history
       const sessionId = `line-${userId}`;
@@ -1957,14 +1957,14 @@ async function checkConversationRecovery() {
         });
       }
     } catch (err) {
-      console.error(`[LINE Recovery] Nudge failed for ${userId.slice(0, 8)}...:`, err);
+      log.error(`Nudge failed for ${userId.slice(0, 8)}...:`, err);
     }
   }
 }
 
 // Run conversation recovery check every 60 seconds
 setInterval(() => {
-  checkConversationRecovery().catch((err) => console.error("[LINE Recovery] Check error:", err));
+  checkConversationRecovery().catch((err) => log.error("Recovery check error:", err));
 }, 60 * 1000);
 
 // ============ FOLLOW-UP PUSH MESSAGING SYSTEM ============
@@ -2048,7 +2048,7 @@ export async function sendFollowUpMessages() {
         });
 
         followUpCooldown.set(conv.id, now);
-        console.log(`[LINE] 📩 Follow-up sent to conv ${conv.id} (${greeting})`);
+        log.info(`📩 Follow-up sent to conv ${conv.id} (${greeting})`);
 
         // Save follow-up to conversation
         await db.addMessage({
@@ -2057,17 +2057,17 @@ export async function sendFollowUpMessages() {
           content: `[系統自動跟進] ${followUpText}`,
         });
       } catch (err) {
-        console.error(`[LINE] Follow-up push failed for conv ${conv.id}:`, err);
+        log.error(`Follow-up push failed for conv ${conv.id}:`, err);
       }
     }
   } catch (err) {
-    console.error("[LINE] Follow-up system error:", err);
+    log.error("Follow-up system error:", err);
   }
 }
 
 // Run follow-up check every 2 hours
 setInterval(() => {
-  sendFollowUpMessages().catch((err) => console.error("[LINE] Follow-up interval error:", err));
+  sendFollowUpMessages().catch((err) => log.error("Follow-up interval error:", err));
 }, 2 * 60 * 60 * 1000);
 
 export { lineRouter };
