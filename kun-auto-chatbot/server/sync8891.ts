@@ -204,6 +204,17 @@ function apiVehicleToScraped(v: ApiVehicle): ScrapedVehicle {
   // Get photo URL (use bigImage for better quality)
   const photoUrl = v.bigImage || v.image || "";
 
+  // Parse features from subTitle — format: 【崑家】year/model/feature1/feature2/feature3
+  // Everything after brand/model info separated by / is a feature
+  const subTitle = v.subTitle || "";
+  const featureTokens = subTitle.replace(/【[^】]*】\s*/, '').split('/').map((s: string) => s.trim()).filter(Boolean);
+  // Filter out year/mileage/model tokens, keep only feature descriptions
+  const features = featureTokens.filter((t: string) =>
+    !/^\d{4}年?$|^\d{4}\/\d{2}$|^跑[\d萬千]+|^僅跑|^里程|^年式$/.test(t) &&
+    !new RegExp(`${brand}|${model}|崑家`, 'i').test(t) &&
+    t.length >= 2
+  ).join('、');
+
   return {
     externalId: String(v.itemId),
     sourceUrl: `https://auto.8891.com.tw/usedauto-infos-${v.itemId}.html`,
@@ -222,8 +233,8 @@ function apiVehicleToScraped(v: ApiVehicle): ScrapedVehicle {
     bodyType: "",
     licenseDate: "",
     location: v.region || "高雄市",
-    description: v.subTitle || "",
-    features: "",
+    description: subTitle.replace(/【[^】]*】\s*/, ''),
+    features,
     guarantees: "",
     photoUrls: photoUrl,
     photoCount: photoUrl ? 1 : 0,
@@ -290,35 +301,11 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
     }
     const extended = ds.extended || {};
 
-    // Extract features/equipment from multiple possible data sources in 8891
-    const featureParts: string[] = [];
-    // 1. equipment/tags (配備標籤)
-    if (ds.equipment && Array.isArray(ds.equipment)) {
-      featureParts.push(...ds.equipment.map((e: any) => typeof e === 'string' ? e : e.name || e.label || '').filter(Boolean));
-    }
-    if (ds.tags && Array.isArray(ds.tags)) {
-      featureParts.push(...ds.tags.map((t: any) => typeof t === 'string' ? t : t.name || t.label || '').filter(Boolean));
-    }
-    // 2. saleCodes (認證標籤 e.g. 原廠保固, 第三方認證)
-    if (ds.saleCodes && Array.isArray(ds.saleCodes)) {
-      featureParts.push(...ds.saleCodes.filter((s: any) => typeof s === 'string' && s.length > 0));
-    }
-    // 3. extended fields that describe the car
-    if (extended.horsepower) featureParts.push(`馬力${extended.horsepower}`);
-    if (extended.seats) featureParts.push(`${extended.seats}人座`);
-    if (extended.doors) featureParts.push(`${extended.doors}門`);
-    if (extended.drivetrain) featureParts.push(extended.drivetrain);
-
-    // Extract description from seller notes
-    const description = ds.description || ds.sellerDescription || ds.memo || ds.subTitle || '';
-    // Extract guarantees
+    // Extract guarantees from extended inspection flags
     const guaranteeParts: string[] = [];
-    if (ds.guarantees && Array.isArray(ds.guarantees)) {
-      guaranteeParts.push(...ds.guarantees.map((g: any) => typeof g === 'string' ? g : g.name || '').filter(Boolean));
-    }
-    if (ds.certifications && Array.isArray(ds.certifications)) {
-      guaranteeParts.push(...ds.certifications.map((c: any) => typeof c === 'string' ? c : c.name || '').filter(Boolean));
-    }
+    if (extended.isReport) guaranteeParts.push('有檢測報告');
+    if (extended.isAudit) guaranteeParts.push('已審核');
+    if (extended.isCheck) guaranteeParts.push('已查驗');
 
     return {
       photoUrls: photoList.join("|"),
@@ -326,9 +313,8 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
       transmission: extended.transmission || "",
       fuelType: extended.fuelType || "",
       bodyType: extended.bodyType || "",
-      features: featureParts.join('、') || "",
+      features: "",  // features come from subTitle parsing in apiVehicleToScraped
       guarantees: guaranteeParts.join('、') || "",
-      description: typeof description === 'string' ? description : "",
     };
   } catch {
     return null;
