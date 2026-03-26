@@ -1221,7 +1221,13 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
     });
     items.push({
       type: "action",
-      action: { type: "message", label: "💰 算貸款", text: `${ctx.vehicleName} 可以貸款嗎？月付大概多少？` },
+      action: {
+        type: "uri",
+        label: "💰 算貸款",
+        uri: ctx.vehicleExternalId
+          ? `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${ctx.vehicleExternalId}&vehicle=${encodeURIComponent(ctx.vehicleName!)}`
+          : `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry`,
+      },
     });
     items.push({
       type: "action",
@@ -1248,7 +1254,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       });
       items.push({
         type: "action",
-        action: { type: "message", label: "💰 算貸款", text: "我想了解貸款方案" },
+        action: { type: "uri", label: "💰 算貸款", uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry` },
       });
       items.push({
         type: "action",
