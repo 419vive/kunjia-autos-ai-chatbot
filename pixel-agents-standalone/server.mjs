@@ -20,8 +20,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PORT = 3333;
-const WEBVIEW_DIR = join(__dirname, "..", "pixel-agents", "dist", "webview");
-const PUBLIC_DIR = join(__dirname, "..", "pixel-agents", "webview-ui", "public");
+
+// Resolve pixel-agents directory: try sibling first, then home directory fallback
+function resolvePixelAgentsDir() {
+  const candidates = [
+    join(__dirname, "..", "pixel-agents"),           // sibling: ~/kunjia-repo/pixel-agents/
+    join(homedir(), "pixel-agents"),                  // home fallback: ~/pixel-agents/
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  console.error("[ERROR] Could not find pixel-agents directory. Tried:");
+  candidates.forEach(c => console.error("  -", c));
+  console.error("Set PIXEL_AGENTS_DIR env var to override, or clone pixel-agents to one of the above paths.");
+  return candidates[0]; // return first candidate so paths resolve (will 404 gracefully)
+}
+
+const PIXEL_AGENTS_DIR = process.env.PIXEL_AGENTS_DIR || resolvePixelAgentsDir();
+const WEBVIEW_DIR = join(PIXEL_AGENTS_DIR, "dist", "webview");
+const PUBLIC_DIR = join(PIXEL_AGENTS_DIR, "webview-ui", "public");
 const MIME = {".html":"text/html",".js":"text/javascript",".css":"text/css",".json":"application/json",".png":"image/png",".jpg":"image/jpeg",".gif":"image/gif",".svg":"image/svg+xml"};
 
 // Parse args
