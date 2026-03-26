@@ -171,12 +171,6 @@ async function startServer() {
   }));
 
   // ============================================================
-  // PERFORMANCE: gzip/brotli compression for all responses
-  // Reduces transfer size by 60-80% for text-based content
-  // ============================================================
-  app.use(compression());
-
-  // ============================================================
   // SECURITY LAYER 1: HTTP Security Headers (Helmet)
   // OWASP A05:2021 – Security Misconfiguration
   // ============================================================
