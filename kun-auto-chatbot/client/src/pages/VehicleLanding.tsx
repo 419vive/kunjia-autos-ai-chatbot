@@ -382,6 +382,17 @@ export default function VehicleLanding() {
       </div>
 
       <div className="relative max-w-lg mx-auto px-4 py-6">
+        {/* Breadcrumb nav — visible to crawlers and screen readers */}
+        <nav aria-label="breadcrumb" className="mb-3">
+          <ol className="flex items-center gap-1 text-[10px] text-white/40 flex-wrap">
+            <li><a href="/" className="hover:text-white/70 transition-colors">首頁</a></li>
+            <li aria-hidden="true" className="text-white/20">/</li>
+            <li><a href={`/?brand=${encodeURIComponent(vehicle.brand)}`} className="hover:text-white/70 transition-colors">{vehicle.brand} 二手車</a></li>
+            <li aria-hidden="true" className="text-white/20">/</li>
+            <li aria-current="page" className="text-white/60 truncate max-w-[140px]">{name} {year}</li>
+          </ol>
+        </nav>
+
         {/* Brand header */}
         <div className="text-center mb-4">
           <p className="text-[#C4A265] text-xs font-medium tracking-widest uppercase">崑家汽車 · 40年老口碑</p>

@@ -1006,14 +1006,19 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     <meta property="og:type" content="${ogType}" />
     <meta property="og:url" content="${escAttr(canonicalUrl)}" />
     <meta property="og:image" content="${escAttr(ogImage)}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${escAttr(title)}" />
     <meta property="og:site_name" content="${SITE_NAME}" />
     <meta property="og:locale" content="zh_TW" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@kun_motors" />
     <meta name="twitter:title" content="${escAttr(title)}" />
     <meta name="twitter:description" content="${escAttr(description)}" />
     <meta name="twitter:image" content="${escAttr(ogImage)}" />
+    <meta name="twitter:image:alt" content="${escAttr(title)}" />
 
     <!-- Freshness signal -->
     <meta property="article:modified_time" content="${modifiedTime}" />
@@ -1042,7 +1047,7 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<meta\s+name="keywords"[^>]*>/gi, "")
     .replace(/<meta\s+name="geo\.[^"]*"[^>]*>/gi, "")
     .replace(/<meta\s+name="ICBM"[^>]*>/gi, "")
-    .replace(/<meta\s+property="og:(title|description|type|url|image|site_name|locale)"[^>]*>/gi, "")
+    .replace(/<meta\s+property="og:(title|description|type|url|image|image:width|image:height|image:alt|site_name|locale)"[^>]*>/gi, "")
     .replace(/<link\s+rel="alternate"\s+hreflang="[^"]*"[^>]*>/gi, "")
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
@@ -1168,6 +1173,84 @@ Disallow: /chat
 Disallow: /loan-inquiry
 Disallow: /book-visit
 
+# Apple AI (Siri / Apple Intelligence)
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+User-agent: Applebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# ByteDance / TikTok AI
+User-agent: Bytespider
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# You.com AI Search
+User-agent: YouBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# Amazon Alexa / Rufus AI
+User-agent: Amazonbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# DuckDuckGo AI (DuckAssist)
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# Diffbot (AI knowledge graph)
+User-agent: Diffbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+Disallow: /loan-inquiry
+Disallow: /book-visit
+
+# === Google crawler — allow conversion pages for indexing ===
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chat
+
 # === Default crawler rules ===
 User-agent: *
 Allow: /
@@ -1183,10 +1266,9 @@ Sitemap: ${baseUrl}/sitemap.xml
 # Crawl-delay (only for generic crawlers)
 Crawl-delay: 1
 
-# LLM-readable content
-# See https://llmstxt.org for specification
-# llms.txt: ${baseUrl}/llms.txt
-# llms-full.txt: ${baseUrl}/llms-full.txt
+# LLM-readable content (https://llmstxt.org specification)
+# Summary index:  ${baseUrl}/llms.txt
+# Full content:   ${baseUrl}/llms-full.txt
 `
     );
   });
@@ -1372,6 +1454,8 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
         { loc: "/area/pingtung",                 changefreq: "weekly",  priority: "0.8" },
         { loc: "/area/taichung",                 changefreq: "weekly",  priority: "0.8" },
         { loc: "/area/chiayi",                   changefreq: "weekly",  priority: "0.8" },
+        { loc: "/book-visit",                    changefreq: "monthly", priority: "0.7" },
+        { loc: "/loan-inquiry",                  changefreq: "monthly", priority: "0.7" },
       ];
 
       // Dynamic vehicle pages + brand pages
