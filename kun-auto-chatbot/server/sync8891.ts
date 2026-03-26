@@ -17,6 +17,7 @@ import { vehicles } from "../drizzle/schema";
 import { getDb } from "./db";
 import { notifyOwner } from "./_core/notification";
 import * as db from "./db";
+import { logger } from "./logger";
 
 // 崑家汽車 identifier on 8891
 const SHOP_ID = 1726;
@@ -127,7 +128,7 @@ interface CoVReport {
  * This API returns the complete list in one call (up to limit).
  */
 async function fetchAllVehiclesFromApi(): Promise<{ total: number; items: ApiVehicle[] }> {
-  console.log("[8891 Sync] Fetching vehicles via v5 API...");
+  logger.info("8891 Sync", "Fetching vehicles via v5 API...");
 
   try {
     const deviceId = `sync-${Date.now()}`;
@@ -156,10 +157,10 @@ async function fetchAllVehiclesFromApi(): Promise<{ total: number; items: ApiVeh
     const items: ApiVehicle[] = data.data?.items || [];
     const total: number = data.data?.total || items.length;
 
-    console.log(`[8891 Sync] API returned ${items.length} vehicles (total: ${total})`);
+    logger.info("8891 Sync", `API returned ${items.length} vehicles (total: ${total})`);
     return { total, items };
   } catch (err: any) {
-    console.error("[8891 Sync] API fetch failed:", err.message);
+    logger.error("8891 Sync", `API fetch failed: ${err.message}`);
     throw err;
   }
 }
@@ -472,7 +473,7 @@ export async function sync8891(): Promise<{
 
   syncInProgress = true;
   lastSyncStatus = "running";
-  console.log("[8891 Sync] Starting sync for 崑家汽車 (Shop ID: 1726)...");
+  logger.info("8891 Sync", "Starting sync for 崑家汽車 (Shop ID: 1726)...");
 
   try {
     const dbConn = await getDb();
@@ -490,10 +491,10 @@ export async function sync8891(): Promise<{
     // Step 2: Cross-verify with shop page
     const onSaleCount = await fetchShopOnSaleCount();
     if (onSaleCount > 0 && apiItems.length !== onSaleCount) {
-      console.warn(`[8891 Sync] WARNING: API returned ${apiItems.length} but shop reports ${onSaleCount}`);
+      logger.warn("8891 Sync", `WARNING: API returned ${apiItems.length} but shop reports ${onSaleCount}`);
     }
 
-    console.log(`[8891 Sync] Processing ${apiItems.length} vehicles from API...`);
+    logger.info("8891 Sync", `Processing ${apiItems.length} vehicles from API...`);
 
     let added = 0;
     let updated = 0;
@@ -572,7 +573,7 @@ export async function sync8891(): Promise<{
             status: "available",
           });
           added++;
-          console.log(`[8891 Sync] ✅ Added: ${scraped.brand} ${scraped.model} (${carId})`);
+          logger.info("8891 Sync", `Added: ${scraped.brand} ${scraped.model} (${carId})`);
         } else {
           const current = existing[0];
           const updates: Record<string, any> = {};
@@ -607,11 +608,11 @@ export async function sync8891(): Promise<{
           if (Object.keys(updates).length > 0) {
             await dbConn.update(vehicles).set(updates).where(eq(vehicles.id, current.id));
             updated++;
-            console.log(`[8891 Sync] 🔄 Updated: ${current.brand} ${current.model} (${carId}) - ${Object.keys(updates).join(", ")}`);
+            logger.info("8891 Sync", `Updated: ${current.brand} ${current.model} (${carId}) - ${Object.keys(updates).join(", ")}`);
           }
         }
       } catch (err: any) {
-        console.error(`[8891 Sync] Error processing vehicle ${carId}:`, err.message);
+        logger.error("8891 Sync", `Error processing vehicle ${carId}: ${err.message}`);
       }
     }
 
@@ -626,7 +627,7 @@ export async function sync8891(): Promise<{
       if (!processedSet.has(existing.externalId)) {
         await dbConn.update(vehicles).set({ status: "sold" }).where(eq(vehicles.id, existing.id));
         removed++;
-        console.log(`[8891 Sync] 🚫 Marked sold: ${existing.brand} ${existing.model} (${existing.externalId})`);
+        logger.info("8891 Sync", `Marked sold: ${existing.brand} ${existing.model} (${existing.externalId})`);
       }
     }
     // Note: "reserved" vehicles are NOT auto-marked as sold even if they disappear from 8891.
@@ -635,13 +636,13 @@ export async function sync8891(): Promise<{
     // Step 5: Run Chain of Verification (twice per week only)
     let covReport: CoVReport | null = null;
     if (shouldRunCoV()) {
-      console.log("[8891 Sync] Running Chain of Verification (scheduled)...");
+      logger.info("8891 Sync", "Running Chain of Verification (scheduled)...");
       covReport = await runChainOfVerification(apiItems, onSaleCount);
       lastCoVReport = covReport;
       lastCoVTime = new Date();
-      console.log(`[8891 Sync] CoV: ${covReport.summary}`);
+      logger.info("8891 Sync", `CoV: ${covReport.summary}`);
     } else {
-      console.log("[8891 Sync] Skipping CoV (next check in " + Math.round((COV_INTERVAL_MS - (Date.now() - (lastCoVTime?.getTime() || 0))) / 3600000) + " hours)");
+      logger.info("8891 Sync", `Skipping CoV (next check in ${Math.round((COV_INTERVAL_MS - (Date.now() - (lastCoVTime?.getTime() || 0))) / 3600000)} hours)`);
     }
 
     const total = processedIds.length;
@@ -681,7 +682,7 @@ export async function sync8891(): Promise<{
     lastSyncVehicleCount = total;
     syncInProgress = false;
 
-    console.log(`[8891 Sync] ${message}`);
+    logger.info("8891 Sync", message);
     return { success: true, message, added, updated, removed, total, covReport: covReport || undefined };
   } catch (err: any) {
     const message = `同步失敗：${err.message}`;
@@ -690,7 +691,7 @@ export async function sync8891(): Promise<{
     lastSyncMessage = message;
     syncInProgress = false;
 
-    console.error(`[8891 Sync] ${message}`);
+    logger.error("8891 Sync", message);
 
     // Notify owner of failure
     await notifyOwner({
@@ -707,17 +708,17 @@ export async function sync8891(): Promise<{
  * Useful for periodic health checks.
  */
 export async function runCoVOnly(): Promise<CoVReport> {
-  console.log("[8891 CoV] Running standalone verification...");
+  logger.info("8891 CoV", "Running standalone verification...");
 
   try {
     const { items: apiItems } = await fetchAllVehiclesFromApi();
     const onSaleCount = await fetchShopOnSaleCount();
     const report = await runChainOfVerification(apiItems, onSaleCount);
     lastCoVReport = report;
-    console.log(`[8891 CoV] ${report.summary}`);
+    logger.info("8891 CoV", `${report.summary}`);
     return report;
   } catch (err: any) {
-    console.error("[8891 CoV] Verification failed:", err.message);
+    logger.error("8891 CoV", `Verification failed: ${err.message}`);
     return {
       timestamp: new Date(),
       overallStatus: "fail",
@@ -740,17 +741,17 @@ export async function runCoVOnly(): Promise<CoVReport> {
 export function startSyncScheduler(intervalHours = 6) {
   const intervalMs = intervalHours * 60 * 60 * 1000;
 
-  console.log(`[8891 Sync] Scheduler started: syncing every ${intervalHours} hours`);
+  logger.info("8891 Sync", `Scheduler started: syncing every ${intervalHours} hours`);
 
   // Run first sync after 60 seconds (give server time to start)
   setTimeout(async () => {
-    console.log("[8891 Sync] Running initial sync...");
+    logger.info("8891 Sync", "Running initial sync...");
     await sync8891();
   }, 60000);
 
   // Schedule recurring syncs
   setInterval(async () => {
-    console.log("[8891 Sync] Running scheduled sync...");
+    logger.info("8891 Sync", "Running scheduled sync...");
     await sync8891();
   }, intervalMs);
 
@@ -758,7 +759,7 @@ export function startSyncScheduler(intervalHours = 6) {
   // Check every 12 hours if it's time for a CoV run
   setInterval(async () => {
     if (!syncInProgress && shouldRunCoV()) {
-      console.log("[8891 CoV] Running scheduled verification (twice per week)...");
+      logger.info("8891 CoV", "Running scheduled verification (twice per week)...");
       const report = await runCoVOnly();
       lastCoVTime = new Date();
     }

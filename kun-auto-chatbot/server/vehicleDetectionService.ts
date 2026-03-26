@@ -860,7 +860,32 @@ export function buildIntentInstructions(
   }
 
   const instructions: string[] = [];
-  
+
+  // ============ VEHICLE SPEC DETAIL INTENT ============
+  // When customer asks for detailed specs (e.g. clicks "了解車子細節/規格" button)
+  if (detectedVehicle && /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage)) {
+    instructions.push(`🔴 車輛規格查詢指令（最高優先級！）：
+客人要看 ${detectedVehicle.brand} ${detectedVehicle.model} 的詳細規格！
+你必須列出這台車的**所有**已知資訊，格式如下（每項佔一行）：
+
+${detectedVehicle.brand} ${detectedVehicle.model}
+
+售價：（從資料庫取）
+年份：
+顏色：
+里程：
+排氣量：
+變速箱：
+燃料：
+車型：
+配備：（完整列出，用頓號分隔）
+
+🔴 必須把資料庫裡有的資訊全部列出來，不能省略！
+🔴 沒有的欄位就跳過，不要寫「未提供」
+🔴 最後加一句：「想進一步了解或預約看車，隨時跟我說！」
+🚫 不要編造資料庫裡沒有的資訊！`);
+  }
+
   // ============ APPOINTMENT INTENT ============
   if (intents.includes('appointment')) {
     const vehicleCtx = detectedVehicle ? `\n【⭐ 客人要預約看的車：${detectedVehicle.brand} ${detectedVehicle.model}】只能談這台車！` : '';

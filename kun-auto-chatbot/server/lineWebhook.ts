@@ -1154,7 +1154,8 @@ async function processLineEvent(
   replyText = replyText.replace(/。/g, '');
   // For appointment and loan intents: preserve line breaks (structured format with 姓名/電話 fields)
   // For other intents: collapse newlines into spaces for single-line output (不分段 rule)
-  const needsStructuredFormat = customerIntents.includes('appointment') || customerIntents.includes('loan');
+  const isSpecQuery = /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage);
+  const needsStructuredFormat = customerIntents.includes('appointment') || customerIntents.includes('loan') || isSpecQuery;
   if (needsStructuredFormat) {
     // Keep line breaks but clean up excessive blank lines (max 1 blank line between sections)
     replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();

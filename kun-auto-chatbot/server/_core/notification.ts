@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { logger } from "../logger";
 
 export type NotificationPayload = {
   title: string;
@@ -54,6 +55,6 @@ export async function notifyOwner(
   payload: NotificationPayload
 ): Promise<boolean> {
   const { title, content } = validatePayload(payload);
-  console.log(`[Notification] ${title}\n${content}`);
+  logger.info("Notification", `${title}\n${content}`);
   return true;
 }
