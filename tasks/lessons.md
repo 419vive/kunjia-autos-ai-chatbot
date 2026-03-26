@@ -12,3 +12,6 @@
 - [2026-03-25] | extractVehicleFromHistory 搜尋所有 role（含 bot）→ 舊 bot 回覆污染新查詢 | 歷史搜尋優先搜 user 訊息，bot 訊息只作 fallback
 - [2026-03-25] | 預約意圖指令太 generic 不帶車輛名 → LLM 從歷史抓錯車 | 當 intent 和 vehicle 同時偵測到，intent 指令必須包含車輛上下文
 - [2026-03-25] | LINE in-app browser 中 CSP scriptSrc:'self' 阻擋 Vite 動態 chunk → 頁面空白 | production CSP 需加 'unsafe-inline' 或 nonce 支援 Vite module preload
+- [2026-03-26] | LINE Flex Message 的 URI 按鈕在 LINE in-app browser 開內部 SPA 頁面全部白屏 | LINE 聊天中的按鈕一律用 message 類型（在聊天室內回覆），不要用 URI 開內部頁面；URI 只用於 tel: 和外部連結
+- [2026-03-26] | 說「已修復」但沒實際跑測試驗證 → 用戶不信任 | 修改後必須實際啟動 server + 瀏覽器驗證，不能只看 code 就說修好了
+- [2026-03-26] | 用戶說「不需要再對話」= AI 完全不回覆（靜默），不是回一段客氣話 | 「不需要對話」指令要精確理解：可能是零回覆+靜默 handoff，不要自作主張加回覆
