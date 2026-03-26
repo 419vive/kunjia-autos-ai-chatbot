@@ -1131,11 +1131,14 @@ async function processLineEvent(
 
   // ============ REGULAR MESSAGE → RESPONSE ============
 
-  const allHistory = await db.getMessagesByConversation(convId, 100);
+  // Fetch conversation history and vehicle inventory concurrently — both are independent DB reads
+  const [allHistory, allVehicles] = await Promise.all([
+    db.getMessagesByConversation(convId, 100),
+    db.getAllVehicles(),
+  ]);
   const history = allHistory.slice(-10);
   console.log(`[LINE] History: total=${allHistory.length}, using last ${history.length} messages`);
 
-  const allVehicles = await db.getAllVehicles();
   const vIndex = buildVehicleIndex(allVehicles);
 
   // ============ VEHICLE DETECTION v5: Context-aware detection ============
@@ -1430,7 +1433,8 @@ async function processLineEvent(
 
   // Build contextual quick reply based on conversation state (personalized)
   // Extract previously discussed vehicles from conversation history
-  const allMessages = await db.getMessagesByConversation(convId, 30);
+  // Reuse the already-fetched allHistory (avoids a redundant DB round-trip after the reply)
+  const allMessages = allHistory.slice(-30);
   const prevVehicles: string[] = [];
   for (const msg of allMessages) {
     const vMatch = msg.content.match(/(?:詢問|了解|看|這台)\s*([\u4e00-\u9fff\w]+\s+[\u4e00-\u9fff\w]+)/);
