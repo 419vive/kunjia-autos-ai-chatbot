@@ -32,4 +32,4 @@
 - [ ] Split routers.ts (1,277 lines) into smaller modules
 - [ ] Replace 170+ console statements with structured logging
 - [ ] Add API pagination for admin endpoints
-- [ ] Remove unused KaTeX fonts from bundle
+- [x] Remove unused KaTeX fonts from bundle (Rollup plugin in vite.config.ts, -59 files, ~2MB)

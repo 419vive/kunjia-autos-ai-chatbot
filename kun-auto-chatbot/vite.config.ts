@@ -4,6 +4,29 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { defineConfig } from "vite";
 
+// Rollup plugin: drop KaTeX font assets from the bundle.
+// KaTeX is pulled in transitively (streamdown → rehype-katex → katex) but
+// this app never renders math formulas.  The fonts (~2 MB, 60 files) are
+// only needed for actual LaTeX rendering; removing them has no visible
+// effect on a car-dealership chatbot.
+const excludeKatexFonts = {
+  name: "exclude-katex-fonts",
+  generateBundle(
+    _options: unknown,
+    bundle: Record<string, { type: string; fileName: string }>
+  ) {
+    for (const key of Object.keys(bundle)) {
+      const chunk = bundle[key];
+      if (
+        chunk.type === "asset" &&
+        /KaTeX_.*\.(woff2?|ttf)$/i.test(chunk.fileName)
+      ) {
+        delete bundle[key];
+      }
+    }
+  },
+};
+
 const plugins = [react(), tailwindcss(), jsxLocPlugin()];
 
 export default defineConfig({
@@ -25,6 +48,7 @@ export default defineConfig({
     minify: "esbuild",
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      plugins: [excludeKatexFonts],
       output: {
         manualChunks(id) {
           // --- Shiki: consolidate hundreds of language grammars + themes ---
