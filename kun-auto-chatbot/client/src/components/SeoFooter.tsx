@@ -20,6 +20,7 @@ const BLOG_LINKS = [
   { label: "高雄二手車推薦", href: "/blog/kaohsiung-used-car-guide" },
   { label: "第三方認證指南", href: "/blog/third-party-inspection-guide" },
   { label: "過戶流程與費用", href: "/blog/used-car-transfer-guide" },
+  { label: "高雄二手車行推薦比較 2026", href: "/blog/kaohsiung-used-car-dealers-comparison" },
 ];
 
 const SERVICE_AREAS = [
