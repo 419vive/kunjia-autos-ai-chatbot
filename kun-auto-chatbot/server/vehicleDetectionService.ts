@@ -233,6 +233,20 @@ export function buildVehicleIndex(vehicles: any[]): VehicleIndex {
     if (modelUpper.length >= 2 && !byModel.has(modelUpper)) {
       byModel.set(modelUpper, v);
     }
+    // Also index by base model name (first word of model) for short messages like "BMW X1"
+    // e.g. "X1 sDrive20i" → also index "X1", "Corolla Cross GR Sport" → also index "Corolla Cross"
+    const modelWords = modelUpper.split(/\s+/);
+    for (let len = 1; len <= Math.min(modelWords.length - 1, 2); len++) {
+      const baseModel = modelWords.slice(0, len).join(' ');
+      if (baseModel.length >= 2 && !byModel.has(baseModel)) {
+        byModel.set(baseModel, v);
+      }
+      // Also index brand+baseModel
+      const bmKey = `${brandUpper}|${baseModel}`;
+      if (!byBrandModel.has(bmKey)) {
+        byBrandModel.set(bmKey, v);
+      }
+    }
     const arr = byBrand.get(brandUpper) || [];
     arr.push(v);
     byBrand.set(brandUpper, arr);
@@ -258,18 +272,23 @@ function normalizeForMatching(message: string): string {
  */
 function findVehicleFromNormalized(normalizedUpper: string, index: VehicleIndex, userMessage: string): any | null {
   // Layer 1: brand + model (exact pair in message)
+  // Layer 1: brand + model — prefer LONGEST match (most specific)
   let found: any | null = null;
+  let foundKeyLen = 0;
   index.byBrandModel.forEach((v, key) => {
-    if (found) return;
     const [brand, model] = key.split("|");
-    if (normalizedUpper.includes(brand) && normalizedUpper.includes(model)) found = v;
+    if (normalizedUpper.includes(brand) && normalizedUpper.includes(model)) {
+      if (key.length > foundKeyLen) { found = v; foundKeyLen = key.length; }
+    }
   });
   if (found) return found;
 
-  // Layer 2: model only
+  // Layer 2: model only — prefer LONGEST match
+  let foundModelLen = 0;
   index.byModel.forEach((v, model) => {
-    if (found) return;
-    if (normalizedUpper.includes(model)) found = v;
+    if (normalizedUpper.includes(model)) {
+      if (model.length > foundModelLen) { found = v; foundModelLen = model.length; }
+    }
   });
   if (found) return found;
 
