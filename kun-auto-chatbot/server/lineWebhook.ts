@@ -647,6 +647,49 @@ async function processLineEvent(
     if (action) {
       console.log(`[LINE] Postback action: ${action}`);
     }
+
+    if (action === "appointment_datetime") {
+      const replyToken = event.replyToken;
+      const postbackUserId = event.source?.userId;
+      // LINE sends datetime in postback.params.datetime for datetimepicker
+      const selectedDatetime: string | undefined = (event.postback as any)?.params?.datetime;
+
+      if (replyToken && selectedDatetime) {
+        // Parse ISO datetime string e.g. "2026-03-26T14:30"
+        const [datePart, timePart] = selectedDatetime.split("T");
+        const [year, month, day] = datePart.split("-");
+        const formattedDatetime = `${year}/${month}/${day} ${timePart}`;
+
+        const vehicleName = params.get("vehicleName") || "";
+        const vehicleInfo = vehicleName ? `\n車款：${vehicleName}` : "";
+
+        const confirmText = `您選擇了 ${formattedDatetime}${vehicleInfo}\n\n請留下聯絡資訊：\n姓名：\n電話：\n\n我們會盡快確認！`;
+
+        console.log(`[LINE] Appointment datetime selected: ${selectedDatetime} by ${postbackUserId?.slice(0, 8)}...`);
+
+        // Save to conversation if possible
+        if (postbackUserId) {
+          const postbackSession = `line-${postbackUserId}`;
+          const postbackConv = await db.getConversationBySessionId(postbackSession);
+          if (postbackConv) {
+            await db.addMessage({ conversationId: postbackConv.id, role: "user", content: `[客戶選擇預約時間：${formattedDatetime}]` });
+            await db.addMessage({ conversationId: postbackConv.id, role: "assistant", content: confirmText });
+          }
+        }
+
+        try {
+          await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+            body: JSON.stringify({ replyToken, messages: [{ type: "text", text: confirmText }] }),
+          });
+        } catch (err) {
+          console.error("[LINE] Appointment datetime reply failed:", err);
+        }
+      }
+      return;
+    }
+
     return;
   }
 
@@ -1112,31 +1155,104 @@ async function processLineEvent(
 
   // ============ APPOINTMENT → DIRECT RESPONSE (skip LLM) ============
   if (customerIntents.includes('appointment')) {
-    const vehicleInfo = detection.vehicle ? `（${(detection.vehicle as any).brand} ${(detection.vehicle as any).model}）` : '';
-    replyText = `預約看車${vehicleInfo}
+    const vehicleName = detection.vehicle ? `${(detection.vehicle as any).brand} ${(detection.vehicle as any).model}` : '';
+    const vehicleId = (detection.vehicle as any)?.id ? String((detection.vehicle as any).id) : '';
+    const headerText = vehicleName ? `預約看車（${vehicleName}）` : '預約看車';
 
-請填寫以下資訊：
+    // Generate dynamic dates for datetimepicker
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const formatDate = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const todayStr = formatDate(now);
+    const maxDate = new Date(now);
+    maxDate.setDate(maxDate.getDate() + 30);
+    const maxStr = formatDate(maxDate);
 
-日期：____年____月____日
-時間：____:____（營業時間 09:00-20:00）
-姓名：
-電話：
+    const postbackDataParts = [`action=appointment_datetime`];
+    if (vehicleId) postbackDataParts.push(`vehicleId=${encodeURIComponent(vehicleId)}`);
+    if (vehicleName) postbackDataParts.push(`vehicleName=${encodeURIComponent(vehicleName)}`);
+    const postbackData = postbackDataParts.join('&');
 
-地址：高雄市三民區大順二路269號（肯德基斜對面）`;
-
-    console.log(`[LINE] Appointment direct response`);
-    await db.addMessage({ conversationId: convId, role: "assistant", content: replyText });
-    const quickReplyCtx: ConversationContext = {
-      hasVehicle: !!detection.vehicle, hasAppointment: true, hasContact: !!conversation!.customerContact,
-      vehicleName: detection.vehicle ? `${(detection.vehicle as any).brand} ${(detection.vehicle as any).model}` : undefined,
-      messageCount: 0, leadScore: conversation!.leadScore || 0,
+    const flexMessage = {
+      type: "flex",
+      altText: headerText,
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#1E3A5F",
+          contents: [
+            {
+              type: "text",
+              text: headerText,
+              color: "#FFFFFF",
+              size: "lg",
+              weight: "bold",
+              wrap: true,
+            },
+          ],
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          spacing: "md",
+          contents: [
+            {
+              type: "text",
+              text: "請選擇您方便的日期和時間",
+              size: "md",
+              wrap: true,
+              color: "#333333",
+            },
+            {
+              type: "button",
+              style: "primary",
+              color: "#1E3A5F",
+              action: {
+                type: "datetimepicker",
+                label: "📅 選擇日期與時間",
+                data: postbackData,
+                mode: "datetime",
+                initial: `${todayStr}T10:00`,
+                min: `${todayStr}T09:00`,
+                max: `${maxStr}T20:00`,
+              },
+            },
+            {
+              type: "text",
+              text: "營業時間 09:00-20:00（週一至週六）",
+              size: "sm",
+              color: "#888888",
+              wrap: true,
+            },
+          ],
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "地址：高雄市三民區大順二路269號（肯德基斜對面）",
+              size: "xs",
+              color: "#888888",
+              wrap: true,
+            },
+          ],
+        },
+      },
     };
-    const quickReply = buildContextualQuickReply(quickReplyCtx);
+
+    const appointmentLogText = `預約看車${vehicleName ? `（${vehicleName}）` : ''} — 已發送日期選擇器`;
+    console.log(`[LINE] Appointment flex message response`);
+    await db.addMessage({ conversationId: convId, role: "assistant", content: appointmentLogText });
     try {
       await fetch("https://api.line.me/v2/bot/message/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
-        body: JSON.stringify({ replyToken, messages: [{ type: "text", text: replyText, quickReply }] }),
+        body: JSON.stringify({ replyToken, messages: [flexMessage] }),
       });
     } catch (err) { console.error("[LINE] Reply failed:", err); }
     return;
