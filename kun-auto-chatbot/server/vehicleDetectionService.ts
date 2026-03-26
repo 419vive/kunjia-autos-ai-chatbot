@@ -14,7 +14,6 @@
  */
 
 // ============ BRAND ALIASES (Chinese → English) ============
-import { logger } from "./logger";
 
 export const BRAND_ALIASES: Record<string, string> = {
   // Japanese brands
@@ -380,7 +379,7 @@ export function extractVehicleFromHistory(
     if (msg.role !== 'user') continue;
     const found = findInMessage(msg.content || '');
     if (found) {
-      logger.info("VehicleDetection", `extractVehicleFromHistory: found ${found.brand} ${found.model} in user message at index ${i}`);
+      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in user message at index ${i}`);
       return found;
     }
   }
@@ -390,7 +389,7 @@ export function extractVehicleFromHistory(
     if (msg.role !== 'assistant') continue;
     const found = findInMessage(msg.content || '');
     if (found) {
-      logger.info("VehicleDetection", `extractVehicleFromHistory: found ${found.brand} ${found.model} in assistant message at index ${i} (fallback)`);
+      console.log(`[VehicleDetection] extractVehicleFromHistory: found ${found.brand} ${found.model} in assistant message at index ${i} (fallback)`);
       return found;
     }
   }
@@ -526,12 +525,12 @@ export function detectVehicleFromMessage(
       if (historyVehicle) {
         const directAnswer = getQuestionAnswer(historyVehicle, questionType);
         const termExplanation = getTermExplanation(userMessage, historyVehicle);
-        logger.info("VehicleDetection", `Context-aware: resolved "${userMessage}" to ${historyVehicle.brand} ${historyVehicle.model} from conversation history`);
+        console.log(`[VehicleDetection] Context-aware: resolved "${userMessage}" to ${historyVehicle.brand} ${historyVehicle.model} from conversation history`);
         return { type: 'context', vehicle: historyVehicle, questionType, directAnswer, termExplanation };
       }
       // Follow-up detected but no vehicle in history → special fallback
       // So LLM knows to ask "你問的是哪一台呢？" instead of giving a generic greeting
-      logger.info("VehicleDetection", `Follow-up question detected but no vehicle in history: "${userMessage}"`);
+      console.log(`[VehicleDetection] Follow-up question detected but no vehicle in history: "${userMessage}"`);
       return { type: 'context_missing', vehicle: null, questionType, directAnswer: '', termExplanation: '' };
     }
   }
@@ -861,7 +860,32 @@ export function buildIntentInstructions(
   }
 
   const instructions: string[] = [];
-  
+
+  // ============ VEHICLE SPEC DETAIL INTENT ============
+  // When customer asks for detailed specs (e.g. clicks "了解車子細節/規格" button)
+  if (detectedVehicle && /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage)) {
+    instructions.push(`🔴 車輛規格查詢指令（最高優先級！）：
+客人要看 ${detectedVehicle.brand} ${detectedVehicle.model} 的詳細規格！
+你必須列出這台車的**所有**已知資訊，格式如下（每項佔一行）：
+
+${detectedVehicle.brand} ${detectedVehicle.model}
+
+售價：（從資料庫取）
+年份：
+顏色：
+里程：
+排氣量：
+變速箱：
+燃料：
+車型：
+配備：（完整列出，用頓號分隔）
+
+🔴 必須把資料庫裡有的資訊全部列出來，不能省略！
+🔴 沒有的欄位就跳過，不要寫「未提供」
+🔴 最後加一句：「想進一步了解或預約看車，隨時跟我說！」
+🚫 不要編造資料庫裡沒有的資訊！`);
+  }
+
   // ============ APPOINTMENT INTENT ============
   if (intents.includes('appointment')) {
     const vehicleCtx = detectedVehicle ? `\n【⭐ 客人要預約看的車：${detectedVehicle.brand} ${detectedVehicle.model}】只能談這台車！` : '';
