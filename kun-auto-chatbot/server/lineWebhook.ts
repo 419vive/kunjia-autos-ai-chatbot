@@ -651,37 +651,90 @@ async function processLineEvent(
     if (action === "appointment_datetime") {
       const replyToken = event.replyToken;
       const postbackUserId = event.source?.userId;
-      // LINE sends datetime in postback.params.datetime for datetimepicker
       const selectedDatetime: string | undefined = (event.postback as any)?.params?.datetime;
 
       if (replyToken && selectedDatetime) {
-        // Parse ISO datetime string e.g. "2026-03-26T14:30"
         const [datePart, timePart] = selectedDatetime.split("T");
         const [year, month, day] = datePart.split("-");
         const formattedDatetime = `${year}/${month}/${day} ${timePart}`;
-
         const vehicleName = params.get("vehicleName") || "";
-        const vehicleInfo = vehicleName ? `\n車款：${vehicleName}` : "";
-
-        const confirmText = `您選擇了 ${formattedDatetime}${vehicleInfo}\n\n請留下聯絡資訊：\n姓名：\n電話：\n\n我們會盡快確認！`;
+        const vehicleId = params.get("vehicleId") || "";
 
         console.log(`[LINE] Appointment datetime selected: ${selectedDatetime} by ${postbackUserId?.slice(0, 8)}...`);
 
-        // Save to conversation if possible
+        // Save to conversation
         if (postbackUserId) {
           const postbackSession = `line-${postbackUserId}`;
           const postbackConv = await db.getConversationBySessionId(postbackSession);
           if (postbackConv) {
             await db.addMessage({ conversationId: postbackConv.id, role: "user", content: `[客戶選擇預約時間：${formattedDatetime}]` });
-            await db.addMessage({ conversationId: postbackConv.id, role: "assistant", content: confirmText });
+            await db.addMessage({ conversationId: postbackConv.id, role: "assistant", content: `已選擇 ${formattedDatetime}，引導至預約表單` });
           }
         }
+
+        // Build URL to book-visit page with pre-filled date/time
+        const baseUrl = process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app";
+        const bookParams = new URLSearchParams();
+        if (vehicleId) bookParams.set("vehicleId", vehicleId);
+        if (vehicleName) bookParams.set("vehicle", vehicleName);
+        bookParams.set("date", `${year}-${month}-${day}`);
+        bookParams.set("time", timePart);
+        const bookUrl = `${baseUrl}/book-visit?${bookParams.toString()}`;
+
+        // Reply with Flex Message containing confirmation + form button
+        const flexMsg = {
+          type: "flex" as const,
+          altText: `預約確認 ${formattedDatetime}`,
+          contents: {
+            type: "bubble",
+            size: "kilo",
+            header: {
+              type: "box",
+              layout: "vertical",
+              contents: [{ type: "text", text: "✅ 預約時間已選擇", weight: "bold", size: "lg", color: "#FFFFFF" }],
+              backgroundColor: "#27AE60",
+              paddingAll: "15px",
+            },
+            body: {
+              type: "box",
+              layout: "vertical",
+              spacing: "md",
+              contents: [
+                { type: "text", text: `📅 ${year}/${month}/${day}`, size: "md", weight: "bold" },
+                { type: "text", text: `🕐 ${timePart}`, size: "md", weight: "bold" },
+                ...(vehicleName ? [{ type: "text", text: `🚗 ${vehicleName}`, size: "sm", color: "#666666" }] : []),
+                { type: "separator", margin: "lg" },
+                { type: "text", text: "請填寫姓名與電話完成預約", size: "sm", color: "#888888", margin: "md" },
+                {
+                  type: "button",
+                  action: { type: "uri", label: "📋 填寫預約資料", uri: bookUrl },
+                  style: "primary",
+                  color: "#C4A265",
+                  height: "md",
+                  margin: "lg",
+                },
+                {
+                  type: "button",
+                  action: { type: "uri", label: "📞 直接打電話預約", uri: "tel:0936812818" },
+                  style: "secondary",
+                  margin: "sm",
+                },
+              ],
+            },
+            footer: {
+              type: "box",
+              layout: "vertical",
+              contents: [{ type: "text", text: "📍 高雄市三民區大順二路269號（肯德基斜對面）", size: "xs", color: "#AAAAAA", wrap: true }],
+              paddingAll: "10px",
+            },
+          },
+        };
 
         try {
           await fetch("https://api.line.me/v2/bot/message/reply", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
-            body: JSON.stringify({ replyToken, messages: [{ type: "text", text: confirmText }] }),
+            body: JSON.stringify({ replyToken, messages: [flexMsg] }),
           });
         } catch (err) {
           console.error("[LINE] Appointment datetime reply failed:", err);
