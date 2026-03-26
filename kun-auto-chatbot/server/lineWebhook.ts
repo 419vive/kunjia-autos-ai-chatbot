@@ -713,12 +713,6 @@ async function processLineEvent(
                   height: "md",
                   margin: "lg",
                 },
-                {
-                  type: "button",
-                  action: { type: "uri", label: "📞 直接打電話預約", uri: "tel:0936812818" },
-                  style: "secondary",
-                  margin: "sm",
-                },
               ],
             },
             footer: {
