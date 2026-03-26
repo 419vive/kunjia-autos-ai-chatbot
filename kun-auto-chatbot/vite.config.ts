@@ -49,45 +49,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       plugins: [excludeKatexFonts],
-      output: {
-        manualChunks(id) {
-          // --- Shiki: consolidate hundreds of language grammars + themes ---
-          if (id.includes("shiki") || id.includes("@shikijs")) {
-            if (id.includes("/themes/")) return "vendor-shiki-themes";
-            if (id.includes("/langs/")) return "vendor-shiki-langs";
-            // shiki core goes into vendor-markdown to avoid circular deps
-            return "vendor-markdown";
-          }
-          // --- Mermaid: consolidate all diagram modules ---
-          if (id.includes("mermaid") || id.includes("cytoscape") || id.includes("cose-bilkent") || id.includes("dagre") || id.includes("d3") || id.includes("elkjs")) {
-            return "vendor-mermaid";
-          }
-          // --- KaTeX + Streamdown + remark/rehype ecosystem ---
-          // Merged into one chunk to avoid circular deps (katex <-> rehype-katex <-> streamdown)
-          if (id.includes("katex") || id.includes("rehype-katex")) {
-            return "vendor-markdown";
-          }
-          if (id.includes("streamdown") || id.includes("remark-") || id.includes("rehype-") || id.includes("unified") || id.includes("hast-") || id.includes("mdast-") || id.includes("micromark") || id.includes("remend")) {
-            return "vendor-markdown";
-          }
-          // --- React core ---
-          if (id.includes("react-dom") || (id.includes("/react/") && id.includes("node_modules"))) {
-            return "vendor-react";
-          }
-          // --- Radix UI ---
-          if (id.includes("@radix-ui")) {
-            return "vendor-radix";
-          }
-          // --- Charts ---
-          if (id.includes("recharts") || id.includes("victory")) {
-            return "vendor-charts";
-          }
-          // --- Framer Motion ---
-          if (id.includes("framer-motion")) {
-            return "vendor-motion";
-          }
-        },
-      },
     },
   },
   server: {
