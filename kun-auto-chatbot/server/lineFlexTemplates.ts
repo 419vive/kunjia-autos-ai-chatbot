@@ -42,8 +42,6 @@ function buildVehicleBubble(v: Vehicle): any {
   // Build LINE inquiry message with vehicle details
   const lineInquiryText = `我想詢問這台車：\n${v.brand} ${v.model} ${v.modelYear || ""}年\n售價：${priceText}\n${specs.slice(0, 3).join(" · ")}`;
 
-  const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`;
-
   const footerButtons: any[] = [
     // Primary CTA: 了解車子細節/規格 → 發送訊息讓 AI 回覆車輛規格（避免 LINE in-app browser 白頁面）
     {
@@ -106,14 +104,13 @@ function buildVehicleBubble(v: Vehicle): any {
     });
   }
 
-  // Loan inquiry button
-  const loanUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  // Loan inquiry button — 發送訊息讓 AI 回覆貸款資訊（避免 LINE in-app browser 白頁面）
   footerButtons.push({
     type: "button",
     action: {
-      type: "uri",
+      type: "message",
       label: "💰 貸款利率怎麼算",
-      uri: loanUrl,
+      text: `${v.brand} ${v.model} 可以貸款嗎？月付大概多少？`,
     },
     style: "secondary",
   });
@@ -138,9 +135,9 @@ function buildVehicleBubble(v: Vehicle): any {
       aspectRatio: "4:3",
       aspectMode: "cover",
       action: {
-        type: "uri",
+        type: "message",
         label: "查看詳情",
-        uri: vehicleDetailUrl,
+        text: `我想了解 ${v.brand} ${v.model} 的詳細規格`,
       },
     },
     body: {
@@ -571,9 +568,9 @@ export function buildAppointmentCard(): any {
           {
             type: "button",
             action: {
-              type: "uri",
-              label: "📋 線上預約表單",
-              uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit`,
+              type: "message",
+              label: "📋 我想預約看車",
+              text: "我想預約看車，什麼時候方便？",
             },
             style: "primary",
             color: "#C4A265",
@@ -1032,7 +1029,7 @@ export function buildFollowWelcomeMessages(): any[] {
           },
           {
             type: "button",
-            action: { type: "uri", label: "🌐 開啟網站瀏覽", uri: baseUrl },
+            action: { type: "message", label: "🚗 看車庫存", text: "我想看車，有什麼車可以推薦？" },
             style: "secondary",
           },
         ],
