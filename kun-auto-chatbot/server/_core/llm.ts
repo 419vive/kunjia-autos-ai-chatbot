@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { logger } from "../logger";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -198,12 +199,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
         // Retry on rate limit (429) or server errors (5xx)
         if ((response.status === 429 || response.status >= 500) && attempt < LLM_MAX_RETRIES) {
           const backoff = (attempt + 1) * 1000;
-          console.warn(`[LLM] Retrying (attempt ${attempt + 1}) after ${response.status}, backoff ${backoff}ms`);
+          logger.warn("LLM", `Retrying (attempt ${attempt + 1}) after ${response.status}, backoff ${backoff}ms`);
           await new Promise(r => setTimeout(r, backoff));
           lastError = new Error(`Google AI API error (${response.status}): ${errorText}`);
           continue;
         }
-        console.error("[LLM] API error:", response.status, errorText.substring(0, 500));
+        logger.error("LLM", `API error: ${response.status} ${errorText.substring(0, 500)}`);
         throw new Error(`Google AI API error (${response.status}): ${errorText}`);
       }
 
@@ -213,7 +214,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       if (err.name === "AbortError") {
         lastError = new Error(`LLM request timed out after ${LLM_TIMEOUT_MS}ms`);
         if (attempt < LLM_MAX_RETRIES) {
-          console.warn(`[LLM] Timeout, retrying (attempt ${attempt + 1})`);
+          logger.warn("LLM", `Timeout, retrying (attempt ${attempt + 1})`);
           continue;
         }
       }
@@ -224,7 +225,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       lastError = err;
       if (attempt < LLM_MAX_RETRIES) {
         const backoff = (attempt + 1) * 1000;
-        console.warn(`[LLM] Error, retrying (attempt ${attempt + 1}), backoff ${backoff}ms:`, err.message);
+        logger.warn("LLM", `Error, retrying (attempt ${attempt + 1}), backoff ${backoff}ms: ${err.message}`);
         await new Promise(r => setTimeout(r, backoff));
         continue;
       }

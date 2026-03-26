@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { logger } from "../logger";
 import { createServer } from "http";
 import net from "net";
 import compression from "compression";
@@ -39,12 +40,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function runMigrations() {
   if (!process.env.DATABASE_URL) {
-    console.warn("[Database] DATABASE_URL not set, skipping migrations");
+    logger.warn("Database", "DATABASE_URL not set, skipping migrations");
     return;
   }
   let conn: mysql.Connection | null = null;
   try {
-    console.log("[Database] Running migrations...");
+    logger.info("Database", "Running migrations...");
     conn = await mysql.createConnection(process.env.DATABASE_URL);
 
     // Create tables if they don't exist
@@ -135,9 +136,9 @@ async function runMigrations() {
       INDEX idx_pageviews_path (path(191))
     )`);
 
-    console.log("[Database] Migrations completed successfully");
+    logger.info("Database", "Migrations completed successfully");
   } catch (error) {
-    console.error("[Database] Migration failed:", error);
+    logger.error("Database", "Migration failed:", error);
   } finally {
     if (conn) await conn.end();
   }
@@ -386,7 +387,7 @@ a{color:#C4A265;text-decoration:underline}
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    logger.info("Server", `Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
   // Run database migrations before starting
@@ -396,22 +397,22 @@ a{color:#C4A265;text-decoration:underline}
   await seedAdminUser();
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-    console.log("[Security] All security layers active: Helmet, Rate Limiting, PII Protection");
+    logger.info("Server", `Server running on http://localhost:${port}/`);
+    logger.info("Security", "All security layers active: Helmet, Rate Limiting, PII Protection");
     // Run initial 8891 sync in background (non-blocking) — server handles requests immediately
-    console.log("[Sync] Running initial 8891 vehicle sync (background)...");
+    logger.info("Sync", "Running initial 8891 vehicle sync (background)...");
     sync8891()
-      .then(result => console.log("[Sync] Initial sync completed:", result))
-      .catch(err => console.error("[Sync] Initial sync failed:", err));
+      .then(result => logger.info("Sync", `Initial sync completed: ${result}`))
+      .catch(err => logger.error("Sync", "Initial sync failed:", err));
     startSyncScheduler(6);
     // Auto-deploy Rich Menu on startup to keep it in sync with code
     const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     if (lineToken) {
       deployRichMenu(lineToken)
-        .then(r => console.log(`[RichMenu] Auto-deployed on startup: ${r.richMenuId}`))
-        .catch(err => console.error("[RichMenu] Auto-deploy failed:", err));
+        .then(r => logger.info("RichMenu", `Auto-deployed on startup: ${r.richMenuId}`))
+        .catch(err => logger.error("RichMenu", "Auto-deploy failed:", err));
     }
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(err => logger.error("Server", "Fatal startup error:", err));

@@ -1,4 +1,5 @@
 import { eq, like, and, or, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
+import { logger } from "./logger";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
@@ -30,7 +31,7 @@ export async function getDb() {
       });
       _db = drizzle(pool);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn("Database", "Failed to connect:", error);
       _db = null;
     }
   }
@@ -42,7 +43,7 @@ export async function getDb() {
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
+  if (!db) { logger.warn("Database", "Cannot upsert user: database not available"); return; }
   try {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
@@ -61,7 +62,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
     await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-  } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
+  } catch (error) { logger.error("Database", "Failed to upsert user:", error); throw error; }
 }
 
 export async function getUserByOpenId(openId: string) {

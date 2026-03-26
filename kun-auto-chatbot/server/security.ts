@@ -19,6 +19,7 @@
  */
 
 import crypto from "crypto";
+import { logger } from "./logger";
 
 // ============================================================
 // 1. PII ENCRYPTION (AES-256-GCM) — NIST SP 800-38D
@@ -81,7 +82,7 @@ export function decryptPII(ciphertext: string): string {
     return decrypted;
   } catch (err) {
     // If decryption fails, the data might not be encrypted (legacy data)
-    console.warn("[Security] Decryption failed, returning raw value (may be unencrypted legacy data)");
+    logger.warn("Security", "Decryption failed, returning raw value (may be unencrypted legacy data)");
     return ciphertext;
   }
 }
@@ -226,7 +227,7 @@ export function sanitizeChatMessage(message: string, maxLength: number = 2000): 
   
   for (const pattern of promptInjectionPatterns) {
     if (pattern.test(sanitized)) {
-      console.warn(`[Security] Potential prompt injection detected (pattern: ${pattern.source})`);
+      logger.warn("Security", `Potential prompt injection detected (pattern: ${pattern.source})`);
       // Don't block - just log. The system prompt should be robust enough.
       break;
     }
@@ -296,7 +297,7 @@ export function logSecurityEvent(event: Omit<SecurityEvent, "timestamp">): void 
   
   // Log high/critical events to console (masked)
   if (event.severity === "high" || event.severity === "critical") {
-    console.warn(`[SECURITY ${event.severity.toUpperCase()}] ${event.eventType}: ${maskPIIInText(event.details)}`);
+    logger.warn("Security", `[${event.severity.toUpperCase()}] ${event.eventType}: ${maskPIIInText(event.details)}`);
   }
 }
 
