@@ -49,6 +49,47 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       plugins: [excludeKatexFonts],
+      output: {
+        manualChunks: {
+          // Core React runtime — always needed, cache-stable
+          "vendor-react": ["react", "react-dom"],
+          // Routing
+          "vendor-router": ["wouter"],
+          // Data fetching layer
+          "vendor-query": ["@tanstack/react-query", "@trpc/react-query", "@trpc/client"],
+          // Radix UI primitives (large but rarely changes)
+          "vendor-radix": [
+            "@radix-ui/react-accordion",
+            "@radix-ui/react-alert-dialog",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-collapsible",
+            "@radix-ui/react-context-menu",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-hover-card",
+            "@radix-ui/react-label",
+            "@radix-ui/react-menubar",
+            "@radix-ui/react-navigation-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-progress",
+            "@radix-ui/react-radio-group",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-select",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slider",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-toggle",
+            "@radix-ui/react-toggle-group",
+            "@radix-ui/react-tooltip",
+          ],
+          // Lucide icons (heavy, but stable — good cache candidate)
+          "vendor-icons": ["lucide-react"],
+        },
+      },
     },
   },
   server: {
