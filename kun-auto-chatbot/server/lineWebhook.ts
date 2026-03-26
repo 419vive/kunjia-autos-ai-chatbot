@@ -457,7 +457,7 @@ async function processLineEvent(
               items: [
                 { type: "action", action: { type: "message", label: "🔍 看最新車輛", text: "我想看車，有什麼車可以推薦？" } },
                 { type: "action", action: { type: "message", label: "💰 50萬以下", text: "50萬以下有什麼好車？" } },
-                { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+                { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
                 ...(lastVehicle ? [{ type: "action" as const, action: { type: "message" as const, label: `🚗 再看${lastVehicle.slice(0, 13)}`, text: `我想了解 ${lastVehicle}` } }] : []),
                 { type: "action", action: { type: "message", label: "💬 隨便問問", text: "你好，我想了解崑家汽車" } },
               ],
@@ -2111,7 +2111,7 @@ async function checkConversationRecovery() {
     } else if (track.lastTopic === "booking") {
       nudgeText = "看車的時間有想到嗎？不用完全確定，我們電話再聊也可以 😊";
       quickReplyItems.push(
-        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" } },
+        { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
         { type: "action", action: { type: "message", label: "🕐 時間彈性", text: "我時間彈性，你們幫我安排" } },
         { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
       );
