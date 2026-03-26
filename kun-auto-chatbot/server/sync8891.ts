@@ -277,14 +277,45 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
     }
     const extended = ds.extended || {};
 
+    // Extract features/equipment from multiple possible data sources in 8891
+    const featureParts: string[] = [];
+    // 1. equipment/tags (配備標籤)
+    if (ds.equipment && Array.isArray(ds.equipment)) {
+      featureParts.push(...ds.equipment.map((e: any) => typeof e === 'string' ? e : e.name || e.label || '').filter(Boolean));
+    }
+    if (ds.tags && Array.isArray(ds.tags)) {
+      featureParts.push(...ds.tags.map((t: any) => typeof t === 'string' ? t : t.name || t.label || '').filter(Boolean));
+    }
+    // 2. saleCodes (認證標籤 e.g. 原廠保固, 第三方認證)
+    if (ds.saleCodes && Array.isArray(ds.saleCodes)) {
+      featureParts.push(...ds.saleCodes.filter((s: any) => typeof s === 'string' && s.length > 0));
+    }
+    // 3. extended fields that describe the car
+    if (extended.horsepower) featureParts.push(`馬力${extended.horsepower}`);
+    if (extended.seats) featureParts.push(`${extended.seats}人座`);
+    if (extended.doors) featureParts.push(`${extended.doors}門`);
+    if (extended.drivetrain) featureParts.push(extended.drivetrain);
+
+    // Extract description from seller notes
+    const description = ds.description || ds.sellerDescription || ds.memo || ds.subTitle || '';
+    // Extract guarantees
+    const guaranteeParts: string[] = [];
+    if (ds.guarantees && Array.isArray(ds.guarantees)) {
+      guaranteeParts.push(...ds.guarantees.map((g: any) => typeof g === 'string' ? g : g.name || '').filter(Boolean));
+    }
+    if (ds.certifications && Array.isArray(ds.certifications)) {
+      guaranteeParts.push(...ds.certifications.map((c: any) => typeof c === 'string' ? c : c.name || '').filter(Boolean));
+    }
+
     return {
       photoUrls: photoList.join("|"),
       photoCount: photoList.length,
       transmission: extended.transmission || "",
       fuelType: extended.fuelType || "",
       bodyType: extended.bodyType || "",
-      features: "",
-      guarantees: "",
+      features: featureParts.join('、') || "",
+      guarantees: guaranteeParts.join('、') || "",
+      description: typeof description === 'string' ? description : "",
     };
   } catch {
     return null;
@@ -538,6 +569,9 @@ export async function sync8891(): Promise<{
           if (enriched.transmission) scraped.transmission = enriched.transmission;
           if (enriched.fuelType) scraped.fuelType = enriched.fuelType;
           if (enriched.bodyType) scraped.bodyType = enriched.bodyType;
+          if (enriched.features) scraped.features = enriched.features;
+          if (enriched.description) scraped.description = enriched.description;
+          if (enriched.guarantees) scraped.guarantees = enriched.guarantees;
         }
 
         const existing = await dbConn
