@@ -21,6 +21,7 @@ export default function BookVisit() {
   const [specificTime, setSpecificTime] = useState(params.get("time") || "");
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
+  const [interestedVehicle, setInterestedVehicle] = useState(vehicleName || "");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
@@ -28,9 +29,9 @@ export default function BookVisit() {
   // Auto-save form data to sessionStorage
   const formData = useMemo(() => ({
     timeMode, preferredDate, amPm, specificTime,
-    customerName, phone, notes,
+    customerName, phone, interestedVehicle, notes,
     vehicleId: vehicleId || "", vehicleName,
-  }), [timeMode, preferredDate, amPm, specificTime, customerName, phone, notes, vehicleId, vehicleName]);
+  }), [timeMode, preferredDate, amPm, specificTime, customerName, phone, interestedVehicle, notes, vehicleId, vehicleName]);
 
   const { restoredData, clearDraft, hasDraft } = useFormAutosave("kunjia_bookvisit_draft", formData);
 
@@ -39,6 +40,7 @@ export default function BookVisit() {
     if (restoredData) {
       if (restoredData.customerName) setCustomerName(restoredData.customerName as string);
       if (restoredData.phone) setPhone(restoredData.phone as string);
+      if (restoredData.interestedVehicle) setInterestedVehicle(restoredData.interestedVehicle as string);
       if (restoredData.notes) setNotes(restoredData.notes as string);
       if (restoredData.timeMode) setTimeMode(restoredData.timeMode as TimeMode);
       if (restoredData.preferredDate) setPreferredDate(restoredData.preferredDate as string);
@@ -78,7 +80,7 @@ export default function BookVisit() {
 
     mutation.mutate({
       vehicleId: vehicleId ? Number(vehicleId) : undefined,
-      vehicleName: vehicleName || undefined,
+      vehicleName: interestedVehicle || vehicleName || undefined,
       customerName,
       phone,
       preferredDate: timeMode === "specific" ? preferredDate : undefined,
@@ -369,6 +371,18 @@ export default function BookVisit() {
             {touched.phone && !phoneValid && phone.length > 0 && (
               <p className="mt-1 text-xs text-red-500 animate-in slide-in-from-top-1 duration-200">請輸入有效的手機號碼（09 開頭，共 10 碼）</p>
             )}
+          </div>
+
+          {/* Interested Vehicle */}
+          <div>
+            <label className="text-sm font-medium">想看的車</label>
+            <input
+              type="text"
+              value={interestedVehicle}
+              onChange={(e) => setInterestedVehicle(e.target.value)}
+              placeholder="例如：BMW X1、Toyota Camry"
+              className="mt-1 w-full rounded-lg border bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
           </div>
 
           {/* Notes */}
