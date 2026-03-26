@@ -55,16 +55,6 @@ function buildVehicleBubble(v: Vehicle): any {
       color: "#C4A265",
       height: "md",
     },
-    {
-      type: "button",
-      action: {
-        type: "message",
-        label: "💬 LINE 問這台車",
-        text: lineInquiryText,
-      },
-      style: "primary",
-      color: "#06C755",
-    },
   ];
 
   // Appointment booking button — 發送訊息讓 AI 回覆預約流程（避免 LINE in-app browser 白頁面）
@@ -341,16 +331,6 @@ export function buildPhotoCarousel(vehicle: Vehicle): any[] {
         layout: "vertical",
         spacing: "sm",
         contents: [
-          {
-            type: "button",
-            action: {
-              type: "message",
-              label: "💬 LINE 問這台車",
-              text: `我想詢問這台車：\n${vehicle.brand} ${vehicle.model} ${vehicle.modelYear || ""}年\n售價：${vehicle.priceDisplay || vehicle.price + "萬"}`,
-            },
-            style: "primary",
-            color: "#06C755",
-          },
           {
             type: "button",
             action: {
