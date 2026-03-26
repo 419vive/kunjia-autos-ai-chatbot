@@ -1,6 +1,60 @@
 {
   "version": 1,
   "skills": {
+    "brand-guidelines": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "path": "skills/brand-guidelines",
+      "computedHash": "1120b3769e2985cefb3d25be981b1f914abeba57ae079b83c20c666c164fa9fe"
+    },
+    "seo-audit": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/seo-audit",
+      "computedHash": "94b91d7f70d6941ed776d94babb6cec9af94fe9dbe2ce6795bddf45a8d635ef8"
+    },
+    "copywriting": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/copywriting",
+      "computedHash": "f5d879acc5caa36e64c03382b08a6910ede4ab150ee78c97827a2f1ed1feb9dd"
+    },
+    "page-cro": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/page-cro",
+      "computedHash": "60db341ae3a52ecd6521bdbb3741e22b20197ec130c61728cbbb7c1951988c9c"
+    },
+    "product-marketing-context": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/product-marketing-context",
+      "computedHash": "e80bbfe3c243ccc39f238dc9bc64ec4a4f9ff0af366a5b17081b92bac69902e4"
+    },
+    "sales-enablement": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/sales-enablement",
+      "computedHash": "06b11f87b93885d7b4b5d2f26ce27555039099bb105918a751a3dc6f3a7a27eb"
+    },
+    "content-strategy": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/content-strategy",
+      "computedHash": "bfaf5c1a7c492a57a236ef993c21b9858bc57e080d301f3a4e3969d53730d13e"
+    },
+    "schema-markup": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/schema-markup",
+      "computedHash": "728f221b25d062afe204f3980d46db4800ac05f9fb68fd2cdcc8e7bfa7b68e79"
+    },
+    "site-architecture": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "path": "skills/site-architecture",
+      "computedHash": "4e89403300d7fc9f11c26e13091d9d437ddf1c5571fb91104965db53e04e33bd"
+    },
     "gws-admin-reports": {
       "source": "googleworkspace/cli",
       "sourceType": "github",
