@@ -1253,19 +1253,10 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       });
     }
 
-    // If user previously asked about vehicles, show a "back to X" button
-    if (ctx.previousVehicles && ctx.previousVehicles.length > 0) {
-      const lastCar = ctx.previousVehicles[0];
-      items.push({
-        type: "action",
-        action: { type: "message", label: `🔙 再看${lastCar.slice(0, 13)}`, text: `我想了解 ${lastCar}` },
-      });
-    } else {
-      items.push({
-        type: "action",
-        action: { type: "message", label: "📞 聯絡我們", text: "可以給我你們的聯絡方式嗎？" },
-      });
-    }
+    items.push({
+      type: "action",
+      action: { type: "message", label: "📞 聯絡我們", text: "可以給我你們的聯絡方式嗎？" },
+    });
   }
 
   // Add FAQ only in general conversation (not when asking about a specific vehicle or booking)
