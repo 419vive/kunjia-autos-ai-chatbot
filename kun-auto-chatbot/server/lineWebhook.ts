@@ -2104,7 +2104,7 @@ async function checkConversationRecovery() {
     } else if (track.lastTopic === "loan") {
       nudgeText = "貸款的部分還有疑問嗎？需要的話我可以請專員幫你算方案 💰";
       quickReplyItems.push(
-        { type: "action", action: { type: "message", label: "💰 填貸款評估", text: "我想了解貸款方案" } },
+        { type: "action", action: { type: "uri", label: "💰 填貸款評估", uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry` } },
         { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
         { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
       );
@@ -2239,7 +2239,7 @@ export async function sendFollowUpMessages() {
               quickReply: {
                 items: [
                   { type: "action", action: { type: "message", label: "📅 預約看車", text: "我想預約看車" } },
-                  { type: "action", action: { type: "message", label: "💰 問貸款", text: "我想了解貸款方案" } },
+                  { type: "action", action: { type: "uri", label: "💰 問貸款", uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry` } },
                   { type: "action", action: { type: "uri", label: "📞 直接打電話", uri: "tel:0936812818" } },
                 ],
               },
