@@ -477,7 +477,7 @@ export function buildWelcomeCard(): any {
                 action: {
                   type: "message",
                   label: "📅 預約到店賞車",
-                  text: "我想預約看車，什麼時候方便？",
+                  text: "我想預約看車",
                 },
                 style: "secondary",
               },
@@ -570,7 +570,7 @@ export function buildAppointmentCard(): any {
             action: {
               type: "message",
               label: "📋 我想預約看車",
-              text: "我想預約看車，什麼時候方便？",
+              text: "我想預約看車",
             },
             style: "primary",
             color: "#C4A265",
@@ -675,8 +675,9 @@ export const FAQ_ITEMS = [
     shortQuestion: "自備款不足，還可以貸款買車嗎？",
     answer:
       "完全沒問題！我們擁有業界經驗最豐富的「超強貸款團隊」💪\n\n你只要負責挑喜歡的車，貸款難題交給我們搞定！\n\n不管你的條件如何，我們都會盡全力幫你爭取最佳方案。",
-    ctaLabel: "💬 詢問貸款方案",
-    ctaText: "我想了解貸款方案，自備款不多可以嗎？",
+    ctaLabel: "💰 立即填寫貸款評估",
+    ctaText: "",
+    ctaUri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry`,
   },
   {
     id: 3,
@@ -778,7 +779,7 @@ export function buildVehicleCarouselQuickReply(): any {
       action: {
         type: "message",
         label: "🚗 我想預約看車",
-        text: "我想預約看車，什麼時候方便？",
+        text: "我想預約看車",
       },
     },
     {
@@ -898,11 +899,9 @@ export function buildFaqAnswerMessages(faqItem: (typeof FAQ_ITEMS)[number]): any
         contents: [
           {
             type: "button",
-            action: {
-              type: "message",
-              label: faqItem.ctaLabel,
-              text: faqItem.ctaText,
-            },
+            action: (faqItem as any).ctaUri
+              ? { type: "uri", label: faqItem.ctaLabel, uri: (faqItem as any).ctaUri }
+              : { type: "message", label: faqItem.ctaLabel, text: faqItem.ctaText },
             style: "primary",
             color: faqItem.color,
             height: "sm",
@@ -1065,7 +1064,7 @@ export function buildFollowWelcomeMessages(): any[] {
           action: {
             type: "message",
             label: "📅 預約看車",
-            text: "我想預約看車，什麼時候方便？",
+            text: "我想預約看車",
           },
         },
         {
@@ -1113,7 +1112,6 @@ export interface RichMenuTrigger {
 export function detectRichMenuTrigger(message: string): RichMenuTrigger | null {
   const triggers: Record<string, RichMenuTrigger> = {
     "我想看車，有什麼車可以推薦？": { type: "vehicle_browse", label: "看車庫存" },
-    "我想預約看車，什麼時候方便？": { type: "appointment", label: "預約賞車" },
     "有什麼熱門車款推薦？": { type: "popular", label: "熱門推薦" },
     "50萬以下有什麼好車？": { type: "budget", label: "50萬以下" },
     "你好，我想了解崑家汽車": { type: "welcome", label: "阿家智能客服" },
@@ -1250,7 +1248,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       // Engaged user → push toward conversion
       items.push({
         type: "action",
-        action: { type: "message", label: "📅 預約看車", text: "我想預約看車，什麼時候方便？" },
+        action: { type: "message", label: "📅 預約看車", text: "我想預約看車" },
       });
       items.push({
         type: "action",
@@ -1271,7 +1269,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       });
       items.push({
         type: "action",
-        action: { type: "message", label: "📅 預約賞車", text: "我想預約看車，什麼時候方便？" },
+        action: { type: "message", label: "📅 預約賞車", text: "我想預約看車" },
       });
     }
 

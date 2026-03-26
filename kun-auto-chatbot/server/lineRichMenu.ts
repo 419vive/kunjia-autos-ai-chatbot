@@ -29,7 +29,7 @@ function buildRichMenuObject() {
     },
     {
       bounds: { x: COL_W, y: 0, width: COL_W, height: ROW_H },
-      action: { type: "message", label: "預約賞車", text: "我想預約看車，什麼時候方便？" },
+      action: { type: "message", label: "預約賞車", text: "我想預約看車" },
     },
     {
       bounds: { x: COL_W * 2, y: 0, width: 2500 - COL_W * 2, height: ROW_H },
