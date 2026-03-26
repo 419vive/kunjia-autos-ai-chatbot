@@ -15,6 +15,7 @@ import { startSyncScheduler, sync8891 } from "../sync8891";
 import { deployRichMenu } from "../lineRichMenu";
 import { RATE_LIMIT_CONFIG, logSecurityEvent } from "../security";
 import { trackingRouter } from "../trackingApi";
+import { pixelEventsRouter } from "../pixelEventsRelay";
 import { registerAdminAuthRoutes, seedAdminUser } from "./adminAuth";
 import { createSeoRouter } from "../seo";
 import mysql from "mysql2/promise";
@@ -325,6 +326,9 @@ async function startServer() {
 
   // Page view tracking API (lightweight, no auth required)
   app.use(trackingRouter);
+
+  // Pixel Agents event relay (for remote session → local viewer)
+  app.use(pixelEventsRouter);
 
   // tRPC API
   app.use(
