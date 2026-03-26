@@ -57,6 +57,8 @@
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80"
   },
   "enableAllProjectMcpServers": true,
+  "autoDreamEnabled": true,
+  "autoMemoryEnabled": true,
   "disableAllHooks": false,
   "hooks": {
     "PreToolUse": [
