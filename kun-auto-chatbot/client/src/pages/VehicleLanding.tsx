@@ -603,7 +603,7 @@ export default function VehicleLanding() {
 
             {/* Short compelling copy */}
             <div className="bg-white/[0.04] rounded-xl border border-white/[0.06] px-4 py-3">
-              <p className="text-white/80 text-sm leading-relaxed">
+              <p className="text-white/80 text-sm leading-relaxed answer-summary" data-speakable>
                 {vehicle.description
                   ? (vehicle.description as string).slice(0, 120) + ((vehicle.description as string).length > 120 ? "..." : "")
                   : `${year} ${name}，${vehicle.mileage ? `里程 ${vehicle.mileage}，` : ""}${vehicle.fuelType ? `${vehicle.fuelType}，` : ""}全車通過第三方認證，品質保證！`}
