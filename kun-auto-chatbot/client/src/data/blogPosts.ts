@@ -750,6 +750,69 @@ export const blogPosts: BlogPost[] = [
 <p>選擇二手車行就像選擇醫生，<strong>信任</strong>和<strong>專業</strong>缺一不可。不論你最終選擇哪個通路，請務必堅持第三方認證、透明定價、書面合約三個原則。崑家汽車40年來堅持正派經營，歡迎隨時透過 <a href="https://page.line.me/825oftez" target="_blank" rel="noopener">LINE 官方帳號 @825oftez</a> 諮詢，或直接到高雄市三民區大順二路269號賞車。</p>
     `
   },
+  {
+    slug: "used-car-price-guide",
+    title: "二手車價格怎麼查？2026行情表與估價技巧完整教學",
+    description: "教你如何查詢二手車價格行情，包含8891、SUM鑑價、殘值計算公式，掌握中古車合理價格不被坑。",
+    publishedAt: "2026-03-26",
+    updatedAt: "2026-03-26",
+    author: "崑家汽車",
+    category: "購車指南",
+    keywords: ["二手車價格", "中古車行情", "二手車估價", "中古車價格查詢", "二手車行情表", "高雄二手車價格"],
+    content: `
+<p class="answer-summary" data-speakable><strong>查詢二手車價格的方法：8891行情價、SUM聯盟鑑價、殘值公式估算（新車價×殘值率）。建議用3種方式交叉比對，再看車況加減價。崑家汽車全車實價標示，免議價煩惱。</strong></p>
+
+<h2>為什麼二手車價格這麼難查？</h2>
+<p>不像新車有統一定價，二手車每台車況不同，價格可以差很多。同一款車，<strong>里程差2萬公里、有沒有事故、是否原廠保養</strong>，價差可能到5-10萬。所以「行情價」只是參考，最終還是要看實車。</p>
+<p>但知道行情至少讓你不會被開天價。以下教你3種查價方法。</p>
+
+<h2>方法一：8891 中古車行情</h2>
+<p><a href="https://auto.8891.com.tw" target="_blank" rel="noopener">8891中古車</a>是台灣最大的中古車平台，上面有幾萬筆在售車輛。直接搜尋你想要的車款，就能看到目前市場上的售價範圍。</p>
+<p><strong>技巧：</strong>篩選同年份、同里程區間的車，取中間值就是大約行情。注意要過濾掉太高或太低的極端值。</p>
+
+<h2>方法二：殘值公式估算</h2>
+<p>簡易公式：<strong>二手車價格 ≈ 新車價 × 殘值率</strong></p>
+<table>
+<tr><th>車齡</th><th>殘值率（參考）</th><th>範例（新車80萬）</th></tr>
+<tr><td>1年</td><td>80-85%</td><td>64-68萬</td></tr>
+<tr><td>3年</td><td>60-70%</td><td>48-56萬</td></tr>
+<tr><td>5年</td><td>45-55%</td><td>36-44萬</td></tr>
+<tr><td>7年</td><td>30-40%</td><td>24-32萬</td></tr>
+<tr><td>10年</td><td>20-30%</td><td>16-24萬</td></tr>
+</table>
+<p>※殘值率因品牌而異，<strong>Toyota、Honda 保值率最高</strong>，歐系車折舊較快。</p>
+
+<h2>方法三：到店詢價比較</h2>
+<p>線上查完行情，建議實際走訪2-3家車行比較。<a href="/">崑家汽車</a>採用<strong>實價標示</strong>，每台車的價格都是透明的，不需要費力議價。我們在<a href="https://maps.google.com/?q=高雄市三民區大順二路269號" target="_blank" rel="noopener">高雄市三民區大順二路269號（肯德基斜對面）</a>，歡迎直接到店比價。</p>
+
+<h2>影響二手車價格的6大因素</h2>
+<ol>
+<li><strong>品牌與車款</strong> — 熱門車款保值率高（如 Toyota Corolla Cross、Honda Fit）</li>
+<li><strong>年份與里程</strong> — 年份越新、里程越低，價格越高</li>
+<li><strong>車況</strong> — 有沒有事故、泡水、鈑金烤漆</li>
+<li><strong>配備</strong> — 有天窗、皮椅、ACC 等配備會加分</li>
+<li><strong>認證</strong> — 有<a href="/blog/third-party-inspection-guide">第三方認證</a>的車通常更保值</li>
+<li><strong>過戶次數</strong> — 一手車比多手車價值高</li>
+</ol>
+
+<h2>常見問題 FAQ</h2>
+
+<h3>Q：二手車價格可以殺價嗎？</h3>
+<p>看車行。有些車行標高價等你殺，有些像崑家汽車採<strong>實價標示</strong>，價格就是最終價，省去議價的時間和心理壓力。</p>
+
+<h3>Q：網路上查到的價格準嗎？</h3>
+<p>網路價格是<strong>參考行情</strong>，不是成交價。實際成交通常比刊登價低5-10%。建議到店看實車再決定。</p>
+
+<h3>Q：怎麼判斷一台車值不值這個價？</h3>
+<p>三個指標：<strong>同款車的市場行情、該車的里程數、是否有第三方認證</strong>。有認證的車即使貴一些也值得，因為省下後續修車的錢。</p>
+
+<h3>Q：高雄哪裡可以看二手車價格？</h3>
+<p>推薦到<a href="/">崑家汽車</a>（高雄三民區大順二路269號），全車實價標示、第三方認證、40年在地老店。也可以先在 <a href="https://page.line.me/825oftez" target="_blank" rel="noopener">LINE @825oftez</a> 線上詢價。</p>
+
+<h3>Q：二手車貸款會影響車價嗎？</h3>
+<p>不會直接影響車價，但<a href="/blog/used-car-loan-guide">貸款利率</a>會影響你的總付出成本。建議先了解<a href="/loan-inquiry">貸款方案</a>再決定預算。</p>
+    `
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
