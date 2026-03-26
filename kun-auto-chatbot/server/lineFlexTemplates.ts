@@ -42,16 +42,14 @@ function buildVehicleBubble(v: Vehicle): any {
   // Build LINE inquiry message with vehicle details
   const lineInquiryText = `我想詢問這台車：\n${v.brand} ${v.model} ${v.modelYear || ""}年\n售價：${priceText}\n${specs.slice(0, 3).join(" · ")}`;
 
-  const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`;
-
   const footerButtons: any[] = [
-    // Primary CTA: 了解車子細節/規格 → 車輛詳情頁（有 3 個意圖問題 + 照片 + 完整資訊）
+    // Primary CTA: 了解車子細節/規格 → 發送訊息讓 AI 回覆車輛規格（避免 LINE in-app browser 白頁面）
     {
       type: "button",
       action: {
-        type: "uri",
+        type: "message",
         label: "👉 了解車子細節/規格",
-        uri: vehicleDetailUrl,
+        text: `我想了解 ${v.brand} ${v.model} 的詳細規格`,
       },
       style: "primary",
       color: "#C4A265",
@@ -69,14 +67,13 @@ function buildVehicleBubble(v: Vehicle): any {
     },
   ];
 
-  // Appointment booking button
-  const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  // Appointment booking button — 發送訊息讓 AI 回覆預約流程（避免 LINE in-app browser 白頁面）
   footerButtons.push({
     type: "button",
     action: {
-      type: "uri",
+      type: "message",
       label: "📅 預約看車",
-      uri: bookUrl,
+      text: `我想預約去看 ${v.brand} ${v.model}`,
     },
     style: "secondary",
   });
@@ -107,14 +104,13 @@ function buildVehicleBubble(v: Vehicle): any {
     });
   }
 
-  // Loan inquiry button
-  const loanUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  // Loan inquiry button — 發送訊息讓 AI 回覆貸款資訊（避免 LINE in-app browser 白頁面）
   footerButtons.push({
     type: "button",
     action: {
-      type: "uri",
+      type: "message",
       label: "💰 貸款利率怎麼算",
-      uri: loanUrl,
+      text: `${v.brand} ${v.model} 可以貸款嗎？月付大概多少？`,
     },
     style: "secondary",
   });
@@ -139,9 +135,9 @@ function buildVehicleBubble(v: Vehicle): any {
       aspectRatio: "4:3",
       aspectMode: "cover",
       action: {
-        type: "uri",
+        type: "message",
         label: "查看詳情",
-        uri: vehicleDetailUrl,
+        text: `我想了解 ${v.brand} ${v.model} 的詳細規格`,
       },
     },
     body: {
@@ -572,9 +568,9 @@ export function buildAppointmentCard(): any {
           {
             type: "button",
             action: {
-              type: "uri",
-              label: "📋 線上預約表單",
-              uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit`,
+              type: "message",
+              label: "📋 我想預約看車",
+              text: "我想預約看車，什麼時候方便？",
             },
             style: "primary",
             color: "#C4A265",
@@ -1033,7 +1029,7 @@ export function buildFollowWelcomeMessages(): any[] {
           },
           {
             type: "button",
-            action: { type: "uri", label: "🌐 開啟網站瀏覽", uri: baseUrl },
+            action: { type: "message", label: "🚗 看車庫存", text: "我想看車，有什麼車可以推薦？" },
             style: "secondary",
           },
         ],
@@ -1232,31 +1228,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       action: { type: "message", label: "💬 想和真人聊這台車", text: "我想跟真人業務聊聊這台車" },
     });
   } else if (ctx.hasAppointment) {
-    // Customer wants to visit → show time slots + contact
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🌅 上午去看",
-        text: "我想平日上午去看車",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "☀️ 下午去看",
-        text: "我想平日下午去看車",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🌙 晚上去看",
-        text: "我想平日晚上去看車",
-      },
-    });
+    // Customer wants to visit → only show location button (time slots removed per owner request)
     items.push({
       type: "action",
       action: {

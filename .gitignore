@@ -1,2 +1,4 @@
 .claude-memory.md
 .claude/hooks/logs/
+node_modules/
+package-lock.json

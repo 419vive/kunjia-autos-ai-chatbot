@@ -20,6 +20,11 @@
 - [x] QA CRITICAL C1-C10 + MODERATE M1-M12 修復 (PR #33)
 - [x] QA LOW L1-L16 修復 (15/16 完成, L14 deferred)
 - [x] Enable auto mode permissions (PR #34)
+- [x] LINE 對話流程修正 + 白頁面修復 (PR #35)
+  - 貸款/試駕回覆格式改為結構化（姓名/電話欄位）
+  - 所有內部 URI 按鈕改為 message 類型（修復白頁面）
+  - 移除上午/下午/晚上按鈕，只保留「怎麼去？」
+  - 時間彈性 → AI 靜默 handoff
 
 ## Backlog (identified, not yet requested)
 - [ ] L14: Web Chat nudge/follow-up system (requires push architecture)
@@ -27,4 +32,4 @@
 - [ ] Split routers.ts (1,277 lines) into smaller modules
 - [ ] Replace 170+ console statements with structured logging
 - [ ] Add API pagination for admin endpoints
-- [ ] Remove unused KaTeX fonts from bundle
+- [x] Remove unused KaTeX fonts from bundle (Rollup plugin in vite.config.ts, -59 files, ~2MB)

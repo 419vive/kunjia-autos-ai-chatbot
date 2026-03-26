@@ -1063,6 +1063,16 @@ async function processLineEvent(
   let replyText: string;
   let isHumanHandoff = false;
 
+  // ============ FLEXIBLE TIME → SILENT HANDOFF (AI 完全不回覆) ============
+  // Customer says "時間彈性" or "幫我安排" → AI 靜默，真人業務直接接手
+  if (/時間彈性|你們幫我安排|幫我安排就好|幫我安排時間|都可以.*安排|你安排/.test(userMessage)) {
+    console.log('[LINE] 🚨 Flexible time detected — silent handoff, AI does NOT reply');
+    await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
+    await sendHumanHandoffNotification(conversation!, userMessage, '（AI 未回覆，靜默轉交真人）', channelAccessToken, ownerUserId);
+    await db.updateConversation(convId, { status: 'human_handoff' });
+    return;
+  }
+
   // ============ RULE-BASED MODE vs LLM MODE ============
   if (isRuleBasedMode()) {
     console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
@@ -1142,8 +1152,15 @@ async function processLineEvent(
   replyText = replyText.replace(/^#+\s+/gm, '');            // Remove ## heading markdown
   // Remove periods (unnatural in LINE chat)
   replyText = replyText.replace(/。/g, '');
-  // Collapse all newlines into spaces for single-line output (不分段 rule)
-  replyText = replyText.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  // For appointment and loan intents: preserve line breaks (structured format with 姓名/電話 fields)
+  // For other intents: collapse newlines into spaces for single-line output (不分段 rule)
+  const needsStructuredFormat = customerIntents.includes('appointment') || customerIntents.includes('loan');
+  if (needsStructuredFormat) {
+    // Keep line breaks but clean up excessive blank lines (max 1 blank line between sections)
+    replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();
+  } else {
+    replyText = replyText.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
 
   // ============ HUMAN HANDOFF DETECTION ============
   // Check if AI flagged [HUMAN_HANDOFF] in its response

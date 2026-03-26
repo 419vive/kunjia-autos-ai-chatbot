@@ -874,28 +874,48 @@ export function buildIntentInstructions(
       // Customer mentioned a specific time
       const phonePart = customerContact
         ? `客人已留電話 ${customerContact}，告知我們業務會盡快聯繫。`
-        : `🔴 客人還沒留電話！確認時間後直接要電話：「方便留個電話嗎？我們業務會盡快火速與你聯繫確認！📞」`;
+        : `🔴 客人還沒留電話！確認時間後直接要聯絡資料`;
       instructions.push(`🔴 預約指令：客人提到了具體時間，直接確認該時間。${vehicleCtx}
 ${phonePart}
-告知「我們業務會盡快火速與你聯繫，幫你安排看車！」
+🔴 必須用以下格式回覆（每段之間空一行）：
+
+想來看車太好了！請問哪個時段方便呢？
+
+上午10-11、
+下午14-15、
+晚上18-19
+
+方便留個簡單資料嗎？
+
+姓名：
+電話：
+看車以上3個時段選一：
+
+地址高雄市三民區大順二路269號（肯德基斜對面）
+
 🚫 不要推薦車款！客人要的是預約，不是推薦！`);
     } else {
-      // No specific time — ask for phone FIRST, then say sales rep will arrange
-      const phoneInstruction = customerContact 
-        ? `客人已留電話 ${customerContact}，不需要再問電話。直接告知：「我們業務會盡快火速與你聯繫，幫你安排看車時間！」`
-        : `🔴🔴🔴 客人還沒留電話！必須直接要電話！🔴🔴🔴
-用這個句式（可微調）：
-「想來看車太好了！方便留個電話嗎？我們業務會盡快火速與你聯繫，幫你安排看車時間！📞」
-不要囉嗦推薦車款或給時段選項，客人要來看車就是有意願了，直接要電話才是正確做法！`;
-      
+      // No specific time — show time slots + ask for contact info
       instructions.push(`🔴 預約看車指令（最高優先級！）：
-客人想預約看車！動機明確！${vehicleCtx}你必須：
-1. 簡短肯定客人的決定（一句話）
-2. ${phoneInstruction}
-3. 回覆控制在 60 字以內，簡潔有力！
+客人想預約看車！動機明確！${vehicleCtx}
+🔴🔴🔴 必須嚴格按照以下格式回覆（每段之間空一行）：🔴🔴🔴
+
+想來看車太好了！請問哪個時段方便呢？
+
+上午10-11、
+下午14-15、
+晚上18-19
+
+方便留個簡單資料嗎？
+
+姓名：
+電話：
+看車以上3個時段選一：
+
+地址高雄市三民區大順二路269號（肯德基斜對面）
 
 🚫🚫🚫 絕對禁止推薦車款！客人要的是預約，不是推薦！🚫🚫🚫
-🚫🚫🚫 絕對禁止給時段選項！直接要電話讓業務安排！🚫🚫🚫`);
+🚫🚫🚫 絕對禁止自己編造不同的格式！必須照上面格式回覆！🚫🚫🚫`);
     }
   }
   
@@ -941,9 +961,22 @@ Google 地圖：https://maps.google.com/?q=高雄市三民區大順二路269號
   
   // ============ LOAN INTENT ============
   if (intents.includes('loan')) {
+    const vehicleInfo = detectedVehicle ? `${detectedVehicle.brand} ${detectedVehicle.model}` : '';
+    const vehicleLine = vehicleInfo ? `提到客人問的車：${vehicleInfo}，` : '';
     instructions.push(`🔴 貸款指令：
-客人問貸款！這個問題需要專人回答。
-你必須回覆：「貸款的部分我幫你轉給專人來回答，真人客服馬上就到！請稍等一下🙏 [HUMAN_HANDOFF]」`);
+客人問貸款！你必須用以下格式回覆（${vehicleLine}加上「是台好車」鼓勵）：
+
+${vehicleInfo || '（車款名稱）'}是台好車！
+方便留個電話嗎？
+賴先生可以直接跟你詳細介紹！
+
+姓名：
+電話：
+方便通話時間：
+
+🔴 必須包含「姓名：」「電話：」「方便通話時間：」三個欄位！
+🔴 如果有偵測到車輛資訊（年份、排量、里程、售價），放在車款名稱後面的括號裡
+🔴 格式範例：Hyundai Tucson（2016年、2.0L、里程10萬公里）售價29.8萬是台好車！`);
   }
   
   // ============ HOW TO BROWSE INTENT ============
