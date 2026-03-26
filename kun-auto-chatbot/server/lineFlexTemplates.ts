@@ -104,13 +104,13 @@ function buildVehicleBubble(v: Vehicle): any {
     });
   }
 
-  // Loan inquiry button — 發送訊息讓 AI 回覆貸款資訊（避免 LINE in-app browser 白頁面）
+  // Loan inquiry button — opens loan inquiry web page
   footerButtons.push({
     type: "button",
     action: {
-      type: "message",
+      type: "uri",
       label: "💰 貸款利率怎麼算",
-      text: `${v.brand} ${v.model} 可以貸款嗎？月付大概多少？`,
+      uri: `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/loan-inquiry?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`,
     },
     style: "secondary",
   });
