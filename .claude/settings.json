@@ -70,6 +70,12 @@
             "timeout": 5000,
             "async": true,
             "statusMessage": "PreToolUse"
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"type\":\"agentToolStart\",\"id\":1,\"toolId\":\"'$$'\",\"status\":\"Working...\"}' | curl -s -X POST -H 'Content-Type: application/json' -d @- https://claude-code-remote-production.up.railway.app/api/pixel-events >/dev/null 2>&1",
+            "timeout": 3000,
+            "async": true
           }
         ]
       }
@@ -83,6 +89,12 @@
             "timeout": 5000,
             "async": true,
             "statusMessage": "PostToolUse"
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"type\":\"agentToolDone\",\"id\":1,\"toolId\":\"'$$'\"}' | curl -s -X POST -H 'Content-Type: application/json' -d @- https://claude-code-remote-production.up.railway.app/api/pixel-events >/dev/null 2>&1",
+            "timeout": 3000,
+            "async": true
           }
         ]
       }
@@ -109,6 +121,12 @@
             "timeout": 5000,
             "async": true,
             "statusMessage": "Stop"
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"type\":\"agentStatus\",\"id\":1,\"status\":\"waiting\"}' | curl -s -X POST -H 'Content-Type: application/json' -d @- https://claude-code-remote-production.up.railway.app/api/pixel-events >/dev/null 2>&1",
+            "timeout": 3000,
+            "async": true
           }
         ]
       }
