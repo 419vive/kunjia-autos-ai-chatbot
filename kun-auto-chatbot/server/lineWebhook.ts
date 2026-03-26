@@ -1063,25 +1063,12 @@ async function processLineEvent(
   let replyText: string;
   let isHumanHandoff = false;
 
-  // ============ FLEXIBLE TIME → HUMAN HANDOFF (skip LLM) ============
-  // When customer says "時間彈性" or "幫我安排", hand off to human directly
+  // ============ FLEXIBLE TIME → SILENT HANDOFF (AI 完全不回覆) ============
+  // Customer says "時間彈性" or "幫我安排" → AI 靜默，真人業務直接接手
   if (/時間彈性|你們幫我安排|幫我安排就好|幫我安排時間|都可以.*安排|你安排/.test(userMessage)) {
-    console.log('[LINE] 🚨 Flexible time detected — triggering human handoff directly');
-    replyText = `${greeting}好的沒問題！我已經通知賴先生了，他會盡快打電話跟你聯繫安排看車時間！請稍等一下🙏`;
-    isHumanHandoff = true;
-
-    // Save + reply + handoff, then return early
-    await db.addMessage({ conversationId: convId, role: "assistant", content: replyText });
-    try {
-      await fetch("https://api.line.me/v2/bot/message/reply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
-        body: JSON.stringify({ replyToken, messages: [{ type: "text", text: replyText }] }),
-      });
-    } catch (err) {
-      console.error("[LINE] Reply failed:", err);
-    }
-    await sendHumanHandoffNotification(conversation!, userMessage, replyText, channelAccessToken, ownerUserId);
+    console.log('[LINE] 🚨 Flexible time detected — silent handoff, AI does NOT reply');
+    await db.addMessage({ conversationId: convId, role: "user", content: userMessage });
+    await sendHumanHandoffNotification(conversation!, userMessage, '（AI 未回覆，靜默轉交真人）', channelAccessToken, ownerUserId);
     await db.updateConversation(convId, { status: 'human_handoff' });
     return;
   }
