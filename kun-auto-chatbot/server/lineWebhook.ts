@@ -1063,6 +1063,29 @@ async function processLineEvent(
   let replyText: string;
   let isHumanHandoff = false;
 
+  // ============ FLEXIBLE TIME → HUMAN HANDOFF (skip LLM) ============
+  // When customer says "時間彈性" or "幫我安排", hand off to human directly
+  if (/時間彈性|你們幫我安排|幫我安排就好|幫我安排時間|都可以.*安排|你安排/.test(userMessage)) {
+    console.log('[LINE] 🚨 Flexible time detected — triggering human handoff directly');
+    replyText = `${greeting}好的沒問題！我已經通知賴先生了，他會盡快打電話跟你聯繫安排看車時間！請稍等一下🙏`;
+    isHumanHandoff = true;
+
+    // Save + reply + handoff, then return early
+    await db.addMessage({ conversationId: convId, role: "assistant", content: replyText });
+    try {
+      await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+        body: JSON.stringify({ replyToken, messages: [{ type: "text", text: replyText }] }),
+      });
+    } catch (err) {
+      console.error("[LINE] Reply failed:", err);
+    }
+    await sendHumanHandoffNotification(conversation!, userMessage, replyText, channelAccessToken, ownerUserId);
+    await db.updateConversation(convId, { status: 'human_handoff' });
+    return;
+  }
+
   // ============ RULE-BASED MODE vs LLM MODE ============
   if (isRuleBasedMode()) {
     console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
@@ -1142,8 +1165,15 @@ async function processLineEvent(
   replyText = replyText.replace(/^#+\s+/gm, '');            // Remove ## heading markdown
   // Remove periods (unnatural in LINE chat)
   replyText = replyText.replace(/。/g, '');
-  // Collapse all newlines into spaces for single-line output (不分段 rule)
-  replyText = replyText.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  // For appointment and loan intents: preserve line breaks (structured format with 姓名/電話 fields)
+  // For other intents: collapse newlines into spaces for single-line output (不分段 rule)
+  const needsStructuredFormat = customerIntents.includes('appointment') || customerIntents.includes('loan');
+  if (needsStructuredFormat) {
+    // Keep line breaks but clean up excessive blank lines (max 1 blank line between sections)
+    replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();
+  } else {
+    replyText = replyText.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
 
   // ============ HUMAN HANDOFF DETECTION ============
   // Check if AI flagged [HUMAN_HANDOFF] in its response

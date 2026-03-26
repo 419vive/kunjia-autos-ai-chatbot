@@ -45,13 +45,13 @@ function buildVehicleBubble(v: Vehicle): any {
   const vehicleDetailUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/vehicle/${v.id}`;
 
   const footerButtons: any[] = [
-    // Primary CTA: 了解車子細節/規格 → 車輛詳情頁（有 3 個意圖問題 + 照片 + 完整資訊）
+    // Primary CTA: 了解車子細節/規格 → 發送訊息讓 AI 回覆車輛規格（避免 LINE in-app browser 白頁面）
     {
       type: "button",
       action: {
-        type: "uri",
+        type: "message",
         label: "👉 了解車子細節/規格",
-        uri: vehicleDetailUrl,
+        text: `我想了解 ${v.brand} ${v.model} 的詳細規格`,
       },
       style: "primary",
       color: "#C4A265",
@@ -69,14 +69,13 @@ function buildVehicleBubble(v: Vehicle): any {
     },
   ];
 
-  // Appointment booking button
-  const bookUrl = `${process.env.BASE_URL || "https://claude-code-remote-production.up.railway.app"}/book-visit?vehicleId=${v.id}&vehicle=${encodeURIComponent(`${v.brand} ${v.model}`)}`;
+  // Appointment booking button — 發送訊息讓 AI 回覆預約流程（避免 LINE in-app browser 白頁面）
   footerButtons.push({
     type: "button",
     action: {
-      type: "uri",
+      type: "message",
       label: "📅 預約看車",
-      uri: bookUrl,
+      text: `我想預約去看 ${v.brand} ${v.model}`,
     },
     style: "secondary",
   });
@@ -1232,31 +1231,7 @@ export function buildContextualQuickReply(ctx: ConversationContext): any {
       action: { type: "message", label: "💬 想和真人聊這台車", text: "我想跟真人業務聊聊這台車" },
     });
   } else if (ctx.hasAppointment) {
-    // Customer wants to visit → show time slots + contact
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🌅 上午去看",
-        text: "我想平日上午去看車",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "☀️ 下午去看",
-        text: "我想平日下午去看車",
-      },
-    });
-    items.push({
-      type: "action",
-      action: {
-        type: "message",
-        label: "🌙 晚上去看",
-        text: "我想平日晚上去看車",
-      },
-    });
+    // Customer wants to visit → only show location button (time slots removed per owner request)
     items.push({
       type: "action",
       action: {
