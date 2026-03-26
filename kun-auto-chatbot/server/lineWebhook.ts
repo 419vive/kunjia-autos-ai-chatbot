@@ -1073,6 +1073,43 @@ async function processLineEvent(
     return;
   }
 
+  // ============ VEHICLE SPEC QUERY → DIRECT RESPONSE (skip LLM) ============
+  // When customer clicks "了解車子細節/規格", respond directly from DB — don't trust LLM to copy
+  if (detection.vehicle && /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage)) {
+    const v = detection.vehicle as any;
+    const specLines: string[] = [`${v.brand} ${v.model}`, '', `售價：${v.priceDisplay || v.price + '萬'}`];
+    if (v.modelYear) specLines.push(`年份：${v.modelYear}年`);
+    if (v.licenseDate) specLines.push(`出廠日期：${v.licenseDate}`);
+    if (v.color) specLines.push(`顏色：${v.color}`);
+    if (v.mileage) specLines.push(`里程：${v.mileage}`);
+    if (v.displacement) specLines.push(`排氣量：${v.displacement}`);
+    if (v.transmission) specLines.push(`變速箱：${v.transmission}`);
+    if (v.fuelType) specLines.push(`燃料：${v.fuelType}`);
+    if (v.bodyType) specLines.push(`車型：${v.bodyType}`);
+    if (v.features) specLines.push(`配備：${v.features}`);
+    if (v.guarantees) specLines.push(`認證/保障：${v.guarantees}`);
+    if (v.description) specLines.push(`\n${v.description}`);
+    specLines.push('', '想進一步了解或預約看車，隨時跟我說！');
+
+    replyText = specLines.join('\n');
+    console.log(`[LINE] Vehicle spec direct response for ${v.brand} ${v.model}`);
+
+    await db.addMessage({ conversationId: convId, role: "assistant", content: replyText });
+    const quickReplyCtx: ConversationContext = {
+      hasVehicle: true, hasAppointment: false, hasContact: !!conversation!.customerContact,
+      vehicleName: `${v.brand} ${v.model}`, messageCount: 0, leadScore: conversation!.leadScore || 0,
+    };
+    const quickReply = buildContextualQuickReply(quickReplyCtx);
+    try {
+      await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+        body: JSON.stringify({ replyToken, messages: [{ type: "text", text: replyText, quickReply }] }),
+      });
+    } catch (err) { console.error("[LINE] Reply failed:", err); }
+    return;
+  }
+
   // ============ RULE-BASED MODE vs LLM MODE ============
   if (isRuleBasedMode()) {
     console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
