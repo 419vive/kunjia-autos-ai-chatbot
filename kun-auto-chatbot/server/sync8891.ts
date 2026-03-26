@@ -254,6 +254,19 @@ async function fetchVehicleDetailEnriched(carId: string): Promise<Partial<Scrape
     const ds = data.props?.pageProps?.dataSource;
     if (!ds) return null;
 
+    // DEBUG: Log all available fields from 8891 detail page (first vehicle only)
+    logger.info("8891 Enrich", `dataSource keys: ${Object.keys(ds).join(', ')}`);
+    if (ds.extended) logger.info("8891 Enrich", `extended keys: ${Object.keys(ds.extended).join(', ')}`);
+    // Log any field that might contain features/specs
+    for (const key of Object.keys(ds)) {
+      const val = ds[key];
+      if (val && typeof val === 'string' && val.length > 0 && val.length < 500) {
+        logger.info("8891 Enrich", `ds.${key} (string): ${val.substring(0, 200)}`);
+      } else if (Array.isArray(val) && val.length > 0) {
+        logger.info("8891 Enrich", `ds.${key} (array[${val.length}]): ${JSON.stringify(val.slice(0, 3)).substring(0, 300)}`);
+      }
+    }
+
     // Verify this vehicle belongs to 崑家汽車
     if (ds.sellerInfo?.shopId !== SHOP_ID) return null;
 
