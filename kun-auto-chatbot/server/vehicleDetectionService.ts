@@ -846,7 +846,7 @@ export function buildIntentInstructions(
   userMessage: string,
   greeting: string,
   customerContact?: string | null,
-  detectedVehicle?: { brand: string; model: string } | null
+  detectedVehicle?: { brand: string; model: string; modelYear?: string; displacement?: string; mileage?: string; price?: number; priceDisplay?: string } | null
 ): string {
   if (intents.length === 0) {
     // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
@@ -941,9 +941,40 @@ Google 地圖：https://maps.google.com/?q=高雄市三民區大順二路269號
   
   // ============ LOAN INTENT ============
   if (intents.includes('loan')) {
-    instructions.push(`🔴 貸款指令：
-客人問貸款！這個問題需要專人回答。
-你必須回覆：「貸款的部分我幫你轉給專人來回答，真人客服馬上就到！請稍等一下🙏 [HUMAN_HANDOFF]」`);
+    if (detectedVehicle) {
+      const vName = `${detectedVehicle.brand} ${detectedVehicle.model}`;
+      const specs = [
+        detectedVehicle.modelYear ? `${detectedVehicle.modelYear}年` : '',
+        detectedVehicle.displacement || '',
+        detectedVehicle.mileage ? `里程${detectedVehicle.mileage}` : '',
+      ].filter(Boolean).join('、');
+      const priceStr = detectedVehicle.priceDisplay || (detectedVehicle.price ? `${detectedVehicle.price}萬` : '');
+      instructions.push(`🔴 貸款指令（必須遵守！）：
+客人問貸款！你必須用以下格式回覆，收集客人聯絡資訊：
+
+🤍${greeting}🤍${vName}${specs ? `（${specs}）` : ''}${priceStr ? `售價${priceStr}` : ''}是台好車！
+方便留個電話嗎？
+賴先生可以直接跟你詳細介紹！
+
+姓名：
+電話：
+方便通話時間：
+
+🚫 禁止轉真人！禁止加 [HUMAN_HANDOFF]！直接用上面的格式回覆就好！`);
+    } else {
+      instructions.push(`🔴 貸款指令（必須遵守！）：
+客人問貸款！你必須用以下格式回覆，收集客人聯絡資訊：
+
+🤍${greeting}🤍想了解貸款方案沒問題！
+方便留個電話嗎？
+賴先生可以直接跟你詳細介紹！
+
+姓名：
+電話：
+方便通話時間：
+
+🚫 禁止轉真人！禁止加 [HUMAN_HANDOFF]！直接用上面的格式回覆就好！`);
+    }
   }
   
   // ============ HOW TO BROWSE INTENT ============

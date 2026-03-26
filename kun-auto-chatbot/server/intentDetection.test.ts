@@ -226,9 +226,9 @@ describe('detectCustomerIntents', () => {
 
 describe('buildIntentInstructions', () => {
   
-  it('should return empty string for no intents', () => {
+  it('should return default guidance for no intents', () => {
     const result = buildIntentInstructions([], '你好', '人客');
-    expect(result).toBe('');
+    expect(result).toContain('沒有偵測到特定意圖');
   });
   
   it('should ask for phone directly for appointment "上午" (no time slots)', () => {
@@ -287,10 +287,13 @@ describe('buildIntentInstructions', () => {
     expect(result).toContain('9:00-20:00');
   });
   
-  it('should include HUMAN_HANDOFF for loan intent', () => {
+  it('should collect contact info for loan intent instead of handoff', () => {
     const intents: CustomerIntent[] = ['loan'];
     const result = buildIntentInstructions(intents, '可以貸款嗎', '人客');
-    expect(result).toContain('[HUMAN_HANDOFF]');
+    expect(result).toContain('姓名：');
+    expect(result).toContain('電話：');
+    expect(result).toContain('方便通話時間：');
+    expect(result).toContain('禁止轉真人');
   });
   
   it('should include multi-intent reminder when multiple intents', () => {

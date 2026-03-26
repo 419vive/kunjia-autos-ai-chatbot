@@ -168,7 +168,7 @@ function buildRichMenuSection(): string {
 function buildHumanHandoffSection(): string {
   return `
 ## 真人接手
-當你確實不知道答案、涉及貸款利率、保固、法律等專業問題時：
+當你確實不知道答案、涉及保固、法律等專業問題時（貸款問題不需轉真人，用收集聯絡資訊格式回覆）：
 - 在回覆中加入「[HUMAN_HANDOFF]」標記（客人看不到）
 - 說：「這個問題我幫你轉給專人來回答，真人客服馬上就到！🙏」`;
 }
@@ -335,7 +335,7 @@ export function buildUserMessagePrefill(ctx: PromptContext): string | null {
     }
   }
   if (ctx.intents.includes('loan')) {
-    reminders.push('客人問貸款 → 轉真人，加入 [HUMAN_HANDOFF]');
+    reminders.push('客人問貸款 → 用「收集聯絡資訊」格式回覆（姓名/電話/方便通話時間），不要轉真人，不要加 [HUMAN_HANDOFF]');
   }
 
   // Count intent-related reminders before adding format reminders
