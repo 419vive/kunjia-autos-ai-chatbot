@@ -850,23 +850,9 @@ export function buildIntentInstructions(
   customerContact?: string | null,
   detectedVehicle?: any | null
 ): string {
-  if (intents.length === 0) {
-    // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
-    return `
-
-## 回覆指引
-客人的訊息：「${userMessage}」
-沒有偵測到特定意圖，請根據訊息內容自然回應
-🔴 不要重複打招呼！不要說「你好」「歡迎」！直接回應客人說的內容就好
-🔴 如果不確定客人想問什麼，簡短回應並引導：「${greeting}想了解什麼車款呢？或者點下方選單看看我們的庫存🚗」`;
-  }
-
-  const instructions: string[] = [];
-
-  // ============ VEHICLE SPEC DETAIL INTENT ============
-  // When customer asks for detailed specs (e.g. clicks "了解車子細節/規格" button)
+  // ============ VEHICLE SPEC DETAIL — checked BEFORE intent check ============
+  // "我想了解 X Y 的詳細規格" doesn't trigger any standard intent, so must be checked first
   if (detectedVehicle && /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage)) {
-    // Build the spec lines directly from vehicle data — don't rely on LLM to extract from KB
     const v = detectedVehicle;
     const specLines: string[] = [
       `${v.brand} ${v.model}`,
@@ -887,15 +873,33 @@ export function buildIntentInstructions(
     specLines.push('');
     specLines.push('想進一步了解或預約看車，隨時跟我說！');
 
-    const prebuiltResponse = specLines.join('\n');
+    return `
 
-    instructions.push(`🔴🔴🔴 車輛規格查詢指令（最高優先級！必須一字不差照抄！）🔴🔴🔴
-客人要看車輛規格！你必須「完整照抄」以下內容，不能省略任何一行、不能改寫、不能加emoji、不能加開場白：
+## ❗❗❗ 客人意圖偵測結果 — 最後指令（最高優先級）❗❗❗
 
-${prebuiltResponse}
+客人的原始訊息：「${userMessage}」
+偵測到的意圖：vehicle_spec
 
-🔴 以上就是你的完整回覆！一字不差照抄！不要加任何其他內容！`);
+🔴🔴🔴 車輛規格查詢指令（最高優先級！必須一字不差照抄！）🔴🔴🔴
+你必須「完整照抄」以下內容，不能省略任何一行、不能改寫、不能加emoji、不能加開場白：
+
+${specLines.join('\n')}
+
+🔴 以上就是你的完整回覆！一字不差照抄！不要加任何其他內容！`;
   }
+
+  if (intents.length === 0) {
+    // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
+    return `
+
+## 回覆指引
+客人的訊息：「${userMessage}」
+沒有偵測到特定意圖，請根據訊息內容自然回應
+🔴 不要重複打招呼！不要說「你好」「歡迎」！直接回應客人說的內容就好
+🔴 如果不確定客人想問什麼，簡短回應並引導：「${greeting}想了解什麼車款呢？或者點下方選單看看我們的庫存🚗」`;
+  }
+
+  const instructions: string[] = [];
 
   // ============ APPOINTMENT INTENT ============
   if (intents.includes('appointment')) {
