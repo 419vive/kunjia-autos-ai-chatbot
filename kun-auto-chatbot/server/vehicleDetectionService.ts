@@ -584,7 +584,9 @@ export function buildSmartVehicleKB(
     targetVehicle.fuelType ? `燃料：${targetVehicle.fuelType}` : '',
     targetVehicle.bodyType ? `車型：${targetVehicle.bodyType}` : '',
     targetVehicle.features ? `配備：${targetVehicle.features}` : '',
+    targetVehicle.guarantees ? `認證/保障：${targetVehicle.guarantees}` : '',
     targetVehicle.description ? `描述：${targetVehicle.description}` : '',
+    targetVehicle.licenseDate ? `出廠日期：${targetVehicle.licenseDate}` : '',
     `★★★★★★★★★★★★★★★`,
   ].filter(Boolean).join('\n');
   
