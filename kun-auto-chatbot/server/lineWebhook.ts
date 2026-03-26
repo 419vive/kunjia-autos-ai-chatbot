@@ -1110,6 +1110,38 @@ async function processLineEvent(
     return;
   }
 
+  // ============ APPOINTMENT → DIRECT RESPONSE (skip LLM) ============
+  if (customerIntents.includes('appointment')) {
+    const vehicleInfo = detection.vehicle ? `（${(detection.vehicle as any).brand} ${(detection.vehicle as any).model}）` : '';
+    replyText = `預約看車${vehicleInfo}
+
+請填寫以下資訊：
+
+日期：____年____月____日
+時間：____:____（營業時間 09:00-20:00）
+姓名：
+電話：
+
+地址：高雄市三民區大順二路269號（肯德基斜對面）`;
+
+    console.log(`[LINE] Appointment direct response`);
+    await db.addMessage({ conversationId: convId, role: "assistant", content: replyText });
+    const quickReplyCtx: ConversationContext = {
+      hasVehicle: !!detection.vehicle, hasAppointment: true, hasContact: !!conversation!.customerContact,
+      vehicleName: detection.vehicle ? `${(detection.vehicle as any).brand} ${(detection.vehicle as any).model}` : undefined,
+      messageCount: 0, leadScore: conversation!.leadScore || 0,
+    };
+    const quickReply = buildContextualQuickReply(quickReplyCtx);
+    try {
+      await fetch("https://api.line.me/v2/bot/message/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+        body: JSON.stringify({ replyToken, messages: [{ type: "text", text: replyText, quickReply }] }),
+      });
+    } catch (err) { console.error("[LINE] Reply failed:", err); }
+    return;
+  }
+
   // ============ RULE-BASED MODE vs LLM MODE ============
   if (isRuleBasedMode()) {
     console.log("[LINE] Rule-based mode active (FORCE_RULE_BASED_REPLY=1)");
