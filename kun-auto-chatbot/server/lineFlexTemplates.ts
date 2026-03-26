@@ -81,18 +81,6 @@ function buildVehicleBubble(v: Vehicle): any {
     });
   }
 
-  // Add "看所有照片" button if vehicle has more than 1 photo
-  if (photoCount > 1) {
-    footerButtons.push({
-      type: "button",
-      action: {
-        type: "message",
-        label: `📸 看所有照片 (${photoCount}張)`,
-        text: `看照片 ${v.externalId}`,
-      },
-      style: "secondary",
-    });
-  }
 
   // Loan inquiry button — opens loan inquiry web page
   footerButtons.push({
