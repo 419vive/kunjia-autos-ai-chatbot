@@ -12,7 +12,7 @@ type FormData = {
   employmentType: string;
   employmentDuration: string;
   hasInsurance: string;
-  previousLoans: string;
+  previousLoans: string[];
   purchaseMethod: string;
   notes: string;
 };
@@ -26,7 +26,7 @@ const initialForm: FormData = {
   employmentType: "",
   employmentDuration: "",
   hasInsurance: "",
-  previousLoans: "",
+  previousLoans: [],
   purchaseMethod: "",
   notes: "",
 };
@@ -71,6 +71,50 @@ function RadioGroup({
   );
 }
 
+function CheckboxGroup({
+  label,
+  options,
+  values,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  values: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const toggle = (opt: string) => {
+    if (opt === "沒有") {
+      onChange(values.includes("沒有") ? [] : ["沒有"]);
+      return;
+    }
+    const without = values.filter((v) => v !== "沒有");
+    if (without.includes(opt)) {
+      onChange(without.filter((v) => v !== opt));
+    } else {
+      onChange([...without, opt]);
+    }
+  };
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium text-foreground">{label}</legend>
+      <div className="space-y-1.5">
+        {options.map((opt) => (
+          <label key={opt} className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={values.includes(opt)}
+              onChange={() => toggle(opt)}
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <span className="text-sm">{opt}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export default function LoanInquiry() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const vehicleId = params.get("vehicleId");
@@ -92,10 +136,17 @@ export default function LoanInquiry() {
   // Restore draft on mount
   useEffect(() => {
     if (restoredData) {
-      const { vehicleId: _vid, vehicleName: _vn, ...formFields } = restoredData as Record<string, string>;
+      const { vehicleId: _vid, vehicleName: _vn, ...formFields } = restoredData as Record<string, unknown>;
       const restored: Partial<FormData> = {};
       for (const key of Object.keys(initialForm) as (keyof FormData)[]) {
-        if (formFields[key]) restored[key] = formFields[key];
+        if (formFields[key] != null) {
+          if (key === "previousLoans") {
+            const raw = formFields[key];
+            restored.previousLoans = Array.isArray(raw) ? raw : [];
+          } else {
+            restored[key] = formFields[key] as string;
+          }
+        }
       }
       if (Object.keys(restored).length > 0) {
         setForm((prev) => ({ ...prev, ...restored }));
@@ -136,6 +187,7 @@ export default function LoanInquiry() {
       vehicleId: vehicleId ? Number(vehicleId) : undefined,
       vehicleName: vehicleName || undefined,
       ...form,
+      previousLoans: form.previousLoans.length > 0 ? form.previousLoans.join("、") : undefined,
     });
   };
 
@@ -324,13 +376,12 @@ export default function LoanInquiry() {
             />
           </div>
 
-          {/* Previous loans */}
-          <RadioGroup
-            label="曾經或現在是否有辦過任何貸款"
-            name="previousLoans"
-            options={["沒有", "有，正常繳款中", "有，已繳清", "有，有遲繳紀錄"]}
-            value={form.previousLoans}
-            onChange={update("previousLoans")}
+          {/* Previous loans — multi-select */}
+          <CheckboxGroup
+            label="目前有哪些貸款？（可多選）"
+            options={["沒有", "房貸", "信貸", "車貸", "有遲繳紀錄"]}
+            values={form.previousLoans}
+            onChange={(v) => setForm((prev) => ({ ...prev, previousLoans: v }))}
           />
 
           {/* Purchase method */}

@@ -135,6 +135,39 @@ async function runMigrations() {
       INDEX idx_pageviews_path (path(191))
     )`);
 
+    await conn.execute(`CREATE TABLE IF NOT EXISTS loanInquiries (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      vehicleId int,
+      vehicleName varchar(256),
+      customerName varchar(128) NOT NULL,
+      phone varchar(32) NOT NULL,
+      gender varchar(16),
+      age varchar(16),
+      hasLicense varchar(16),
+      employmentType varchar(64),
+      employmentDuration varchar(64),
+      hasInsurance varchar(64),
+      previousLoans varchar(128),
+      purchaseMethod varchar(64),
+      notes text,
+      status enum('new','contacted','approved','rejected') NOT NULL DEFAULT 'new',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await conn.execute(`CREATE TABLE IF NOT EXISTS appointments (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      vehicleId int,
+      vehicleName varchar(256),
+      customerName varchar(128) NOT NULL,
+      phone varchar(32) NOT NULL,
+      preferredDate varchar(32),
+      preferredTime varchar(64),
+      timeFlexible varchar(16) DEFAULT 'no',
+      notes text,
+      status enum('new','confirmed','completed','cancelled') NOT NULL DEFAULT 'new',
+      createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     console.log("[Database] Migrations completed successfully");
   } catch (error) {
     console.error("[Database] Migration failed:", error);

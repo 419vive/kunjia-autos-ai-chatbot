@@ -165,7 +165,7 @@ export const loanInquiries = mysqlTable("loanInquiries", {
   employmentType: varchar("employmentType", { length: 64 }),
   employmentDuration: varchar("employmentDuration", { length: 64 }),
   hasInsurance: varchar("hasInsurance", { length: 64 }),
-  previousLoans: varchar("previousLoans", { length: 64 }),
+  previousLoans: varchar("previousLoans", { length: 128 }),
   purchaseMethod: varchar("purchaseMethod", { length: 64 }),
   notes: text("notes"),
   status: mysqlEnum("status", ["new", "contacted", "approved", "rejected"]).default("new").notNull(),
