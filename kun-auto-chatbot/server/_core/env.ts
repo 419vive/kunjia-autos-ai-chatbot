@@ -18,5 +18,5 @@ export const ENV = {
   forgeApiUrl: process.env.FORGE_API_URL ?? "",
   forgeApiKey: process.env.FORGE_API_KEY ?? "",
   adminUsername: process.env.ADMIN_USERNAME ?? "admin",
-  adminPassword: isProduction ? requireEnv("ADMIN_PASSWORD") : (process.env.ADMIN_PASSWORD ?? ""),
+  adminPassword: process.env.ADMIN_PASSWORD ?? "",
 };
