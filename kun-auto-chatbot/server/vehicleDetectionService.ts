@@ -848,7 +848,7 @@ export function buildIntentInstructions(
   userMessage: string,
   greeting: string,
   customerContact?: string | null,
-  detectedVehicle?: { brand: string; model: string } | null
+  detectedVehicle?: any | null
 ): string {
   if (intents.length === 0) {
     // No specific intent detected — provide a default instruction so LLM doesn't repeat greetings
@@ -866,26 +866,35 @@ export function buildIntentInstructions(
   // ============ VEHICLE SPEC DETAIL INTENT ============
   // When customer asks for detailed specs (e.g. clicks "了解車子細節/規格" button)
   if (detectedVehicle && /詳細規格|規格|細節|配備|詳細|了解.*規格/.test(userMessage)) {
-    instructions.push(`🔴 車輛規格查詢指令（最高優先級！）：
-客人要看 ${detectedVehicle.brand} ${detectedVehicle.model} 的詳細規格！
-你必須列出這台車的**所有**已知資訊，格式如下（每項佔一行）：
+    // Build the spec lines directly from vehicle data — don't rely on LLM to extract from KB
+    const v = detectedVehicle;
+    const specLines: string[] = [
+      `${v.brand} ${v.model}`,
+      '',
+      `售價：${v.priceDisplay || v.price + '萬'}`,
+    ];
+    if (v.modelYear) specLines.push(`年份：${v.modelYear}年`);
+    if (v.licenseDate) specLines.push(`出廠日期：${v.licenseDate}`);
+    if (v.color) specLines.push(`顏色：${v.color}`);
+    if (v.mileage) specLines.push(`里程：${v.mileage}`);
+    if (v.displacement) specLines.push(`排氣量：${v.displacement}`);
+    if (v.transmission) specLines.push(`變速箱：${v.transmission}`);
+    if (v.fuelType) specLines.push(`燃料：${v.fuelType}`);
+    if (v.bodyType) specLines.push(`車型：${v.bodyType}`);
+    if (v.features) specLines.push(`配備：${v.features}`);
+    if (v.guarantees) specLines.push(`認證/保障：${v.guarantees}`);
+    if (v.description) specLines.push(`\n${v.description}`);
+    specLines.push('');
+    specLines.push('想進一步了解或預約看車，隨時跟我說！');
 
-${detectedVehicle.brand} ${detectedVehicle.model}
+    const prebuiltResponse = specLines.join('\n');
 
-售價：（從資料庫取）
-年份：
-顏色：
-里程：
-排氣量：
-變速箱：
-燃料：
-車型：
-配備：（完整列出，用頓號分隔）
+    instructions.push(`🔴🔴🔴 車輛規格查詢指令（最高優先級！必須一字不差照抄！）🔴🔴🔴
+客人要看車輛規格！你必須「完整照抄」以下內容，不能省略任何一行、不能改寫、不能加emoji、不能加開場白：
 
-🔴 必須把資料庫裡有的資訊全部列出來，不能省略！
-🔴 沒有的欄位就跳過，不要寫「未提供」
-🔴 最後加一句：「想進一步了解或預約看車，隨時跟我說！」
-🚫 不要編造資料庫裡沒有的資訊！`);
+${prebuiltResponse}
+
+🔴 以上就是你的完整回覆！一字不差照抄！不要加任何其他內容！`);
   }
 
   // ============ APPOINTMENT INTENT ============
