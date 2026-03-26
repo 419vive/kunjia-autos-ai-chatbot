@@ -63,9 +63,16 @@ And only implement if you are 100% sure it will work.
 4. Explain → high-level summary each step
 5. Learn → tasks/lessons.md after corrections
 
-## COST CONTROL
+## COST CONTROL & TOKEN EFFICIENCY
 - Never load files larger than 100 lines into context unless explicitly needed.
 - For simple tasks like reading files or checking status, suggest switching to a cheaper model with /model before starting.
+- Use Opus for planning/architecture, Sonnet for writing code — always pick the right model for the task.
+- Use subagents to isolate large context (file reads, searches) from the main conversation.
+- Batch multiple independent tool calls into one message — don't send them one by one.
+- When editing, use Edit tool (sends only the diff) instead of Write tool (sends entire file).
+- Don't re-read files already in context — note key info when first reading.
+- Keep responses concise — lead with the answer, skip filler.
+- For repetitive patterns across files, use subagents with clear instructions instead of doing it manually in the main context.
 
 ## SELF-LEARNING
 - After any correction from me, immediately add an entry to tasks/lessons.md
