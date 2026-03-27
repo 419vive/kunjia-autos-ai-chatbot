@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectPhoneNumber } from "./lineWebhook";
+import { detectPhoneNumber } from "./lineUtils";
 
 describe("detectPhoneNumber", () => {
   // ========== Taiwan Mobile Numbers ==========
