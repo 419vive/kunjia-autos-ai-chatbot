@@ -13,7 +13,8 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Appointments() {
-  const { data, isLoading, refetch } = trpc.appointment.list.useQuery();
+  const { data: appointmentsData, isLoading, refetch } = trpc.appointment.list.useQuery();
+  const data = appointmentsData?.items;
   const updateStatus = trpc.appointment.updateStatus.useMutation({ onSuccess: () => refetch() });
 
   return (

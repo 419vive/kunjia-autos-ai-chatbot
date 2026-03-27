@@ -13,7 +13,8 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function LoanInquiries() {
-  const { data, isLoading, refetch } = trpc.loan.list.useQuery();
+  const { data: loanData, isLoading, refetch } = trpc.loan.list.useQuery();
+  const data = loanData?.items;
   const updateStatus = trpc.loan.updateStatus.useMutation({ onSuccess: () => refetch() });
 
   return (

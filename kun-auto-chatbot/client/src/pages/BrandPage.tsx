@@ -105,7 +105,8 @@ export default function BrandPage() {
   const rawBrand = params?.brand ?? "";
   const brand = decodeURIComponent(rawBrand);
 
-  const { data: vehicles, isLoading } = trpc.vehicle.list.useQuery();
+  const { data: vehiclesData, isLoading } = trpc.vehicle.list.useQuery();
+  const vehicles = vehiclesData?.items;
 
   // Redirect if brand is empty
   if (!brand || brand.trim() === "") {

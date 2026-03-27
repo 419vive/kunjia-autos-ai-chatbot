@@ -241,9 +241,20 @@ export const appRouter = router({
 
   // ============ VEHICLE ENDPOINTS ============
   vehicle: router({
-    list: publicProcedure.query(async () => {
-      return db.getAllVehicles();
-    }),
+    list: publicProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(100).default(20).optional(),
+        offset: z.number().min(0).default(0).optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const allVehicles = await db.getAllVehicles();
+        if (!input || (input.limit === undefined && input.offset === undefined)) {
+          return { items: allVehicles, total: allVehicles.length };
+        }
+        const limit = input.limit ?? 20;
+        const offset = input.offset ?? 0;
+        return { items: allVehicles.slice(offset, offset + limit), total: allVehicles.length };
+      }),
     
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
@@ -358,9 +369,18 @@ export const appRouter = router({
         return { success: true, id };
       }),
 
-    list: adminProcedure.query(async () => {
-      return db.getLoanInquiries();
-    }),
+    list: adminProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(100).default(20).optional(),
+        offset: z.number().min(0).default(0).optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 50;
+        const offset = input?.offset ?? 0;
+        const items = await db.getLoanInquiries(limit, offset);
+        const total = await db.getLoanInquiriesCount();
+        return { items, total };
+      }),
 
     updateStatus: adminProcedure
       .input(z.object({ id: z.number(), status: z.enum(["new", "contacted", "approved", "rejected"]) }))
@@ -436,9 +456,18 @@ export const appRouter = router({
         return { success: true, id };
       }),
 
-    list: adminProcedure.query(async () => {
-      return db.getAppointments();
-    }),
+    list: adminProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(100).default(20).optional(),
+        offset: z.number().min(0).default(0).optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 50;
+        const offset = input?.offset ?? 0;
+        const items = await db.getAppointments(limit, offset);
+        const total = await db.getAppointmentsCount();
+        return { items, total };
+      }),
 
     updateStatus: adminProcedure
       .input(z.object({ id: z.number(), status: z.enum(["new", "confirmed", "completed", "cancelled"]) }))
