@@ -297,8 +297,8 @@ export const appRouter = router({
       .input(z.object({
         vehicleId: z.number().optional(),
         vehicleName: z.string().optional(),
-        customerName: z.string().min(1),
-        phone: z.string().min(1),
+        customerName: z.string().min(1).max(100),
+        phone: z.string().min(1).max(20),
         gender: z.string().optional(),
         age: z.string().optional(),
         hasLicense: z.string().optional(),
@@ -307,7 +307,7 @@ export const appRouter = router({
         hasInsurance: z.string().optional(),
         previousLoans: z.string().optional(),
         purchaseMethod: z.string().optional(),
-        notes: z.string().optional(),
+        notes: z.string().max(500).optional(),
       }))
       .mutation(async ({ input }) => {
         const id = await db.createLoanInquiry(input);
@@ -396,12 +396,12 @@ export const appRouter = router({
       .input(z.object({
         vehicleId: z.number().optional(),
         vehicleName: z.string().optional(),
-        customerName: z.string().min(1),
-        phone: z.string().min(1),
+        customerName: z.string().min(1).max(100),
+        phone: z.string().min(1).max(20),
         preferredDate: z.string().optional(),
         preferredTime: z.string().optional(),
         timeFlexible: z.string().optional(),
-        notes: z.string().optional(),
+        notes: z.string().max(500).optional(),
       }))
       .mutation(async ({ input }) => {
         const id = await db.createAppointment(input);
@@ -481,7 +481,7 @@ export const appRouter = router({
   chat: router({
     send: publicProcedure
       .input(z.object({
-        sessionId: z.string(),
+        sessionId: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
         message: z.string().min(1),
         customerName: z.string().optional(),
         channel: z.enum(["web", "line", "facebook", "youtube", "other"]).default("web"),

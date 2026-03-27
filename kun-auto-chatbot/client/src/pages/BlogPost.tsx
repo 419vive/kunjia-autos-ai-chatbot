@@ -74,6 +74,8 @@ export default function BlogPost() {
             </p>
 
             {/* Article body */}
+            {/* NOTE: post.content is static/trusted — defined in blogPosts.ts and not user-editable.
+                dangerouslySetInnerHTML is safe here as the content is authored at build time. */}
             <div
               className="prose prose-sm sm:prose max-w-none
                 prose-headings:font-bold prose-headings:text-foreground

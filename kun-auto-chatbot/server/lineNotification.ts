@@ -497,7 +497,8 @@ export async function sendHumanHandoffNotification(
 ): Promise<boolean> {
   const customerName = conversation.customerName || "未知客戶";
 
-  console.log(`[LINE] 🚨 Sending HUMAN HANDOFF notification for customer: ${customerName}`);
+  const maskedName = customerName.length > 1 ? customerName[0] + "*".repeat(customerName.length - 1) : "*";
+  console.log(`[LINE] 🚨 Sending HUMAN HANDOFF notification for customer: ${maskedName}`);
 
   try {
     // 1. Notify via system notification
