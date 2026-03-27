@@ -1,6 +1,6 @@
 import * as db from "./db";
 import { buildContextualQuickReply, type ConversationContext } from "./lineFlexTemplates";
-import { getNameGreeting, detectGenderFromName } from "./lineWebhook";
+import { getNameGreeting, detectGenderFromName } from "./lineUtils";
 
 // ============ SHORT-TERM CONVERSATION RECOVERY ============
 // Sends a gentle nudge when a user goes quiet mid-conversation (5-8 min)
