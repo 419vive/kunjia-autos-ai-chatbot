@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
 import * as db from "./db";
-import { detectPhoneNumber } from "./lineWebhook";
+import { detectPhoneNumber } from "./lineUtils";
 import { formatTimeSlotsForPrompt } from "./timeSlotHelper";
 import { nanoid } from "nanoid";
 import { sync8891, getSyncStatus } from "./sync8891";

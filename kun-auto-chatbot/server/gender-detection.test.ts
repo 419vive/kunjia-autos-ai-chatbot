@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectGenderFromName, getGenderGreeting } from "./lineWebhook";
+import { detectGenderFromName, getGenderGreeting } from "./lineUtils";
 
 describe("detectGenderFromName", () => {
   it("detects female from title patterns", () => {
