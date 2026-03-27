@@ -295,7 +295,8 @@ export default function ServiceAreaPage() {
   const citySlug = params?.city ?? "";
   const area = SERVICE_AREAS[citySlug];
 
-  const { data: vehicles, isLoading } = trpc.vehicle.list.useQuery();
+  const { data: vehiclesData, isLoading } = trpc.vehicle.list.useQuery();
+  const vehicles = vehiclesData?.items;
 
   // Redirect if city not found
   if (!area) {

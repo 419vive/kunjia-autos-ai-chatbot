@@ -156,7 +156,8 @@ export default function PricePage() {
   const range = rawRange as PriceRange;
   const meta = RANGE_META[range];
 
-  const { data: vehicles, isLoading } = trpc.vehicle.list.useQuery();
+  const { data: vehiclesData, isLoading } = trpc.vehicle.list.useQuery();
+  const vehicles = vehiclesData?.items;
 
   const filtered =
     vehicles?.filter((v) => meta.filter(Number(v.price))) ?? [];

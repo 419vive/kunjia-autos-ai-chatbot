@@ -67,7 +67,8 @@ export function CompareBar({ ids, onClear }: { ids: number[]; onClear: () => voi
 
 /** Full-screen compare modal */
 function CompareModal({ ids, onClose }: { ids: number[]; onClose: () => void }) {
-  const { data: allVehicles } = trpc.vehicle.list.useQuery();
+  const { data: allVehiclesData } = trpc.vehicle.list.useQuery();
+  const allVehicles = allVehiclesData?.items;
 
   const vehicles = useMemo(() => {
     if (!allVehicles) return [];

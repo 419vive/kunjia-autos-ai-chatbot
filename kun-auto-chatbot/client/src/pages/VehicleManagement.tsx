@@ -205,7 +205,8 @@ type StatusFilter = "all" | "available" | "reserved" | "sold";
 export default function VehicleManagement() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [expandedMediaId, setExpandedMediaId] = useState<number | null>(null);
-  const { data: vehicles, isLoading } = trpc.admin.vehicles.useQuery();
+  const { data: vehiclesData, isLoading } = trpc.admin.vehicles.useQuery();
+  const vehicles = vehiclesData?.items;
   const utils = trpc.useUtils();
   const updateStatus = trpc.admin.updateVehicleStatus.useMutation({
     onSuccess: (_data, variables) => {
@@ -222,7 +223,7 @@ export default function VehicleManagement() {
   const filtered = vehicles?.filter(v => filter === "all" || v.status === filter) || [];
 
   const TABS: { key: StatusFilter; label: string; count: number }[] = [
-    { key: "all", label: "全部", count: vehicles?.length || 0 },
+    { key: "all", label: "全部", count: vehiclesData?.total || 0 },
     { key: "available", label: "在售", count: availableCount },
     { key: "reserved", label: "已收訂", count: reservedCount },
     { key: "sold", label: "已交車", count: soldCount },

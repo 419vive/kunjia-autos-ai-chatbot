@@ -279,7 +279,8 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: {
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  const { data: vehicles, isLoading } = trpc.vehicle.list.useQuery();
+  const { data: vehiclesData, isLoading } = trpc.vehicle.list.useQuery();
+  const vehicles = vehiclesData?.items;
   const { data: brands } = trpc.vehicle.brands.useQuery();
 
   const [searchQuery, setSearchQuery] = useState("");

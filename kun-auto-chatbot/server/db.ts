@@ -639,10 +639,17 @@ export async function createLoanInquiry(data: InsertLoanInquiry) {
   return result.insertId;
 }
 
-export async function getLoanInquiries(limit = 50) {
+export async function getLoanInquiries(limit = 50, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(loanInquiries).orderBy(desc(loanInquiries.createdAt)).limit(limit);
+  return db.select().from(loanInquiries).orderBy(desc(loanInquiries.createdAt)).limit(limit).offset(offset);
+}
+
+export async function getLoanInquiriesCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db.select({ count: sql<number>`count(*)` }).from(loanInquiries);
+  return Number(row?.count ?? 0);
 }
 
 export async function updateLoanInquiryStatus(id: number, status: "new" | "contacted" | "approved" | "rejected") {
@@ -660,10 +667,17 @@ export async function createAppointment(data: InsertAppointment) {
   return result.insertId;
 }
 
-export async function getAppointments(limit = 50) {
+export async function getAppointments(limit = 50, offset = 0) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(appointments).orderBy(desc(appointments.createdAt)).limit(limit);
+  return db.select().from(appointments).orderBy(desc(appointments.createdAt)).limit(limit).offset(offset);
+}
+
+export async function getAppointmentsCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db.select({ count: sql<number>`count(*)` }).from(appointments);
+  return Number(row?.count ?? 0);
 }
 
 export async function updateAppointmentStatus(id: number, status: "new" | "confirmed" | "completed" | "cancelled") {

@@ -125,9 +125,10 @@ export default function VehicleLanding() {
   const isSold = vehicle?.status === "sold" || vehicle?.status === "reserved";
 
   // Fetch similar vehicles when this one is sold (must be before early returns)
-  const { data: allVehicles } = trpc.vehicle.list.useQuery(undefined, {
+  const { data: allVehiclesData } = trpc.vehicle.list.useQuery(undefined, {
     enabled: !!isSold,
   });
+  const allVehicles = allVehiclesData?.items;
 
   const photos = useMemo(() => {
     if (!vehicle?.photoUrls) return [];

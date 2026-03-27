@@ -63,9 +63,20 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  vehicles: adminProcedure.query(async () => {
-    return db.getAllVehicles();
-  }),
+  vehicles: adminProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(20).optional(),
+      offset: z.number().min(0).default(0).optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const allVehicles = await db.getAllVehicles();
+      if (!input || (input.limit === undefined && input.offset === undefined)) {
+        return { items: allVehicles, total: allVehicles.length };
+      }
+      const limit = input.limit ?? 20;
+      const offset = input.offset ?? 0;
+      return { items: allVehicles.slice(offset, offset + limit), total: allVehicles.length };
+    }),
 
   updateVehicleStatus: adminProcedure
     .input(z.object({
