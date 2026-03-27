@@ -529,7 +529,8 @@ async function processLineEvent(
   // ============ POSTBACK EVENT ============
   if (event.type === "postback") {
     const postbackData = event.postback?.data || "";
-    console.log(`[LINE] Postback received: ${postbackData} from user ${event.source?.userId}`);
+    const _userId = event.source?.userId;
+    console.log(`[LINE] Postback received: ${postbackData} from user ${_userId ? _userId.slice(0, 8) + "..." : "unknown"}`);
     // Parse postback data and handle known actions
     const params = new URLSearchParams(postbackData);
     const action = params.get("action");

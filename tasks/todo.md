@@ -16,20 +16,44 @@
 - [x] Competitive Intelligence: Competitor comparison blog post, enhanced FAQs (HOT/SUM/Toyota/杰運/ATDC/格上/FindCar/ABC), authority citations, llms.txt competitive positioning, sitemap updates
 - [x] Speed optimization: gzip compression, static asset caching, DB connection pooling, Vite chunk splitting, non-blocking startup sync
 - [x] Install claude-hud plugin (v0.0.11) — real-time HUD statusline with tools, agents, todos, git, context tracking
-
 - [x] QA CRITICAL C1-C10 + MODERATE M1-M12 修復 (PR #33)
 - [x] QA LOW L1-L16 修復 (15/16 完成, L14 deferred)
 - [x] Enable auto mode permissions (PR #34)
-- [x] LINE 對話流程修正 + 白頁面修復 (PR #35)
+- [x] LINE 對話流程修正 + 白頁面修復 (PR #35-39)
   - 貸款/試駕回覆格式改為結構化（姓名/電話欄位）
   - 所有內部 URI 按鈕改為 message 類型（修復白頁面）
   - 移除上午/下午/晚上按鈕，只保留「怎麼去？」
   - 時間彈性 → AI 靜默 handoff
+  - ADMIN_PASSWORD 改為選填（修復 server crash）
+  - 移除 manualChunks（修復 React forwardRef 白頁面）
+- [x] 車輛規格直接回覆 — 跳過 LLM，從 DB 組字 (PR #40-44)
+- [x] 8891 同步抓配備 — 從 subTitle 解析配備/描述 (PR #42)
+- [x] 車輛偵測配對錯車修復 — base model 索引 + longest match (PR #46)
+- [x] 貸款按鈕全改 URI 開 /loan-inquiry 頁面 (PR #47, #50)
+- [x] 貸款頁面貸款紀錄改為複選（房貸/信貸/車貸）(PR #47)
+- [x] 預約看車 LINE datetimepicker + postback 確認 (PR #49)
+- [x] 預約按鈕全面走 datetimepicker + Rich Menu trigger 衝突修復 (PR #51)
+- [x] 預約確認後跳轉 /book-visit 表單填姓名電話 (PR #52)
+- [x] 移除「LINE 問這台車」按鈕 (PR #54)
+- [x] 移除「再看照片」跟進按鈕 (PR #55)
+- [x] 預約看車頁面新增「想看的車」欄位 (PR #56)
+- [x] Install RuFlo v3.5 — 98 agents, 30 skills, 10 commands (PR #57)
+- [x] Install Context7 + Playwright MCP + 6 Anthropic official skills (PR #58)
+- [x] Install 33 Corey Haines marketing skills (PR #59)
+- [x] SEO 全面優化 — Technical SEO + AI SEO + Google 驗證 (PR #60)
+- [x] 新增 blog「二手車價格查詢指南」(PR #61)
+- [x] Install 145 Agency Agents (PR #62)
+- [x] Split lineWebhook.ts: 2324→1403 lines (-40%) (PR #63)
+- [x] Split routers.ts: 1311→960 lines (-27%) (PR #63)
+- [x] API pagination: vehicle.list, loan.list, appointment.list, admin.vehicles (PR #64)
+- [x] Remove unused KaTeX fonts from bundle (-59 files, ~2MB)
+- [x] Structured logger 取代 170+ console 呼叫 (PR #36)
+- [x] 效能優化：並行 DB 查詢、移除重複 compression、移除多餘 DB call
+- [x] Google Search Console 驗證通過 + sitemap 提交
+- [x] GBP 優化指南完成 (docs/gbp-optimization-guide.md)
+- [x] Pixel Agents standalone server 建立（本機 CLI 模式可用）
+- [x] Token 效率規則加入 CLAUDE.md
+- [x] Auto Dream + Auto Memory 啟用
 
 ## Backlog (identified, not yet requested)
 - [ ] L14: Web Chat nudge/follow-up system (requires push architecture)
-- [ ] Split lineWebhook.ts (1,476 lines) into smaller modules
-- [ ] Split routers.ts (1,277 lines) into smaller modules
-- [ ] Replace 170+ console statements with structured logging
-- [ ] Add API pagination for admin endpoints
-- [x] Remove unused KaTeX fonts from bundle (Rollup plugin in vite.config.ts, -59 files, ~2MB)
