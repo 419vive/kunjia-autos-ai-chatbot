@@ -2925,8 +2925,8 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "used-car-inspection-cost",
-    title: "二手車驗車費用怎麼算？2026年第三方認證價格全解析",
-    description: "二手車驗車費用 1500-3000 元起跳。詳細解析監理所定檢、第三方認證、SGS 檢驗的差異與價格。",
+    title: "中古車第三方認證費用多少？驗車 200～3,000 元一表看懂（2026）",
+    description: "第三方驗車費用 1,500-3,000 元，監理所定檢約 200 元，原廠認證 5,000 元起。一張表比較巨鎧、SGS、SUM 認證價格，看懂誰該付費、報告怎麼讀。",
     publishedAt: "2026-04-21",
     updatedAt: "2026-04-21",
     author: "崑家汽車",
