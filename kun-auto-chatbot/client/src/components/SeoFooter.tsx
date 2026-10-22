@@ -71,7 +71,7 @@ export default function SeoFooter() {
               </a>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3 w-3 shrink-0" />
-                週一至週六 09:00-21:00
+                週一至週日 9:30-20:00
               </div>
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3 shrink-0" />

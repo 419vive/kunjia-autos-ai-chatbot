@@ -59,10 +59,9 @@ Naming the founder with a Person schema creates a knowledge graph node.
   <dl>
     <div><dt>負責人</dt><dd itemProp="name">賴崑家</dd></div>
     <div><dt>成立年份</dt><dd itemProp="foundingDate">1986年</dd></div>
-    <div><dt>Google 評分</dt><dd>⭐ 4.8 / 5（156則）</dd></div>
     <div><dt>地址</dt><dd itemProp="address">高雄市三民區大順二路269號</dd></div>
     <div><dt>電話</dt><dd><a href="tel:0936812818" itemProp="telephone">0936-812-818</a></dd></div>
-    <div><dt>營業時間</dt><dd>週一至週六 09:00–21:00</dd></div>
+    <div><dt>營業時間</dt><dd>週一至週日 9:30-20:00</dd></div>
     {!isLocal && <div><dt>外縣市接駁</dt><dd>免費 · 高鐵左營站接送</dd></div>}
   </dl>
 </section>

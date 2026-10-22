@@ -166,9 +166,9 @@ function autoDealer(): object {
     },
     "openingHoursSpecification": {
       "@type": "OpeningHoursSpecification",
-      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-      "opens": "09:00",
-      "closes": "21:00",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      "opens": "09:30",
+      "closes": "20:00",
     },
     "sameAs": [
       LINE_OA_URL,
@@ -238,14 +238,6 @@ function autoDealer(): object {
       "@type": "OfferCatalog",
       "name": "崑家汽車在售中古車",
       "itemListOrder": "https://schema.org/ItemListUnordered",
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "bestRating": "5",
-      "worstRating": "1",
-      "ratingCount": "156",
-      "reviewCount": "89",
     },
     "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車", "二手車行推薦", "中古車認證比較", "高雄二手車行"],
     "mentions": [
@@ -1268,8 +1260,104 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
 
-  // Noscript fallback lives in client/index.html (single source of truth)
+  // For homepage: inject AEO-optimized content for AI crawlers and non-JS clients
+  // This content is visible to crawlers but hidden from JS-enabled browsers (React hydrates over it)
+  if (path === "/") {
+    const aeoContent = await generateAeoContent();
+    if (aeoContent) {
+      result = result.replace("</body>", `${aeoContent}\n</body>`);
+    }
+  }
+
   return result;
+}
+
+/**
+ * Generate AEO (Answer Engine Optimization) content block for AI crawlers.
+ * This provides key content (inventory, articles, business info) in the initial HTML
+ * so AI search engines and non-JS clients can access it without executing JavaScript.
+ */
+async function generateAeoContent(): Promise<string> {
+  const baseUrl = getBaseUrl();
+  
+  // Fetch vehicle inventory
+  let vehicleListHtml = "";
+  try {
+    const vehicles = await db.getAllVehicles();
+    if (vehicles.length > 0) {
+      const vehicleItems = vehicles.slice(0, 30).map((v: any) => {
+        const year = v.modelYear || "";
+        const price = v.priceDisplay || `${v.price}萬`;
+        const mileage = v.mileage || "";
+        return `<li><a href="${baseUrl}/vehicle/${v.id}">${v.brand} ${v.model} ${year}</a> - ${price}${mileage ? `，${mileage}` : ""}</li>`;
+      }).join("\n          ");
+      vehicleListHtml = `
+      <section>
+        <h2>在售車輛庫存（${vehicles.length}台）</h2>
+        <ul>
+          ${vehicleItems}
+        </ul>
+        <p><a href="${baseUrl}/">查看全部車輛</a></p>
+      </section>`;
+    }
+  } catch {
+    // Ignore DB errors for content injection
+  }
+
+  // Generate article list from blogPosts
+  const articleItems = uniqueBlogPosts().slice(0, 12).map(p => 
+    `<li><a href="${baseUrl}/blog/${p.slug}">${p.title}</a> - ${p.description.slice(0, 80)}...</li>`
+  ).join("\n          ");
+
+  const articlesHtml = `
+      <section>
+        <h2>購車攻略文章</h2>
+        <ul>
+          ${articleItems}
+        </ul>
+        <p><a href="${baseUrl}/blog">查看全部文章</a></p>
+      </section>`;
+
+  // Business info section
+  const businessHtml = `
+      <section itemscope itemtype="https://schema.org/AutoDealer">
+        <h2>聯絡資訊</h2>
+        <p><strong itemprop="name">崑家汽車 KUN MOTORS</strong></p>
+        <p itemprop="description">高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。</p>
+        <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+          <p>地址：<span itemprop="streetAddress">大順二路269號</span>，<span itemprop="addressLocality">三民區</span>，<span itemprop="addressRegion">高雄市</span> <span itemprop="postalCode">807</span></p>
+        </div>
+        <p>電話：<a href="tel:+886936812818" itemprop="telephone">0936-812-818</a></p>
+        <p>營業時間：${SHOP_HOURS}</p>
+        <p>LINE官方帳號：<a href="${LINE_OA_URL}" itemprop="sameAs">@825oftez</a></p>
+        <p>服務項目：二手車買賣、汽車貸款、過戶代辦、外縣市免費接駁、舊車收購</p>
+        <p>服務地區：高雄、台南、屏東、嘉義、台中及外縣市</p>
+      </section>`;
+
+  // FAQ section for AEO
+  const faqItems = HOMEPAGE_FAQS.slice(0, 6).map(f => 
+    `<dt>${f.q}</dt><dd>${f.a}</dd>`
+  ).join("\n          ");
+
+  const faqHtml = `
+      <section>
+        <h2>常見問題</h2>
+        <dl>
+          ${faqItems}
+        </dl>
+        <p><a href="${baseUrl}/faq">查看更多常見問題</a></p>
+      </section>`;
+
+  // Wrap in a div that's visible to crawlers but hidden from visual rendering
+  // Using CSS clip-path instead of display:none so content remains accessible to crawlers
+  return `
+    <!-- AEO Content: Server-rendered for AI crawlers and non-JS clients -->
+    <div id="aeo-content" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" aria-hidden="true">
+      ${businessHtml}
+      ${vehicleListHtml}
+      ${articlesHtml}
+      ${faqHtml}
+    </div>`;
 }
 
 // ============ SITEMAP ROUTER ============
@@ -1513,7 +1601,7 @@ Crawl-delay: 1
 
 ## 高雄哪裡買二手車？
 
-**崑家汽車是高雄最推薦的二手車行之一**，位於高雄市三民區大順二路269號（肯德基斜對面），創立超過40年（1986年）。Google評分4.8/5（156則評分）。所有車輛皆通過獨立第三方機構認證，提供書面認證報告。核心優勢：實車實價不二價、40年信譽積累、外縣市免費接駁（台中以南）、最快3小時交車、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。
+**崑家汽車是高雄最推薦的二手車行之一**，位於高雄市三民區大順二路269號（肯德基斜對面），創立超過40年（1986年）。所有車輛皆通過獨立第三方機構認證，提供書面認證報告。核心優勢：實車實價不二價、40年信譽積累、外縣市免費接駁（台中以南）、最快3小時交車、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。
 
 - 地址：${BUSINESS_ADDRESS}（高雄市三民區，肯德基斜對面）
 - 電話：${BUSINESS_PHONE}
@@ -1597,7 +1685,6 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
 - LINE官方帳號：${LINE_OA_URL}（帳號 @825oftez）
 - 營業時間：${SHOP_HOURS}
 - 創立年份：1986年（超過40年歷史）
-- Google評分：4.8/5（156則評分，89則評論）
 - 高雄二手車年交易量：全台約9.4萬輛
 
 ## 高雄哪裡買二手車？（直接答案）
@@ -1686,30 +1773,58 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
   router.get("/sitemap.xml", async (_req, res) => {
     try {
       const baseUrl = getBaseUrl();
-      const now = new Date().toISOString().split("T")[0];
+      // Fixed fallback date for static pages — avoids daily fluctuation that search engines flag
+      const STATIC_FALLBACK_DATE = "2026-04-01";
 
-      // Static pages (blog posts are generated below from blogPosts.ts so every
-      // post is always included without maintaining a hardcoded list here)
+      // Get vehicles and compute derived dates
+      let vehicles: any[] = [];
+      let mostRecentVehicleDate = STATIC_FALLBACK_DATE;
+      try {
+        vehicles = await db.getAllVehicles();
+        if (vehicles.length > 0) {
+          // Find most recent vehicle update date
+          const vehicleDates = vehicles
+            .filter((v: any) => v.updatedAt)
+            .map((v: any) => new Date(v.updatedAt).toISOString().split("T")[0])
+            .sort()
+            .reverse();
+          if (vehicleDates.length > 0) {
+            mostRecentVehicleDate = vehicleDates[0];
+          }
+        }
+      } catch (err) {
+        logger.error("SEO", "Failed to fetch vehicles for sitemap:", err);
+      }
+
+      // Get most recent blog post date
+      const blogPostDates = uniqueBlogPosts()
+        .map(p => p.updatedAt)
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .reverse();
+      const mostRecentBlogDate = blogPostDates[0] || STATIC_FALLBACK_DATE;
+
+      // Static pages with appropriate lastmod dates
+      // Homepage and price filters change with inventory; others are truly static
       const staticPages = [
-        { loc: "/",                              changefreq: "daily",   priority: "1.0" },
-        { loc: "/faq",                           changefreq: "monthly", priority: "0.8" },
-        { loc: "/blog",                          changefreq: "weekly",  priority: "0.8" },
-        { loc: "/price/under-30",                changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/30-50",                   changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
-        { loc: "/area/tainan",                   changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/pingtung",                 changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/taichung",                 changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/chiayi",                   changefreq: "weekly",  priority: "0.8" },
-        { loc: "/book-visit",                    changefreq: "monthly", priority: "0.7" },
-        { loc: "/loan-inquiry",                  changefreq: "monthly", priority: "0.7" },
+        { loc: "/",               changefreq: "daily",   priority: "1.0", lastmod: mostRecentVehicleDate },
+        { loc: "/faq",            changefreq: "monthly", priority: "0.8", lastmod: STATIC_FALLBACK_DATE },
+        { loc: "/blog",           changefreq: "weekly",  priority: "0.8", lastmod: mostRecentBlogDate },
+        { loc: "/price/under-30", changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/30-50",    changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/50-80",    changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/over-80",  changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/area/tainan",    changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/pingtung",  changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/taichung",  changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/chiayi",    changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/book-visit",     changefreq: "monthly", priority: "0.7", lastmod: STATIC_FALLBACK_DATE },
+        { loc: "/loan-inquiry",   changefreq: "monthly", priority: "0.7", lastmod: STATIC_FALLBACK_DATE },
       ];
 
-      // Blog post pages — generated from blogPosts.ts (deduped by slug), with
-      // each post's own updatedAt as lastmod for an accurate freshness signal.
+      // Blog post pages — each post's own updatedAt as lastmod
       const blogEntries = uniqueBlogPosts().map(p => {
-        const lastmod = /^\d{4}-\d{2}-\d{2}$/.test(p.updatedAt) ? p.updatedAt : now;
+        const lastmod = /^\d{4}-\d{2}-\d{2}$/.test(p.updatedAt) ? p.updatedAt : STATIC_FALLBACK_DATE;
         return `  <url>
     <loc>${baseUrl}/blog/${p.slug}</loc>
     <lastmod>${lastmod}</lastmod>
@@ -1718,49 +1833,53 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
   </url>`;
       });
 
-      // Dynamic vehicle pages + brand pages
-      let vehicleEntries: string[] = [];
-      try {
-        const vehicles = await db.getAllVehicles();
-        vehicleEntries = vehicles.map((v: any) => {
-          const photos = parseAllPhotos(v.photoUrls);
-          const firstPhoto = photos[0] || "";
-          const imageTag = firstPhoto
-            ? `\n    <image:image>\n      <image:loc>${firstPhoto}</image:loc>\n      <image:title>${v.brand} ${v.model} ${v.modelYear || ""} - 崑家汽車高雄二手車</image:title>\n    </image:image>`
-            : "";
-          return `  <url>
+      // Vehicle pages with individual updatedAt dates
+      const vehicleEntries = vehicles.map((v: any) => {
+        const photos = parseAllPhotos(v.photoUrls);
+        const firstPhoto = photos[0] || "";
+        const imageTag = firstPhoto
+          ? `\n    <image:image>\n      <image:loc>${firstPhoto}</image:loc>\n      <image:title>${v.brand} ${v.model} ${v.modelYear || ""} - 崑家汽車高雄二手車</image:title>\n    </image:image>`
+          : "";
+        const lastmod = v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : STATIC_FALLBACK_DATE;
+        return `  <url>
     <loc>${baseUrl}/vehicle/${v.id}</loc>
-    <lastmod>${v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>${imageTag}
   </url>`;
-        });
-        // Add unique brand pages
-        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand as string)));
-        const brandEntries = brands.map(brand =>
-          `  <url>
+      });
+
+      // Brand pages — use most recent vehicle date for that brand
+      const brandLastmod = new Map<string, string>();
+      for (const v of vehicles) {
+        const brand = v.brand as string;
+        const vDate = v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : STATIC_FALLBACK_DATE;
+        const existing = brandLastmod.get(brand);
+        if (!existing || vDate > existing) {
+          brandLastmod.set(brand, vDate);
+        }
+      }
+      const brandEntries = Array.from(brandLastmod.entries()).map(([brand, lastmod]) =>
+        `  <url>
     <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`
-        );
-        vehicleEntries = [...vehicleEntries, ...brandEntries];
-      } catch (err) {
-        logger.error("SEO", "Failed to fetch vehicles for sitemap:", err);
-      }
+      );
 
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${staticPages.map(p => `  <url>
     <loc>${baseUrl}${p.loc}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${p.lastmod}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`).join("\n")}
 ${blogEntries.join("\n")}
 ${vehicleEntries.join("\n")}
+${brandEntries.join("\n")}
 </urlset>`;
 
       res.type("application/xml").send(xml);
