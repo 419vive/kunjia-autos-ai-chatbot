@@ -166,9 +166,9 @@ function autoDealer(): object {
     },
     "openingHoursSpecification": {
       "@type": "OpeningHoursSpecification",
-      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-      "opens": "09:00",
-      "closes": "21:00",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      "opens": "09:30",
+      "closes": "20:00",
     },
     "sameAs": [
       LINE_OA_URL,
@@ -238,14 +238,6 @@ function autoDealer(): object {
       "@type": "OfferCatalog",
       "name": "崑家汽車在售中古車",
       "itemListOrder": "https://schema.org/ItemListUnordered",
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "bestRating": "5",
-      "worstRating": "1",
-      "ratingCount": "156",
-      "reviewCount": "89",
     },
     "knowsAbout": ["二手車買賣", "中古車買賣", "汽車貸款", "二手車過戶", "第三方認證", "高雄二手車", "二手車行推薦", "中古車認證比較", "高雄二手車行"],
     "mentions": [
@@ -1268,8 +1260,154 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
 
-  // Noscript fallback lives in client/index.html (single source of truth)
+  // For homepage: inject AEO-optimized content visible at bottom of page
+  // This content is rendered server-side so AI crawlers and non-JS clients can access it.
+  // It's placed OUTSIDE the React root (#root) so hydration won't affect it.
+  if (path === "/") {
+    const aeoContent = await generateAeoContent();
+    if (aeoContent) {
+      result = result.replace("</body>", `${aeoContent}\n</body>`);
+    }
+  }
+
   return result;
+}
+
+/**
+ * Generate AEO (Answer Engine Optimization) content block.
+ * This provides key content (inventory, articles, business info) in the initial HTML
+ * so AI search engines and non-JS clients can access it without executing JavaScript.
+ * 
+ * IMPORTANT: Content is VISIBLE to users (not hidden) to avoid Google cloaking penalties.
+ * Rendered as a styled section at the bottom of the page, above the footer.
+ * Placed outside React's #root div so hydration doesn't cause duplicates or mismatches.
+ */
+async function generateAeoContent(): Promise<string> {
+  const baseUrl = getBaseUrl();
+  
+  // Fetch vehicle inventory
+  let vehicleListHtml = "";
+  let vehicleCount = 0;
+  try {
+    const vehicles = await db.getAllVehicles();
+    vehicleCount = vehicles.length;
+    if (vehicles.length > 0) {
+      const vehicleItems = vehicles.slice(0, 20).map((v: any) => {
+        const year = v.modelYear || "";
+        const price = v.priceDisplay || `${v.price}萬`;
+        const mileage = v.mileage ? `｜${v.mileage}` : "";
+        return `
+          <li style="margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <a href="${baseUrl}/vehicle/${v.id}" style="color:#C4A265;text-decoration:none;font-weight:500;">${v.brand} ${v.model} ${year}</a>
+            <span style="color:rgba(255,255,255,0.7);margin-left:0.5rem;">${price}${mileage}</span>
+          </li>`;
+      }).join("");
+      vehicleListHtml = `
+        <div style="margin-bottom:2rem;">
+          <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+            🚗 在售車輛庫存（${vehicleCount}台）
+          </h3>
+          <ul style="list-style:none;padding:0;margin:0;columns:1;">
+            ${vehicleItems}
+          </ul>
+          <a href="${baseUrl}/" style="display:inline-block;margin-top:1rem;color:#C4A265;text-decoration:none;font-weight:500;">
+            → 查看全部 ${vehicleCount} 台車輛
+          </a>
+        </div>`;
+    }
+  } catch {
+    // Ignore DB errors for content injection
+  }
+
+  // Generate article list from blogPosts
+  const blogList = uniqueBlogPosts().slice(0, 8);
+  const articleItems = blogList.map(p => `
+    <li style="margin-bottom:0.75rem;">
+      <a href="${baseUrl}/blog/${p.slug}" style="color:#C4A265;text-decoration:none;font-weight:500;">${p.title}</a>
+      <p style="color:rgba(255,255,255,0.6);font-size:0.875rem;margin:0.25rem 0 0 0;">${p.description.slice(0, 60)}...</p>
+    </li>`
+  ).join("");
+
+  const articlesHtml = `
+    <div style="margin-bottom:2rem;">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        📚 購車攻略文章
+      </h3>
+      <ul style="list-style:none;padding:0;margin:0;">
+        ${articleItems}
+      </ul>
+      <a href="${baseUrl}/blog" style="display:inline-block;margin-top:1rem;color:#C4A265;text-decoration:none;font-weight:500;">
+        → 查看全部購車攻略
+      </a>
+    </div>`;
+
+  // Business info section
+  const businessHtml = `
+    <div style="margin-bottom:2rem;" itemscope itemtype="https://schema.org/AutoDealer">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        📍 聯絡資訊
+      </h3>
+      <p style="font-size:1.25rem;font-weight:700;color:white;margin-bottom:0.5rem;" itemprop="name">崑家汽車 KUN MOTORS</p>
+      <p style="color:rgba(255,255,255,0.8);margin-bottom:1rem;line-height:1.6;" itemprop="description">
+        高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。
+      </p>
+      <div style="display:grid;gap:0.5rem;color:rgba(255,255,255,0.9);" itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+        <p style="margin:0;">📍 地址：<span itemprop="streetAddress">大順二路269號</span>，<span itemprop="addressLocality">三民區</span>，<span itemprop="addressRegion">高雄市</span> <span itemprop="postalCode">807</span>（肯德基斜對面）</p>
+        <p style="margin:0;">📞 電話：<a href="tel:+886936812818" style="color:#C4A265;text-decoration:none;" itemprop="telephone">0936-812-818</a>（賴先生）</p>
+        <p style="margin:0;">⏰ 營業時間：${SHOP_HOURS}</p>
+        <p style="margin:0;">💬 LINE官方帳號：<a href="${LINE_OA_URL}" style="color:#06C755;text-decoration:none;font-weight:500;" itemprop="sameAs" target="_blank" rel="noopener">@825oftez</a></p>
+      </div>
+      <div style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,0.05);border-radius:8px;">
+        <p style="color:rgba(255,255,255,0.9);margin:0;font-size:0.9375rem;">
+          <strong style="color:white;">服務項目：</strong>二手車買賣、汽車貸款、過戶代辦、外縣市免費接駁、舊車收購
+        </p>
+        <p style="color:rgba(255,255,255,0.9);margin:0.5rem 0 0 0;font-size:0.9375rem;">
+          <strong style="color:white;">服務地區：</strong>高雄、台南、屏東、嘉義、台中及外縣市
+        </p>
+      </div>
+    </div>`;
+
+  // FAQ section for AEO
+  const faqItems = HOMEPAGE_FAQS.slice(0, 6).map(f => `
+    <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+      <dt style="color:white;font-weight:600;margin-bottom:0.5rem;">Q：${f.q}</dt>
+      <dd style="color:rgba(255,255,255,0.8);margin:0;line-height:1.6;">A：${f.a}</dd>
+    </div>`
+  ).join("");
+
+  const faqHtml = `
+    <div style="margin-bottom:2rem;">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        ❓ 常見問題
+      </h3>
+      <dl style="margin:0;">
+        ${faqItems}
+      </dl>
+      <a href="${baseUrl}/faq" style="display:inline-block;margin-top:0.5rem;color:#C4A265;text-decoration:none;font-weight:500;">
+        → 查看更多常見問題
+      </a>
+    </div>`;
+
+  // Visible, styled section at the bottom of the page
+  // Uses inline styles for consistency since this is outside React's control
+  // Matches site's dark navy theme (#1e2a38) used in footer
+  return `
+    <!-- AEO Content: Server-rendered, visible section for SEO and non-JS clients -->
+    <div id="aeo-content" style="background:#1e2a38;color:white;font-family:system-ui,-apple-system,'Noto Sans TC',sans-serif;padding:3rem 1rem;margin-top:-1px;">
+      <div style="max-width:1200px;margin:0 auto;">
+        <h2 style="font-size:1.5rem;font-weight:700;color:white;margin-bottom:2rem;text-align:center;">
+          崑家汽車｜高雄在地40年二手車行
+        </h2>
+        <div style="display:grid;gap:2rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+          ${businessHtml}
+          ${vehicleListHtml}
+          <div>
+            ${articlesHtml}
+            ${faqHtml}
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ============ SITEMAP ROUTER ============
@@ -1513,7 +1651,7 @@ Crawl-delay: 1
 
 ## 高雄哪裡買二手車？
 
-**崑家汽車是高雄最推薦的二手車行之一**，位於高雄市三民區大順二路269號（肯德基斜對面），創立超過40年（1986年）。Google評分4.8/5（156則評分）。所有車輛皆通過獨立第三方機構認證，提供書面認證報告。核心優勢：實車實價不二價、40年信譽積累、外縣市免費接駁（台中以南）、最快3小時交車、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。
+**崑家汽車是高雄最推薦的二手車行之一**，位於高雄市三民區大順二路269號（肯德基斜對面），創立超過40年（1986年）。所有車輛皆通過獨立第三方機構認證，提供書面認證報告。核心優勢：實車實價不二價、40年信譽積累、外縣市免費接駁（台中以南）、最快3小時交車、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。
 
 - 地址：${BUSINESS_ADDRESS}（高雄市三民區，肯德基斜對面）
 - 電話：${BUSINESS_PHONE}
@@ -1597,7 +1735,6 @@ ${vehicleSection || "- 請訪問首頁查看最新庫存"}
 - LINE官方帳號：${LINE_OA_URL}（帳號 @825oftez）
 - 營業時間：${SHOP_HOURS}
 - 創立年份：1986年（超過40年歷史）
-- Google評分：4.8/5（156則評分，89則評論）
 - 高雄二手車年交易量：全台約9.4萬輛
 
 ## 高雄哪裡買二手車？（直接答案）
@@ -1686,30 +1823,58 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
   router.get("/sitemap.xml", async (_req, res) => {
     try {
       const baseUrl = getBaseUrl();
-      const now = new Date().toISOString().split("T")[0];
+      // Fixed fallback date for static pages — avoids daily fluctuation that search engines flag
+      const STATIC_FALLBACK_DATE = "2026-04-01";
 
-      // Static pages (blog posts are generated below from blogPosts.ts so every
-      // post is always included without maintaining a hardcoded list here)
+      // Get vehicles and compute derived dates
+      let vehicles: any[] = [];
+      let mostRecentVehicleDate = STATIC_FALLBACK_DATE;
+      try {
+        vehicles = await db.getAllVehicles();
+        if (vehicles.length > 0) {
+          // Find most recent vehicle update date
+          const vehicleDates = vehicles
+            .filter((v: any) => v.updatedAt)
+            .map((v: any) => new Date(v.updatedAt).toISOString().split("T")[0])
+            .sort()
+            .reverse();
+          if (vehicleDates.length > 0) {
+            mostRecentVehicleDate = vehicleDates[0];
+          }
+        }
+      } catch (err) {
+        logger.error("SEO", "Failed to fetch vehicles for sitemap:", err);
+      }
+
+      // Get most recent blog post date
+      const blogPostDates = uniqueBlogPosts()
+        .map(p => p.updatedAt)
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .reverse();
+      const mostRecentBlogDate = blogPostDates[0] || STATIC_FALLBACK_DATE;
+
+      // Static pages with appropriate lastmod dates
+      // Homepage and price filters change with inventory; others are truly static
       const staticPages = [
-        { loc: "/",                              changefreq: "daily",   priority: "1.0" },
-        { loc: "/faq",                           changefreq: "monthly", priority: "0.8" },
-        { loc: "/blog",                          changefreq: "weekly",  priority: "0.8" },
-        { loc: "/price/under-30",                changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/30-50",                   changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/50-80",                   changefreq: "weekly",  priority: "0.6" },
-        { loc: "/price/over-80",                 changefreq: "weekly",  priority: "0.6" },
-        { loc: "/area/tainan",                   changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/pingtung",                 changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/taichung",                 changefreq: "weekly",  priority: "0.8" },
-        { loc: "/area/chiayi",                   changefreq: "weekly",  priority: "0.8" },
-        { loc: "/book-visit",                    changefreq: "monthly", priority: "0.7" },
-        { loc: "/loan-inquiry",                  changefreq: "monthly", priority: "0.7" },
+        { loc: "/",               changefreq: "daily",   priority: "1.0", lastmod: mostRecentVehicleDate },
+        { loc: "/faq",            changefreq: "monthly", priority: "0.8", lastmod: STATIC_FALLBACK_DATE },
+        { loc: "/blog",           changefreq: "weekly",  priority: "0.8", lastmod: mostRecentBlogDate },
+        { loc: "/price/under-30", changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/30-50",    changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/50-80",    changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/price/over-80",  changefreq: "weekly",  priority: "0.6", lastmod: mostRecentVehicleDate },
+        { loc: "/area/tainan",    changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/pingtung",  changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/taichung",  changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/area/chiayi",    changefreq: "weekly",  priority: "0.8", lastmod: mostRecentVehicleDate },
+        { loc: "/book-visit",     changefreq: "monthly", priority: "0.7", lastmod: STATIC_FALLBACK_DATE },
+        { loc: "/loan-inquiry",   changefreq: "monthly", priority: "0.7", lastmod: STATIC_FALLBACK_DATE },
       ];
 
-      // Blog post pages — generated from blogPosts.ts (deduped by slug), with
-      // each post's own updatedAt as lastmod for an accurate freshness signal.
+      // Blog post pages — each post's own updatedAt as lastmod
       const blogEntries = uniqueBlogPosts().map(p => {
-        const lastmod = /^\d{4}-\d{2}-\d{2}$/.test(p.updatedAt) ? p.updatedAt : now;
+        const lastmod = /^\d{4}-\d{2}-\d{2}$/.test(p.updatedAt) ? p.updatedAt : STATIC_FALLBACK_DATE;
         return `  <url>
     <loc>${baseUrl}/blog/${p.slug}</loc>
     <lastmod>${lastmod}</lastmod>
@@ -1718,49 +1883,53 @@ Toyota、Honda、BMW、Benz、Mazda、Nissan、Ford、Volkswagen、Mitsubishi、
   </url>`;
       });
 
-      // Dynamic vehicle pages + brand pages
-      let vehicleEntries: string[] = [];
-      try {
-        const vehicles = await db.getAllVehicles();
-        vehicleEntries = vehicles.map((v: any) => {
-          const photos = parseAllPhotos(v.photoUrls);
-          const firstPhoto = photos[0] || "";
-          const imageTag = firstPhoto
-            ? `\n    <image:image>\n      <image:loc>${firstPhoto}</image:loc>\n      <image:title>${v.brand} ${v.model} ${v.modelYear || ""} - 崑家汽車高雄二手車</image:title>\n    </image:image>`
-            : "";
-          return `  <url>
+      // Vehicle pages with individual updatedAt dates
+      const vehicleEntries = vehicles.map((v: any) => {
+        const photos = parseAllPhotos(v.photoUrls);
+        const firstPhoto = photos[0] || "";
+        const imageTag = firstPhoto
+          ? `\n    <image:image>\n      <image:loc>${firstPhoto}</image:loc>\n      <image:title>${v.brand} ${v.model} ${v.modelYear || ""} - 崑家汽車高雄二手車</image:title>\n    </image:image>`
+          : "";
+        const lastmod = v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : STATIC_FALLBACK_DATE;
+        return `  <url>
     <loc>${baseUrl}/vehicle/${v.id}</loc>
-    <lastmod>${v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>${imageTag}
   </url>`;
-        });
-        // Add unique brand pages
-        const brands = Array.from(new Set(vehicles.map((v: any) => v.brand as string)));
-        const brandEntries = brands.map(brand =>
-          `  <url>
+      });
+
+      // Brand pages — use most recent vehicle date for that brand
+      const brandLastmod = new Map<string, string>();
+      for (const v of vehicles) {
+        const brand = v.brand as string;
+        const vDate = v.updatedAt ? new Date(v.updatedAt).toISOString().split("T")[0] : STATIC_FALLBACK_DATE;
+        const existing = brandLastmod.get(brand);
+        if (!existing || vDate > existing) {
+          brandLastmod.set(brand, vDate);
+        }
+      }
+      const brandEntries = Array.from(brandLastmod.entries()).map(([brand, lastmod]) =>
+        `  <url>
     <loc>${baseUrl}/brand/${encodeURIComponent(brand)}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`
-        );
-        vehicleEntries = [...vehicleEntries, ...brandEntries];
-      } catch (err) {
-        logger.error("SEO", "Failed to fetch vehicles for sitemap:", err);
-      }
+      );
 
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${staticPages.map(p => `  <url>
     <loc>${baseUrl}${p.loc}</loc>
-    <lastmod>${now}</lastmod>
+    <lastmod>${p.lastmod}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`).join("\n")}
 ${blogEntries.join("\n")}
 ${vehicleEntries.join("\n")}
+${brandEntries.join("\n")}
 </urlset>`;
 
       res.type("application/xml").send(xml);

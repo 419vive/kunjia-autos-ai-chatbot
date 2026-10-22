@@ -28,7 +28,7 @@ export const KUNJIA_BRAND = {
   founder: "賴崑家",
   phone: "0936-812-818",
   address: "高雄市三民區大順二路269號",
-  hours: "週一至週六 09:00–21:00",
+  hours: "週一至週日 9:30-20:00",
   lineUrl: "https://page.line.me/825oftez",
   gold: "#C4A265",
   darkBg: "#0a0a0a",

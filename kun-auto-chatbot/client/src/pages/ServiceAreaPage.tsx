@@ -123,10 +123,6 @@ export default function ServiceAreaPage() {
               <dd className="font-semibold text-foreground" itemProp="foundingDate">1986年</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Google 評分</dt>
-              <dd className="font-semibold text-foreground">⭐ 4.8 / 5（156則）</dd>
-            </div>
-            <div>
               <dt className="text-muted-foreground">地址</dt>
               <dd className="font-semibold text-foreground" itemProp="address">高雄市三民區大順二路269號</dd>
             </div>
@@ -138,7 +134,7 @@ export default function ServiceAreaPage() {
             </div>
             <div>
               <dt className="text-muted-foreground">營業時間</dt>
-              <dd className="font-semibold text-foreground">週一至週六 09:00–21:00</dd>
+              <dd className="font-semibold text-foreground">週一至週日 9:30-20:00</dd>
             </div>
             {!isLocal && (
               <div className="col-span-2 sm:col-span-3">
