@@ -810,7 +810,7 @@ async function processLineEvent(
 
           // Notify operator about the trade-in photo
           if (conversation) {
-            const ownerUserId = ENV.LINE_OWNER_USER_ID;
+            const ownerUserId = process.env.LINE_OWNER_USER_ID;
             const handoffMessage = `客戶上傳了愛車照片（${identified.brand} ${identified.model}）待估價`;
             await sendHumanHandoffNotification(
               conversation,
@@ -1211,11 +1211,12 @@ async function processLineEvent(
     }
 
     // 3) FAQ chips → deterministic FAQ answer cards (same pattern as rich-menu)
-    if (detectFaqTrigger(userMessage)) {
+    const faqItem = detectFaqTrigger(userMessage);
+    if (faqItem) {
       console.log(`[LINE] Conv ${conversation.id} aiDisabled — serving deterministic FAQ answer, AI stays locked`);
-      const faqMessages = buildFaqAnswerMessages(userMessage);
+      const faqMessages = buildFaqAnswerMessages(faqItem);
       if (faqMessages.length > 0) {
-        await db.addMessage({ conversationId: conversation.id, role: "assistant", content: getAssistantContentForTrigger({ type: "faq_chip" }) });
+        await db.addMessage({ conversationId: conversation.id, role: "assistant", content: getAssistantContentForTrigger({ type: "faq_chip", label: "FAQ" }) });
         try {
           await fetch("https://api.line.me/v2/bot/message/reply", {
             method: "POST",
@@ -1228,19 +1229,23 @@ async function processLineEvent(
     }
 
     // 4) Photo/image uploads → deterministic photo carousel (same pattern as rich-menu)
-    if (detectPhotoTrigger(userMessage)) {
+    const photoExternalId = detectPhotoTrigger(userMessage);
+    if (photoExternalId) {
       console.log(`[LINE] Conv ${conversation.id} aiDisabled — serving deterministic photo carousel, AI stays locked`);
       const allVehicles = await db.getAllVehicles();
-      const photoMessages = buildPhotoCarousel(userMessage, allVehicles);
-      if (photoMessages.length > 0) {
-        await db.addMessage({ conversationId: conversation.id, role: "assistant", content: getAssistantContentForTrigger({ type: "photo_browse" }) });
-        try {
-          await fetch("https://api.line.me/v2/bot/message/reply", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
-            body: JSON.stringify({ replyToken, messages: photoMessages }),
-          });
-        } catch (err) { console.error("[LINE] aiDisabled photo reply failed:", err); }
+      const vehicle = allVehicles.find((v: any) => v.externalId === photoExternalId);
+      if (vehicle) {
+        const photoMessages = buildPhotoCarousel(vehicle);
+        if (photoMessages.length > 0) {
+          await db.addMessage({ conversationId: conversation.id, role: "assistant", content: getAssistantContentForTrigger({ type: "photo_browse", label: "照片瀏覽" }) });
+          try {
+            await fetch("https://api.line.me/v2/bot/message/reply", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${channelAccessToken}` },
+              body: JSON.stringify({ replyToken, messages: photoMessages }),
+            });
+          } catch (err) { console.error("[LINE] aiDisabled photo reply failed:", err); }
+        }
       }
       return;
     }
