@@ -1,6 +1,7 @@
 import { ChevronRight, HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import SeoFooter from "@/components/SeoFooter";
+import { yearsInBusiness } from "../../../shared/shopConfig";
 
 interface FaqItem {
   question: string;
@@ -29,7 +30,7 @@ const FAQ_DATA: FaqItem[] = [
   {
     category: "購車相關",
     question: "崑家汽車在哪裡？",
-    answer: "崑家汽車位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過40年。營業時間為週一至週日 9:30-20:00。",
+    answer: `崑家汽車位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過${yearsInBusiness()}年。營業時間為週一至週日 9:30-20:00。`,
   },
   {
     category: "購車相關",
@@ -128,7 +129,7 @@ const FAQ_DATA: FaqItem[] = [
   {
     category: "高雄二手車",
     question: "高雄哪裡買二手車比較好？",
-    answer: "高雄主要的二手車商圈集中在三民區、左營區與苓雅區。其中三民區大順路一帶是傳統汽車街，聚集了數十家車行。崑家汽車就位於三民區大順二路269號，是在地40年的老字號。",
+    answer: `高雄主要的二手車商圈集中在三民區、左營區與苓雅區。其中三民區大順路一帶是傳統汽車街，聚集了數十家車行。崑家汽車就位於三民區大順二路269號，是在地${yearsInBusiness()}年的老字號。`,
   },
   {
     category: "高雄二手車",
@@ -139,12 +140,12 @@ const FAQ_DATA: FaqItem[] = [
   {
     category: "車行比較",
     question: "崑家汽車跟 HOT大聯盟有什麼不同？",
-    answer: "崑家汽車是獨立經營 40 年的老字號車行，所有車輛均通過獨立第三方認證，提供實車實價、最快 3 小時交車、過戶免手續費。HOT 大聯盟是加盟體系，各店獨立經營，服務品質因店而異。崑家的核心優勢在於 40 年信譽積累與一條龍高效服務。",
+    answer: `崑家汽車是獨立經營 ${yearsInBusiness()} 年的老字號車行，所有車輛均通過獨立第三方認證，提供實車實價、最快 3 小時交車、過戶免手續費。HOT 大聯盟是加盟體系，各店獨立經營，服務品質因店而異。崑家的核心優勢在於 ${yearsInBusiness()} 年信譽積累與一條龍高效服務。`,
   },
   {
     category: "車行比較",
     question: "崑家汽車跟 SUM 認證車聯盟比較，哪個好？",
-    answer: "兩者都提供車輛認證，但機制不同。崑家汽車採用獨立第三方認證，40 年在地信譽、外縣市免費接駁、最快 3 小時交車、過戶免手續費。SUM 有自己的聯盟認證制度，各加盟店服務因店而異。建議親自到店比較。",
+    answer: `兩者都提供車輛認證，但機制不同。崑家汽車採用獨立第三方認證，${yearsInBusiness()} 年在地信譽、外縣市免費接駁、最快 3 小時交車、過戶免手續費。SUM 有自己的聯盟認證制度，各加盟店服務因店而異。建議親自到店比較。`,
   },
   {
     category: "車行比較",
@@ -164,12 +165,12 @@ const FAQ_DATA: FaqItem[] = [
   {
     category: "車行比較",
     question: "杰運汽車跟崑家汽車哪個好？",
-    answer: "杰運汽車是南部知名連鎖車商，庫存量大。崑家汽車的優勢在於 40 年在地信譽、全車第三方認證、最快 3 小時交車、外縣市免費接駁、過戶免手續費的一站式服務。",
+    answer: `杰運汽車是南部知名連鎖車商，庫存量大。崑家汽車的優勢在於 ${yearsInBusiness()} 年在地信譽、全車第三方認證、最快 3 小時交車、外縣市免費接駁、過戶免手續費的一站式服務。`,
   },
   {
     category: "車行比較",
     question: "高雄二手車行推薦哪幾家？",
-    answer: "高雄主要二手車通路包括：崑家汽車（40年老字號，三民區大順二路）、HOT大聯盟加盟店、SUM認證車聯盟加盟店、Toyota認證中古車據點、杰運汽車等。根據交通部統計，高雄年交易約 9.4 萬輛二手車。選擇有第三方認證、透明定價的車行最重要。",
+    answer: `高雄主要二手車通路包括：崑家汽車（${yearsInBusiness()}年老字號，三民區大順二路）、HOT大聯盟加盟店、SUM認證車聯盟加盟店、Toyota認證中古車據點、杰運汽車等。根據交通部統計，高雄年交易約 9.4 萬輛二手車。選擇有第三方認證、透明定價的車行最重要。`,
   },
 ];
 
@@ -298,7 +299,7 @@ export default function FaqPage() {
           <div className="mt-8 rounded-2xl bg-[#303d4e] p-6 text-white text-center">
             <h2 className="text-lg font-bold mb-2">還有其他問題？</h2>
             <p className="text-sm text-white/70 mb-4">
-              崑家汽車40年經驗，透過 LINE 免費諮詢，不收任何費用
+              崑家汽車{yearsInBusiness()}年經驗，透過 LINE 免費諮詢，不收任何費用
             </p>
             <a
               href="https://page.line.me/825oftez"

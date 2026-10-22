@@ -14,6 +14,7 @@ import { useCompareList, CompareBar } from "@/components/VehicleCompare";
 import { getRecentlyViewed, type RecentlyViewedItem } from "@/lib/recentlyViewed";
 import SeoFooter from "@/components/SeoFooter";
 import StickyBookingBar from "@/components/StickyBookingBar";
+import { yearsInBusiness } from "../../../shared/shopConfig";
 import WelcomeBack from "@/components/WelcomeBack";
 import WishlistButton from "@/components/WishlistButton";
 import WishlistDrawer from "@/components/WishlistDrawer";
@@ -296,6 +297,7 @@ function VehicleCard({ vehicle, isComparing, onToggleCompare, onOpenGallery }: {
 }
 
 export default function Home() {
+  const years = yearsInBusiness();
   const [, setLocation] = useLocation();
   const { data: vehiclesData, isLoading } = trpc.vehicle.list.useQuery();
   const vehicles = vehiclesData?.items;
@@ -510,7 +512,7 @@ export default function Home() {
                 decoding="sync"
               />
               <h1 className="text-[11px] sm:text-xs tracking-[0.15em] text-white/75 font-medium mt-1">
-                台灣南部在地 40 年老口碑·正派經營
+                台灣南部在地 {years} 年老口碑·正派經營
               </h1>
             </div>
 
@@ -539,7 +541,7 @@ export default function Home() {
             <span>✅ 累計服務 2,000+ 位車主</span>
             <span>⭐ Google 評分 4.8</span>
             <span>🔐 全車第三方認證</span>
-            <span>📍 高雄在地 40 年</span>
+            <span>📍 高雄在地 {years} 年</span>
           </div>
         </div>
       </div>
@@ -641,11 +643,11 @@ export default function Home() {
       >
         <h2>高雄哪裡買二手車？</h2>
         <p className="answer-summary" data-speakable>
-          高雄買二手車推薦崑家汽車，位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過40年（1986年創立），Google評分4.8/5。核心優勢：全車獨立第三方認證、實車實價不二價、最快3小時交車、外縣市免費接駁（台中以南）、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。電話：0936-812-818，LINE：@825oftez。
+          高雄買二手車推薦崑家汽車，位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過{years}年（1986年創立），Google評分4.8/5。核心優勢：全車獨立第三方認證、實車實價不二價、最快3小時交車、外縣市免費接駁（台中以南）、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。電話：0936-812-818，LINE：@825oftez。
         </p>
         <h2>崑家汽車是什麼？</h2>
         <p data-speakable>
-          崑家汽車（KUN MOTORS）是高雄市三民區的二手車經銷商，創立於1986年，超過40年正派經營。所有在售車輛皆通過獨立第三方機構認證，提供書面認證報告，保證里程、實車實價。服務涵蓋Toyota、Honda、BMW、Benz、Mazda、Nissan等全品牌二手車買賣。
+          崑家汽車（KUN MOTORS）是高雄市三民區的二手車經銷商，創立於1986年，超過{years}年正派經營。所有在售車輛皆通過獨立第三方機構認證，提供書面認證報告，保證里程、實車實價。服務涵蓋Toyota、Honda、BMW、Benz、Mazda、Nissan等全品牌二手車買賣。
         </p>
         <h2>崑家汽車有哪些服務？</h2>
         <ul data-speakable>

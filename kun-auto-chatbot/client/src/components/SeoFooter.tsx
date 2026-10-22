@@ -1,4 +1,5 @@
 import { MapPin, Shield, Clock } from "lucide-react";
+import { yearsInBusiness } from "../../../shared/shopConfig";
 
 const LINE_OA_URL = "https://page.line.me/825oftez";
 
@@ -48,6 +49,7 @@ const OUT_OF_CITY_LINKS = [
 ];
 
 export default function SeoFooter() {
+  const years = yearsInBusiness();
   return (
     <footer className="bg-[#1e2a38] text-white/80">
       {/* Main footer grid */}
@@ -57,7 +59,7 @@ export default function SeoFooter() {
           <div>
             <h3 className="text-sm font-bold text-white mb-3">崑家汽車</h3>
             <p className="text-xs leading-relaxed text-white/60 mb-4">
-              高雄在地40年二手車行，正派經營。全車第三方認證、超強貸款方案，是您買二手車最值得信賴的選擇。
+              高雄在地{years}年二手車行，正派經營。全車第三方認證、超強貸款方案，是您買二手車最值得信賴的選擇。
             </p>
             <div className="space-y-2 text-xs text-white/60">
               <a
@@ -135,8 +137,18 @@ export default function SeoFooter() {
                 </a>
               </li>
               <li>
-                <a href="/loan-inquiry" className="text-xs text-white/60 hover:text-white transition-colors">
+                <a href="/loan-calculator" className="text-xs text-white/60 hover:text-white transition-colors">
                   貸款試算
+                </a>
+              </li>
+              <li>
+                <a href="/sell-car-kaohsiung" className="text-xs text-white/60 hover:text-white transition-colors">
+                  舊車收購
+                </a>
+              </li>
+              <li>
+                <a href="/guarantee" className="text-xs text-white/60 hover:text-white transition-colors">
+                  購車保障
                 </a>
               </li>
               <li>
@@ -227,7 +239,7 @@ export default function SeoFooter() {
       <div className="border-t border-white/10">
         <div className="container py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-white/40">
           <p>&copy; {new Date().getFullYear()} 崑家汽車 KUN MOTORS. 高雄市三民區大順二路269號</p>
-          <p>高雄在地 40 年老口碑 · 正派經營</p>
+          <p>高雄在地 {years} 年老口碑 · 正派經營</p>
         </div>
       </div>
     </footer>
