@@ -14,6 +14,87 @@
 
 ---
 
+## 2026-09-03 — Meta Marketing API 廣告串接（PR #112）；遠端控制 iPad 這條路不通
+
+**Context:**
+Jerry 想用 Meta API 幫崑家汽車下 Facebook 廣告。過程中提出三個想法，兩個要擋，
+一個照做。
+
+**擋掉的兩個（都是事實錯誤，不是意見不同）:**
+
+1. **「用 Google Remote Control 接我媽的 iPad，再用 Computer Use 幫她操作」** —
+   iPadOS 從系統層禁止第三方遠端控制。Chrome 遠端桌面的 iOS App 只是**遙控端**
+   （拿 iPad 控制電腦），沒有 iPad 主控端。TeamViewer 之類在 iOS 上也只能看畫面。
+   替代方案：FaceTime 螢幕分享 + 遠端控制（iOS 18+ 內建），但那是他本人操作，
+   AI 幫不上。**而且這個 session 本來就沒有 Computer Use**——是跑在防火牆後的
+   雲端沙盒，沒有螢幕。
+
+2. **「直接用我媽的帳號密碼登入，身份用她的，這樣最快」** — 反效果。他的顧慮是
+   舊封鎖牽連崑家，但用自己的裝置/IP 登入她的帳號**正是 Meta 用來關聯帳號最強的
+   訊號**，等於親手做了那個連結。而且會觸發異常登入檢查點，可能把她鎖在自己帳號
+   外面。最重要的是它**省不到麻煩的那一段**（App + 商業驗證 + App Review），
+   用誰的帳號登入都要跑完。
+
+**Jerry 重申「我就是要用 Meta API 下廣告」後，停止爭論，照做。**
+
+**沙盒限制再次確認（journal 2026-04-22 的同一類）:**
+```
+www.facebook.com:443   → connect_rejected (organization policy)
+graph.facebook.com:443 → connect_rejected
+```
+Playwright MCP 這個 session 也連線失敗（CONNECTION_CLOSED）。所以無法代看他的
+Meta 後台，唯一管道是他截圖。他截的「近期帳號問題」顯示過去 30 天無未解決問題，
+但那只涵蓋 30 天且受 business 篩選影響，個人廣告帳號的封鎖狀態**至今未確認**。
+
+**Decision — `server/metaAds.ts` 的三個安全性質（每個都有測試）:**
+
+1. **一律 PAUSED 建立。** `createCampaign`/`createAdSet`/`createAd` 寫死
+   `status:"PAUSED"`。`activateAd()` 是唯一會花錢的函式，刻意獨立、builder
+   絕不呼叫它，方便 review 直接 grep。
+2. **預算單位不猜。** Meta 用 `10^currency_offset` 換算，各幣別不同，猜錯就是
+   **100 倍超支**。所以模組拒絕內建 TWD 的 offset，強迫呼叫端從
+   `getAdAccountInfo()` 讀真值再用 `toMinorUnits()` 換算；`toMinorUnits` 會擋掉
+   不合理的 offset，`assertBudgetSane()` 再加一道日預算上限。
+3. **Token 絕不進 log。** `redactToken()` 把關，POST 走 body 不走 URL。
+
+**FACT_LOCK 延伸到廣告文案:** `buildVehicleCreativeSpec()` 從 `shared/shopConfig`
+和 `shared/priceFormat` 取店家事實與價格——廣告文案跟聊天回覆一樣是客戶看得到的
+輸出，適用同一組規則。測試斷言文案帶真實城市/電話、不出現 台北/新車、不會印出
+`undefined萬`。
+
+**踩到並修掉的坑:** 第一次 tsc 我只 grep 了 `metaAds` 就說「零錯誤」，但當時
+`node_modules` 是空的，那次檢查根本沒意義。裝完依賴後真的跑，`logger.info` 的
+簽章是 `(prefix, msg)` 兩個參數，我的新檔案有 7 個 TS2554。**這正是 2026-07-07
+記錄的那個教訓的反例練習**——新檔案裡的型別錯誤必須當場修，絕不能混進「既有
+baseline」。修完 baseline 回到 11。
+
+**Verification:** 新測試 39 passed；全套 944 passed / 46 failed（baseline 905/46
+＋ 這 39，既有失敗數未變）；build 乾淨 896.0kb；tsc 11 errors = baseline，新檔案
+零錯誤。**未對真實 Meta API 驗證過**——還沒有 token，且沙盒連不到 graph.facebook.com。
+所有網路路徑都是對 mocked `fetch` 測的。
+
+**還沒做 / 需要 Jerry:**
+- 確認個人廣告帳號的封鎖類型（可申訴 vs 永久）——會影響架構建議
+- `docs/META_ADS_SETUP.md` 第 1–10 步，其中第 7（商業驗證）、第 8（App Review）
+  是唯一慢的部分，2–5 天起跳
+- 第一次呼叫一定要先跑 `getAdAccountInfo()` 確認 currency offset 再花任何錢
+- 車輛型錄廣告（AIA）沒做：`client/src/lib/pixels.ts` 的 `trackVehicleView`
+  只發 `content_name`，缺 `content_ids`/`content_type`，型錄比對不起來
+
+**業務判斷（已告知 Jerry，他選擇仍走 API）:** 以一個月 6 台的量，後台手動投當天
+就能上線，API 路線 2–4 週。API 的價值在自動化（庫存變動自動改廣告、車賣掉自動關），
+不在下第一支廣告。
+
+**Artifacts:**
+- `kun-auto-chatbot/server/metaAds.ts`（NEW）
+- `kun-auto-chatbot/server/metaAds.test.ts`（NEW — 39 tests）
+- `kun-auto-chatbot/.env.example`（META_* 變數）
+- `docs/META_ADS_SETUP.md`（NEW）
+- PR #112 (draft): https://github.com/419vive/kunjia-autos-ai-chatbot/pull/112
+- Branch: `claude/meta-api-facebook-ads-ppmf24`
+
+---
+
 ## 2026-08-28 — Megan bug report: vehicle page text was navy-on-navy (contrast 1.03:1)
 
 **Context:**
