@@ -59,10 +59,17 @@ chatStreamRouter.post("/api/chat/stream", async (req: express.Request, res: Resp
     // Get or create conversation
     let conversation = await db.getConversationBySessionId(sessionId);
     if (!conversation) {
-      conversation = await db.createConversation({
+      const created = await db.createConversation({
         sessionId,
         channel,
       });
+      if (!created) {
+        sendSSE("error", "Failed to create conversation");
+        res.end();
+        return;
+      }
+      // Type assertion: createConversation returns fields with undefined but we treat them as null
+      conversation = created as unknown as NonNullable<typeof conversation>;
     }
 
     if (!conversation) {

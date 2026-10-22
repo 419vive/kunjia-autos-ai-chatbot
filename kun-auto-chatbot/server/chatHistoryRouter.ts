@@ -69,7 +69,7 @@ chatHistoryRouter.get("/api/chat/history", async (req: express.Request, res: Res
           new Date(since)
         );
       } catch (err) {
-        logger.error("Invalid since param", { since, error: String(err) });
+        logger.error("ChatHistory", `Invalid since param: ${since}`, err);
         // Fallback to full history if since is invalid
         messages = await db.getMessagesByConversation(conversation.id);
       }
@@ -91,7 +91,7 @@ chatHistoryRouter.get("/api/chat/history", async (req: express.Request, res: Res
       conversation: maskedConversation,
     });
   } catch (error) {
-    logger.error("Chat history endpoint error", { error: String(error) });
+    logger.error("ChatHistory", "Chat history endpoint error", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

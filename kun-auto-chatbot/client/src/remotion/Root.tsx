@@ -28,7 +28,7 @@ export const RemotionRoot: React.FC = () => {
       {/* Use Case 6: Landscape showcase for website embed */}
       <Composition
         id="VehicleShowcase"
-        component={VehicleShowcase}
+        component={VehicleShowcase as unknown as React.ComponentType<Record<string, unknown>>}
         durationInFrames={450}
         fps={30}
         width={1280}
@@ -39,7 +39,7 @@ export const RemotionRoot: React.FC = () => {
       {/* Use Case 7: Vertical card for LINE/IG/TikTok sharing */}
       <Composition
         id="VehicleCard"
-        component={VehicleCard}
+        component={VehicleCard as unknown as React.ComponentType<Record<string, unknown>>}
         durationInFrames={150}
         fps={30}
         width={1080}
