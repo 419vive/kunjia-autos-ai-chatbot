@@ -1260,8 +1260,9 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
     .replace(/<link\s+rel="canonical"[^>]*>/gi, "");
   result = result.replace("</head>", `${seoBlock}\n</head>`);
 
-  // For homepage: inject AEO-optimized content for AI crawlers and non-JS clients
-  // This content is visible to crawlers but hidden from JS-enabled browsers (React hydrates over it)
+  // For homepage: inject AEO-optimized content visible at bottom of page
+  // This content is rendered server-side so AI crawlers and non-JS clients can access it.
+  // It's placed OUTSIDE the React root (#root) so hydration won't affect it.
   if (path === "/") {
     const aeoContent = await generateAeoContent();
     if (aeoContent) {
@@ -1273,90 +1274,139 @@ export async function injectSeoTags(html: string, url: string): Promise<string> 
 }
 
 /**
- * Generate AEO (Answer Engine Optimization) content block for AI crawlers.
+ * Generate AEO (Answer Engine Optimization) content block.
  * This provides key content (inventory, articles, business info) in the initial HTML
  * so AI search engines and non-JS clients can access it without executing JavaScript.
+ * 
+ * IMPORTANT: Content is VISIBLE to users (not hidden) to avoid Google cloaking penalties.
+ * Rendered as a styled section at the bottom of the page, above the footer.
+ * Placed outside React's #root div so hydration doesn't cause duplicates or mismatches.
  */
 async function generateAeoContent(): Promise<string> {
   const baseUrl = getBaseUrl();
   
   // Fetch vehicle inventory
   let vehicleListHtml = "";
+  let vehicleCount = 0;
   try {
     const vehicles = await db.getAllVehicles();
+    vehicleCount = vehicles.length;
     if (vehicles.length > 0) {
-      const vehicleItems = vehicles.slice(0, 30).map((v: any) => {
+      const vehicleItems = vehicles.slice(0, 20).map((v: any) => {
         const year = v.modelYear || "";
         const price = v.priceDisplay || `${v.price}萬`;
-        const mileage = v.mileage || "";
-        return `<li><a href="${baseUrl}/vehicle/${v.id}">${v.brand} ${v.model} ${year}</a> - ${price}${mileage ? `，${mileage}` : ""}</li>`;
-      }).join("\n          ");
+        const mileage = v.mileage ? `｜${v.mileage}` : "";
+        return `
+          <li style="margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <a href="${baseUrl}/vehicle/${v.id}" style="color:#C4A265;text-decoration:none;font-weight:500;">${v.brand} ${v.model} ${year}</a>
+            <span style="color:rgba(255,255,255,0.7);margin-left:0.5rem;">${price}${mileage}</span>
+          </li>`;
+      }).join("");
       vehicleListHtml = `
-      <section>
-        <h2>在售車輛庫存（${vehicles.length}台）</h2>
-        <ul>
-          ${vehicleItems}
-        </ul>
-        <p><a href="${baseUrl}/">查看全部車輛</a></p>
-      </section>`;
+        <div style="margin-bottom:2rem;">
+          <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+            🚗 在售車輛庫存（${vehicleCount}台）
+          </h3>
+          <ul style="list-style:none;padding:0;margin:0;columns:1;">
+            ${vehicleItems}
+          </ul>
+          <a href="${baseUrl}/" style="display:inline-block;margin-top:1rem;color:#C4A265;text-decoration:none;font-weight:500;">
+            → 查看全部 ${vehicleCount} 台車輛
+          </a>
+        </div>`;
     }
   } catch {
     // Ignore DB errors for content injection
   }
 
   // Generate article list from blogPosts
-  const articleItems = uniqueBlogPosts().slice(0, 12).map(p => 
-    `<li><a href="${baseUrl}/blog/${p.slug}">${p.title}</a> - ${p.description.slice(0, 80)}...</li>`
-  ).join("\n          ");
+  const blogList = uniqueBlogPosts().slice(0, 8);
+  const articleItems = blogList.map(p => `
+    <li style="margin-bottom:0.75rem;">
+      <a href="${baseUrl}/blog/${p.slug}" style="color:#C4A265;text-decoration:none;font-weight:500;">${p.title}</a>
+      <p style="color:rgba(255,255,255,0.6);font-size:0.875rem;margin:0.25rem 0 0 0;">${p.description.slice(0, 60)}...</p>
+    </li>`
+  ).join("");
 
   const articlesHtml = `
-      <section>
-        <h2>購車攻略文章</h2>
-        <ul>
-          ${articleItems}
-        </ul>
-        <p><a href="${baseUrl}/blog">查看全部文章</a></p>
-      </section>`;
+    <div style="margin-bottom:2rem;">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        📚 購車攻略文章
+      </h3>
+      <ul style="list-style:none;padding:0;margin:0;">
+        ${articleItems}
+      </ul>
+      <a href="${baseUrl}/blog" style="display:inline-block;margin-top:1rem;color:#C4A265;text-decoration:none;font-weight:500;">
+        → 查看全部購車攻略
+      </a>
+    </div>`;
 
   // Business info section
   const businessHtml = `
-      <section itemscope itemtype="https://schema.org/AutoDealer">
-        <h2>聯絡資訊</h2>
-        <p><strong itemprop="name">崑家汽車 KUN MOTORS</strong></p>
-        <p itemprop="description">高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。</p>
-        <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
-          <p>地址：<span itemprop="streetAddress">大順二路269號</span>，<span itemprop="addressLocality">三民區</span>，<span itemprop="addressRegion">高雄市</span> <span itemprop="postalCode">807</span></p>
-        </div>
-        <p>電話：<a href="tel:+886936812818" itemprop="telephone">0936-812-818</a></p>
-        <p>營業時間：${SHOP_HOURS}</p>
-        <p>LINE官方帳號：<a href="${LINE_OA_URL}" itemprop="sameAs">@825oftez</a></p>
-        <p>服務項目：二手車買賣、汽車貸款、過戶代辦、外縣市免費接駁、舊車收購</p>
-        <p>服務地區：高雄、台南、屏東、嘉義、台中及外縣市</p>
-      </section>`;
+    <div style="margin-bottom:2rem;" itemscope itemtype="https://schema.org/AutoDealer">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        📍 聯絡資訊
+      </h3>
+      <p style="font-size:1.25rem;font-weight:700;color:white;margin-bottom:0.5rem;" itemprop="name">崑家汽車 KUN MOTORS</p>
+      <p style="color:rgba(255,255,255,0.8);margin-bottom:1rem;line-height:1.6;" itemprop="description">
+        高雄在地40年二手車行，全車第三方認證、實車實價、保證里程。精選Toyota、Honda、BMW、Benz等品牌優質中古車。
+      </p>
+      <div style="display:grid;gap:0.5rem;color:rgba(255,255,255,0.9);" itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
+        <p style="margin:0;">📍 地址：<span itemprop="streetAddress">大順二路269號</span>，<span itemprop="addressLocality">三民區</span>，<span itemprop="addressRegion">高雄市</span> <span itemprop="postalCode">807</span>（肯德基斜對面）</p>
+        <p style="margin:0;">📞 電話：<a href="tel:+886936812818" style="color:#C4A265;text-decoration:none;" itemprop="telephone">0936-812-818</a>（賴先生）</p>
+        <p style="margin:0;">⏰ 營業時間：${SHOP_HOURS}</p>
+        <p style="margin:0;">💬 LINE官方帳號：<a href="${LINE_OA_URL}" style="color:#06C755;text-decoration:none;font-weight:500;" itemprop="sameAs" target="_blank" rel="noopener">@825oftez</a></p>
+      </div>
+      <div style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,0.05);border-radius:8px;">
+        <p style="color:rgba(255,255,255,0.9);margin:0;font-size:0.9375rem;">
+          <strong style="color:white;">服務項目：</strong>二手車買賣、汽車貸款、過戶代辦、外縣市免費接駁、舊車收購
+        </p>
+        <p style="color:rgba(255,255,255,0.9);margin:0.5rem 0 0 0;font-size:0.9375rem;">
+          <strong style="color:white;">服務地區：</strong>高雄、台南、屏東、嘉義、台中及外縣市
+        </p>
+      </div>
+    </div>`;
 
   // FAQ section for AEO
-  const faqItems = HOMEPAGE_FAQS.slice(0, 6).map(f => 
-    `<dt>${f.q}</dt><dd>${f.a}</dd>`
-  ).join("\n          ");
+  const faqItems = HOMEPAGE_FAQS.slice(0, 6).map(f => `
+    <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+      <dt style="color:white;font-weight:600;margin-bottom:0.5rem;">Q：${f.q}</dt>
+      <dd style="color:rgba(255,255,255,0.8);margin:0;line-height:1.6;">A：${f.a}</dd>
+    </div>`
+  ).join("");
 
   const faqHtml = `
-      <section>
-        <h2>常見問題</h2>
-        <dl>
-          ${faqItems}
-        </dl>
-        <p><a href="${baseUrl}/faq">查看更多常見問題</a></p>
-      </section>`;
+    <div style="margin-bottom:2rem;">
+      <h3 style="font-size:1.125rem;font-weight:700;color:white;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #C4A265;">
+        ❓ 常見問題
+      </h3>
+      <dl style="margin:0;">
+        ${faqItems}
+      </dl>
+      <a href="${baseUrl}/faq" style="display:inline-block;margin-top:0.5rem;color:#C4A265;text-decoration:none;font-weight:500;">
+        → 查看更多常見問題
+      </a>
+    </div>`;
 
-  // Wrap in a div that's visible to crawlers but hidden from visual rendering
-  // Using CSS clip-path instead of display:none so content remains accessible to crawlers
+  // Visible, styled section at the bottom of the page
+  // Uses inline styles for consistency since this is outside React's control
+  // Matches site's dark navy theme (#1e2a38) used in footer
   return `
-    <!-- AEO Content: Server-rendered for AI crawlers and non-JS clients -->
-    <div id="aeo-content" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" aria-hidden="true">
-      ${businessHtml}
-      ${vehicleListHtml}
-      ${articlesHtml}
-      ${faqHtml}
+    <!-- AEO Content: Server-rendered, visible section for SEO and non-JS clients -->
+    <div id="aeo-content" style="background:#1e2a38;color:white;font-family:system-ui,-apple-system,'Noto Sans TC',sans-serif;padding:3rem 1rem;margin-top:-1px;">
+      <div style="max-width:1200px;margin:0 auto;">
+        <h2 style="font-size:1.5rem;font-weight:700;color:white;margin-bottom:2rem;text-align:center;">
+          崑家汽車｜高雄在地40年二手車行
+        </h2>
+        <div style="display:grid;gap:2rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+          ${businessHtml}
+          ${vehicleListHtml}
+          <div>
+            ${articlesHtml}
+            ${faqHtml}
+          </div>
+        </div>
+      </div>
     </div>`;
 }
 
