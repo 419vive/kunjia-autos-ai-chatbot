@@ -815,7 +815,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "toyota-used-car-kaohsiung",
-    title: "高雄Toyota中古車推薦｜34年信賴品牌選擇崑家汽車",
+    title: "高雄Toyota中古車推薦｜信賴品牌選擇崑家汽車",
     description: "想買Toyota中古車？高雄崑家汽車40年老店提供Toyota Corolla、Altis、Camry全系列認證二手車，價格透明、完整保固。",
     publishedAt: "2026-03-15",
     updatedAt: "2026-03-15",
@@ -2955,6 +2955,108 @@ export const blogPosts: BlogPost[] = [
     category: "車型推薦",
     keywords: ["Altis二手", "二手Altis", "Altis買哪一代", "toyota altis二手", "Altis中古車推薦"],
     content: `<p class="answer-summary" data-speakable><strong>二手Altis主要分3個世代：第10代（約2008-2013年，2010年底改CVT變速箱）、第11代（約2013-2019年，2016年10月小改款11.5代升級安全配備）、第12代（2019年至今，換上TNGA底盤，安全性最佳但價格較高）。預算有限選第10代最划算，重視安全配備建議選11.5代之後，追求最新操控與科技選第12代。CVT變速箱只要定期更換變速箱油，高里程後打滑風險就能降低。實際車況、殘值與行情以實車與門市報價為準。</strong></p><h2>Altis到底怎麼分代？先搞懂年份與世代對照</h2><p>台灣市場的Toyota Corolla Altis習慣以「第10代」「第11代」「第12代」稱呼，年份大致對應如下：</p><ul><li><strong>第10代（約2008-2013年）</strong>：2010年11月起改為CVT變速箱，車系後期市場上俗稱「10.5代」</li><li><strong>第11代（約2013-2019年）</strong>：2016年10月推出小改款「11.5代」，主動安全配備明顯升級，是這個世代討論度較高的版本</li><li><strong>第12代（2019年至今）</strong>：換上TNGA底盤，操控與安全性大幅提升，價格也相對較高</li></ul><p>買二手車時，同樣掛「Altis」名稱，車齡、平台、配備差異其實不小，建議先跟賣方確認清楚出廠年式與配備表，再進行比價。</p><h2>三代Altis二手行情與規格比較（僅供參考）</h2><table><thead><tr><th>世代</th><th>年式區間</th><th>變速箱</th><th>安全配備</th><th>二手行情（區間僅供參考）</th></tr></thead><tbody><tr><td>第10代</td><td>2008-2013</td><td>2010年底後改CVT</td><td>基本款，較少主動安全配備</td><td>約20-35萬</td></tr><tr><td>第11代／11.5代</td><td>2013-2019</td><td>CVT</td><td>11.5代（2016年10月起）主動安全配備增加</td><td>約35-55萬</td></tr><tr><td>第12代</td><td>2019年至今</td><td>CVT</td><td>主動安全套件較完整</td><td>約55-80萬</td></tr></tbody></table><p>以上行情為市場區間概估，實際成交價會依里程數、車況、有無事故泡水、配備等級而有落差，正確報價請以崑家汽車實車認證後的價格為準。</p><h2>各代Altis網路上討論度較高的保養重點</h2><p>以下是網路車主社群較常討論的保養留意項目，<strong>不代表每台車都會發生</strong>，主要提醒買車後養成定期保養習慣：</p><ul><li><strong>CVT變速箱油</strong>：若前車主長期未依時程更換變速箱油，高里程後較容易出現換檔頓挫或打滑，建議每2-4萬公里更換一次</li><li><strong>CVT電磁閥</strong>：極少數車輛曾傳出電磁閥老化導致故障燈亮起或入檔延遲，試車時可留意起步是否平順</li><li><strong>冷氣壓縮機繼電器</strong>：老車偶有冷氣時好時壞的討論，多半是繼電器老化，維修成本不高</li><li><strong>底盤異音</strong>：高里程車行經坑洞路面偶有輕微共振或異音，試乘時建議走一段顛簸路面感受看看</li></ul><p>這些都是網路上較常被討論的項目，不代表每台Altis都有的通病。崑家汽車每台在售Altis均經<a href="/blog/third-party-inspection-guide">全車175項第三方認證</a>，變速箱、底盤、電系狀況都會列在報告裡，買家可直接索取查看。</p><h2>預算有限選第10代，還是加價買11.5代之後？</h2><p>如果預算在30萬上下，第10代Altis仍是可靠的代步選擇，缺點是安全配備較陽春；若能加一點預算到35-55萬區間，建議優先看<strong>2016年10月之後的11.5代</strong>，主動安全配備明顯提升。若預算許可（55萬以上），第12代的TNGA底盤在操控與安全性上都是明顯升級，適合重視行車安全、打算長期持有的買家。</p><p>不確定Altis和同級SUV怎麼選？可以參考<a href="/blog/suv-vs-sedan-used-car">房車 vs SUV完整比較</a>；想知道實際養車成本，可以看<a href="/blog/used-car-maintenance-cost">二手車保養費完整分析</a>。</p><h2>FAQ：二手Altis買哪一代常見問題</h2><h3>Q：Altis的世代是怎麼分的？</h3><p>A：台灣市場慣稱第10代（約2008-2013年）、第11代（約2013-2019年，含2016年小改款11.5代）、第12代（2019年至今）。同一世代中間也可能有配備小幅調整，建議看車時直接向門市確認出廠年份與配備表。</p><h3>Q：Altis的CVT變速箱容易壞嗎？</h3><p>A：CVT本身是成熟系統，多數車輛正常使用下不會有大問題，但若長期未依時程更換變速箱油，高里程後確實較容易出現打滑或頓挫。買二手車時建議確認保養紀錄，或直接請崑家汽車協助檢測變速箱狀況。</p><h3>Q：10萬公里以上的Altis還能買嗎？</h3><p>A：可以，Toyota引擎耐用度高，10萬公里以上的Altis在市場上仍常見。重點是<a href="/blog/used-car-mileage-guide">確認里程數真偽</a>與保養紀錄是否連貫，並確認變速箱油有定期更換。</p><h3>Q：Altis和Corolla Cross該怎麼選？</h3><p>A：Altis是房車，油耗更省、停車容易、保養費較低；Corolla Cross是小型SUV，空間大、視野好。城市代步、預算優先可選Altis，重視空間與家庭出遊可考慮Corolla Cross。</p><h3>Q：高雄哪裡可以看到認證的二手Altis？</h3><p>A：<a href="/brand/Toyota">崑家汽車</a>常態備有多台認證Altis現貨，每台均經全車175項檢測與第三方認證，車況與保養紀錄透明。歡迎<a href="https://page.line.me/825oftez" target="_blank" rel="noopener">LINE @825oftez</a>詢問最新現貨，或直接來高雄市三民區大順二路269號門市看車。</p><p style="margin-top: 2rem; padding: 1.5rem; background: #f5f5f5; border-left: 4px solid #d4a574;"><strong>不知道該選哪一代Altis？</strong>加<a href="https://page.line.me/825oftez" target="_blank" rel="noopener">LINE @825oftez</a>告訴我們你的預算與需求，賴先生會依現有認證車源幫你分析。也歡迎致電 0936-812-818，或直接<a href="/">到高雄門市</a>看車比較。</p>`
+  },
+  {
+    slug: "cpo-vs-dealer-vs-alliance",
+    title: "原廠認證中古車 vs 獨立車商 vs 聯盟車商｜2026年完整比較指南",
+    description: "原廠認證中古車（CPO）、獨立車商、聯盟車商（HOT大聯盟、SUM）怎麼選？一張表比較價格、認證標準、保固、服務差異，幫你找到最適合的購車管道。",
+    publishedAt: "2026-10-22",
+    updatedAt: "2026-10-22",
+    author: "崑家汽車",
+    category: "購車指南",
+    keywords: ["原廠認證中古車", "CPO", "獨立車商", "HOT大聯盟", "SUM認證", "二手車怎麼選"],
+    content: `<p class="answer-summary" data-speakable><strong>買二手車有三大管道：原廠認證中古車（CPO）價格最高但品質有原廠保障、聯盟車商（HOT、SUM）標準化認證但各店品質因店而異、獨立車商價格最有競爭力但須慎選口碑。建議重視品牌保障選CPO、追求標準化流程選聯盟、重視性價比與彈性選在地老字號獨立車商。</strong></p>
+<h2>三大購車管道一覽表</h2>
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;"><thead><tr style="background:#f3f4f6;"><th style="padding:8px;border:1px solid #e5e7eb;">管道</th><th style="padding:8px;border:1px solid #e5e7eb;">代表</th><th style="padding:8px;border:1px solid #e5e7eb;">價格定位</th><th style="padding:8px;border:1px solid #e5e7eb;">認證標準</th><th style="padding:8px;border:1px solid #e5e7eb;">保固</th></tr></thead><tbody><tr><td style="padding:8px;border:1px solid #e5e7eb;">原廠認證中古車</td><td style="padding:8px;border:1px solid #e5e7eb;">Toyota CPO、BMW認證</td><td style="padding:8px;border:1px solid #e5e7eb;">高於市場10-15%</td><td style="padding:8px;border:1px solid #e5e7eb;">原廠標準</td><td style="padding:8px;border:1px solid #e5e7eb;">1-2年原廠保固</td></tr><tr><td style="padding:8px;border:1px solid #e5e7eb;">聯盟車商</td><td style="padding:8px;border:1px solid #e5e7eb;">HOT大聯盟、SUM</td><td style="padding:8px;border:1px solid #e5e7eb;">接近市場行情</td><td style="padding:8px;border:1px solid #e5e7eb;">聯盟認證</td><td style="padding:8px;border:1px solid #e5e7eb;">依各店而異</td></tr><tr><td style="padding:8px;border:1px solid #e5e7eb;">獨立車商</td><td style="padding:8px;border:1px solid #e5e7eb;">崑家汽車等在地車行</td><td style="padding:8px;border:1px solid #e5e7eb;">最具競爭力</td><td style="padding:8px;border:1px solid #e5e7eb;">第三方認證</td><td style="padding:8px;border:1px solid #e5e7eb;">1年保固</td></tr></tbody></table>
+<h2>原廠認證中古車（CPO）</h2>
+<p><strong>優點：</strong>車源來自原廠回收或租賃車、認證標準嚴格、保固由原廠提供、後續保養可回原廠</p>
+<p><strong>缺點：</strong>價格高於市場10-15%、僅限該品牌車型、庫存量較少</p>
+<p><strong>適合：</strong>預算充足、重視原廠保障、只考慮特定品牌的買家</p>
+<h2>聯盟車商（HOT、SUM）</h2>
+<p><strong>優點：</strong>店數多（全台約400-500家）、統一認證標準、品牌知名度高</p>
+<p><strong>缺點：</strong>加盟店各自經營、服務品質因店而異、部分聯盟認證標準不如獨立第三方嚴格</p>
+<p><strong>適合：</strong>喜歡連鎖品牌保障、需要跨區服務的買家</p>
+<h2>獨立車商</h2>
+<p><strong>優點：</strong>價格最具競爭力、服務彈性大、在地口碑透明可查</p>
+<p><strong>缺點：</strong>品質參差不齊（須慎選口碑）、無連鎖品牌背書</p>
+<p><strong>適合：</strong>重視性價比、願意做功課、選擇在地老字號的買家</p>
+<h2>如何挑選獨立車商？</h2>
+<ul>
+<li><strong>經營年資：</strong>超過10年以上的老字號，口碑經過市場驗證</li>
+<li><strong>第三方認證：</strong>是否提供獨立機構的書面認證報告</li>
+<li><strong>透明定價：</strong>實車實價、不玩價格遊戲</li>
+<li><strong>售後服務：</strong>有無保固、維修是否方便</li>
+<li><strong>Google評價：</strong>查看真實客戶回饋</li>
+</ul>
+<h2>崑家汽車的定位</h2>
+<p>崑家汽車是高雄在地經營超過40年的獨立車商，所有車輛皆通過獨立第三方認證、實車實價、提供1年保固。結合獨立車商的價格優勢與完整的認證保障，是追求性價比買家的首選。</p>
+<p>地址：高雄市三民區大順二路269號｜電話：0936-812-818｜LINE：@825oftez</p>`
+  },
+  {
+    slug: "how-to-choose-kaohsiung-used-car-dealer",
+    title: "高雄二手車行怎麼選？5大挑選標準幫你避開地雷",
+    description: "高雄二手車行超過百家，怎麼選到可靠的？本文整理5大挑選標準：經營年資、第三方認證、透明定價、售後服務、客戶評價，幫你避開地雷車行。",
+    publishedAt: "2026-10-22",
+    updatedAt: "2026-10-22",
+    author: "崑家汽車",
+    category: "購車指南",
+    keywords: ["高雄二手車行", "高雄二手車推薦", "高雄中古車行", "二手車行怎麼選", "高雄買車"],
+    content: `<p class="answer-summary" data-speakable><strong>高雄二手車行超過百家，挑選可靠車行的5大標準：經營年資超過10年、提供第三方認證報告、實車實價透明定價、完善的售後服務與保固、Google評價4.5星以上。建議實際到店看車、索取認證報告、確認書面保固條款。</strong></p>
+<h2>高雄二手車市場概況</h2>
+<p>高雄是台灣南部最大的二手車交易市場，主要車商聚集在三民區大順路一帶（傳統汽車街）、左營區、鳳山區。二手車價格比台北低約3-8%，是南部民眾購車的熱門選擇。</p>
+<h2>5大挑選標準</h2>
+<h3>1. 經營年資</h3>
+<p>優先選擇經營超過10年的老字號車行。能在競爭激烈的市場存活多年，代表口碑經得起考驗。避開新成立、無實體店面的車商。</p>
+<h3>2. 第三方認證</h3>
+<p>確認車行是否提供獨立第三方機構的書面認證報告。認證報告應涵蓋200+項檢測，包括事故紀錄、泡水檢測、里程數真偽等。正規車行會主動提供，不需買家額外付費。</p>
+<h3>3. 透明定價</h3>
+<p>實車實價、標示價格即為實際售價的車行最可靠。避開標價偏低但實際到店後加價、或需要反覆議價的車行。</p>
+<h3>4. 售後服務</h3>
+<p>確認車行是否提供書面保固、保固期間多久、涵蓋項目有哪些。也要確認維修是否方便、是否有配合的保養廠。</p>
+<h3>5. 客戶評價</h3>
+<p>Google評價是最真實的參考。建議選擇評價數超過50則、平均評分4.5星以上的車行。也可以看看負評內容，了解可能的風險。</p>
+<h2>高雄二手車行推薦</h2>
+<p>崑家汽車位於高雄三民區大順二路269號，在地經營超過40年，Google評分4.8星。所有車輛皆通過第三方認證、實車實價、提供1年保固。外縣市提供免費接駁服務。</p>
+<p>電話：0936-812-818｜LINE：@825oftez</p>`
+  },
+  {
+    slug: "rental-fleet-car-check",
+    title: "租賃車退役車值得買嗎？5大檢查重點與購買建議",
+    description: "格上、和運等租賃公司退役車保養紀錄完整，但使用強度高。本文整理5大檢查重點：里程數、內裝磨損、底盤狀況、保養紀錄、事故紀錄，幫你判斷是否值得買。",
+    publishedAt: "2026-10-22",
+    updatedAt: "2026-10-22",
+    author: "崑家汽車",
+    category: "購車指南",
+    keywords: ["租賃車退役車", "格上中古車", "和運中古車", "租賃車可以買嗎", "二手租賃車"],
+    content: `<p class="answer-summary" data-speakable><strong>租賃車退役車（格上、和運等）優點是保養紀錄完整、里程真實，缺點是使用強度高（多人駕駛、頻繁短途）。購買前務必做第三方認證，重點檢查：內裝磨損、底盤狀況、冷氣系統、車門開關次數。建議選擇2-3年車齡、里程6萬公里以下的車源。</strong></p>
+<h2>租賃車退役車的優缺點</h2>
+<h3>優點</h3>
+<ul>
+<li><strong>保養紀錄完整：</strong>租賃公司有嚴格的保養週期，紀錄可查</li>
+<li><strong>里程數真實：</strong>租賃公司不會調表，里程可信度高</li>
+<li><strong>車況標準化：</strong>退役前會做基本整理</li>
+<li><strong>價格合理：</strong>通常比市場行情低5-10%</li>
+</ul>
+<h3>缺點</h3>
+<ul>
+<li><strong>使用強度高：</strong>多人駕駛、頻繁短途、停車碰撞風險高</li>
+<li><strong>內裝磨損：</strong>方向盤、座椅、門把磨損較明顯</li>
+<li><strong>底盤消耗：</strong>避震器、煞車系統可能需要更換</li>
+<li><strong>無法選配：</strong>租賃車通常是基本款，配備較陽春</li>
+</ul>
+<h2>5大檢查重點</h2>
+<h3>1. 里程數與車齡比例</h3>
+<p>租賃車年均里程約2-3萬公里，高於一般自用車。建議選擇3年內、里程6萬公里以下的車源。</p>
+<h3>2. 內裝磨損程度</h3>
+<p>重點檢查方向盤、排檔桿、座椅、門把的磨損。這些部位反映實際使用強度。</p>
+<h3>3. 底盤與懸吊</h3>
+<p>租賃車常走市區，頻繁煞停對底盤消耗大。建議做底盤檢測，確認避震器、煞車盤狀況。</p>
+<h3>4. 保養紀錄核實</h3>
+<p>向租賃公司索取完整保養紀錄，確認機油、變速箱油、煞車油是否按時更換。</p>
+<h3>5. 第三方認證</h3>
+<p>租賃車退役車更需要做第三方認證。正規車行會主動提供認證報告。</p>
+<h2>崑家汽車的建議</h2>
+<p>租賃車退役車是性價比選擇，但需要更仔細的車況檢查。崑家汽車所有在售車輛（含租賃車來源）皆通過第三方認證，認證報告免費提供。詳情請洽門市 0936-812-818 或 LINE @825oftez。</p>`
   },
 ];
 

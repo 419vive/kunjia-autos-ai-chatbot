@@ -34,6 +34,9 @@ const ServiceAreaPage = lazy(() => import("./pages/ServiceAreaPage"));
 const CarValuation = lazy(() => import("./pages/CarValuation"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const MediaKit = lazy(() => import("./pages/MediaKit"));
+const LoanCalculator = lazy(() => import("./pages/LoanCalculator"));
+const SellCarKaohsiung = lazy(() => import("./pages/SellCarKaohsiung"));
+const Guarantee = lazy(() => import("./pages/Guarantee"));
 const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -58,6 +61,9 @@ function Router() {
       <Route path="/car-valuation" component={CarValuation} />
       <Route path="/about" component={AboutUs} />
       <Route path="/media" component={MediaKit} />
+      <Route path="/loan-calculator" component={LoanCalculator} />
+      <Route path="/sell-car-kaohsiung" component={SellCarKaohsiung} />
+      <Route path="/guarantee" component={Guarantee} />
       <Route path="/line" component={SmartRedirect} />
       <Route path="/contact" component={SmartRedirect} />
 

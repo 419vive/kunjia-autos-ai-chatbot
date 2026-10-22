@@ -19,6 +19,16 @@
 /** Shop display name (never shorten or abbreviate in customer-facing text) */
 export const SHOP_NAME = "崑家汽車";
 
+/**
+ * Founding year — single source of truth for shop age calculations.
+ * All "在地 XX 年" claims MUST derive from this constant.
+ * Jerry confirmed 2026-10-22: founded in 1986.
+ */
+export const FOUNDING_YEAR = 1986;
+
+/** Calculate years in business dynamically */
+export const yearsInBusiness = (): number => new Date().getFullYear() - FOUNDING_YEAR;
+
 /** Shop city (used for location-sanity checks) */
 export const SHOP_CITY = "高雄";
 
