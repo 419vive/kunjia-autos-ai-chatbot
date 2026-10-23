@@ -251,7 +251,9 @@ jobs:
 
       # Optional: Send email via GWS CLI if configured
       - name: Send email summary (requires GWS_CONFIGURED secret)
-        if: ${{ secrets.GWS_CONFIGURED == 'true' }}
+        if: ${{ env.GWS_CONFIGURED == 'true' }}
+        env:
+          GWS_CONFIGURED: ${{ secrets.GWS_CONFIGURED }}
         run: |
           TODAY=$(date +%Y-%m-%d)
           echo "GWS email notification would be sent here"
