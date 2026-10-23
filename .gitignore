@@ -38,3 +38,9 @@ graphify-out/
 # its own branch and the worktree is reaped automatically afterward. Should
 # never appear in the parent worktree as untracked.
 .claude/worktrees/
+
+# Local scratch / working files — never committed. Used for ad-hoc data
+# processing (CSV cleanup, FB ads audience exports, etc.) where the
+# output contains PII (customer emails, phone numbers) that must not
+# enter git history. Keep work here; git ignores the whole tree.
+scratch/
