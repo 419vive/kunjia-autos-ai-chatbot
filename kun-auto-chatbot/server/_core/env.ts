@@ -19,4 +19,5 @@ export const ENV = {
   forgeApiKey: process.env.FORGE_API_KEY ?? "",
   adminUsername: process.env.ADMIN_USERNAME ?? "admin",
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
+  LINE_OWNER_USER_ID: process.env.LINE_OWNER_USER_ID ?? "",
 };

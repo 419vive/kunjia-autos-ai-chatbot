@@ -59,10 +59,9 @@ chatStreamRouter.post("/api/chat/stream", async (req: express.Request, res: Resp
     // Get or create conversation
     let conversation = await db.getConversationBySessionId(sessionId);
     if (!conversation) {
-      conversation = await db.createConversation({
-        sessionId,
-        channel,
-      });
+      await db.createConversation({ sessionId, channel });
+      // Re-fetch to get full record with DB defaults
+      conversation = await db.getConversationBySessionId(sessionId);
     }
 
     if (!conversation) {

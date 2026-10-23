@@ -3,6 +3,8 @@ import { Player } from "@remotion/player";
 import { VehicleShowcase } from "@/remotion/compositions/VehicleShowcase";
 import type { VehicleVideoProps } from "@/remotion/types";
 
+type RemotionComponent = React.ComponentType<Record<string, unknown>>;
+
 interface VehicleVideoPlayerProps {
   vehicle: {
     title?: string | null;
@@ -100,7 +102,7 @@ export default function VehicleVideoPlayer({ vehicle }: VehicleVideoPlayerProps)
         </button>
       ) : (
         <Player
-          component={VehicleShowcase}
+          component={VehicleShowcase as unknown as RemotionComponent}
           inputProps={inputProps}
           durationInFrames={450}
           compositionWidth={1280}
