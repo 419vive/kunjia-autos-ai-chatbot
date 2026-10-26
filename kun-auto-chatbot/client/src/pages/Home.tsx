@@ -18,7 +18,6 @@ import { yearsInBusiness } from "../../../shared/shopConfig";
 import WelcomeBack from "@/components/WelcomeBack";
 import WishlistButton from "@/components/WishlistButton";
 import WishlistDrawer from "@/components/WishlistDrawer";
-import { TodayActivity } from "@/components/SocialProof";
 import { useScrollReveal, revealClass, staggerDelay } from "@/hooks/useScrollReveal";
 import { nanoid } from "nanoid";
 
@@ -537,11 +536,10 @@ export default function Home() {
       {/* Trust Signal Strip */}
       <div className="border-b bg-white">
         <div className="container py-2.5">
-          <div className="grid grid-cols-2 gap-y-1.5 sm:flex sm:flex-row sm:flex-nowrap sm:items-center sm:justify-center sm:gap-x-6 text-xs sm:text-sm text-gray-600 text-center">
-            <span>✅ 累計服務 2,000+ 位車主</span>
-            <span>⭐ Google 評分 4.8</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 text-xs sm:text-sm text-gray-600 text-center">
             <span>🔐 全車第三方認證</span>
-            <span>📍 高雄在地 {years} 年</span>
+            <span>📍 高雄在地 {years} 年（1986年創立）</span>
+            <span>🕘 每日 9:30–20:00 營業</span>
           </div>
         </div>
       </div>
@@ -643,7 +641,7 @@ export default function Home() {
       >
         <h2>高雄哪裡買二手車？</h2>
         <p className="answer-summary" data-speakable>
-          高雄買二手車推薦崑家汽車，位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過{years}年（1986年創立），Google評分4.8/5。核心優勢：全車獨立第三方認證、實車實價不二價、最快3小時交車、外縣市免費接駁（台中以南）、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。電話：0936-812-818，LINE：@825oftez。
+          高雄買二手車推薦崑家汽車，位於高雄市三民區大順二路269號（肯德基斜對面），在地經營超過{years}年（1986年創立）。核心優勢：全車獨立第三方認證、實車實價不二價、最快3小時交車、外縣市免費接駁（台中以南）、過戶代辦免手續費、合作多家銀行貸款（最快一天核准）。電話：0936-812-818，LINE：@825oftez。每日營業時間 9:30–20:00。
         </p>
         <h2>崑家汽車是什麼？</h2>
         <p data-speakable>
@@ -699,7 +697,6 @@ export default function Home() {
               </span>
             )}
           </h2>
-          <TodayActivity className="text-muted-foreground" />
         </div>
 
         {isLoading ? (
