@@ -16,6 +16,10 @@ export function getAssistantContentForTrigger(trigger: { type: string; label: st
       return "[👋 已發送崑家汽車歡迎卡片]";
     case "faq":
       return "[🏆 已發送崑家汽車五大保證FAQ卡片]";
+    case "faq_chip":
+      return `[🏆 FAQ揭曉：${trigger.label}]`;
+    case "photo_browse":
+      return `[📸 已發送 ${trigger.label} 的所有照片]`;
     default:
       return "[已發送圖文卡片]";
   }

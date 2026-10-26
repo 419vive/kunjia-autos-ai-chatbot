@@ -3,6 +3,8 @@ import { VehicleShowcase } from "./compositions/VehicleShowcase";
 import { VehicleCard } from "./compositions/VehicleCard";
 import type { VehicleVideoProps } from "./types";
 
+type RemotionComponent = React.ComponentType<Record<string, unknown>>;
+
 const defaultProps: VehicleVideoProps = {
   title: "Toyota Camry 2023",
   brand: "Toyota",
@@ -28,7 +30,7 @@ export const RemotionRoot: React.FC = () => {
       {/* Use Case 6: Landscape showcase for website embed */}
       <Composition
         id="VehicleShowcase"
-        component={VehicleShowcase}
+        component={VehicleShowcase as unknown as RemotionComponent}
         durationInFrames={450}
         fps={30}
         width={1280}
@@ -39,7 +41,7 @@ export const RemotionRoot: React.FC = () => {
       {/* Use Case 7: Vertical card for LINE/IG/TikTok sharing */}
       <Composition
         id="VehicleCard"
-        component={VehicleCard}
+        component={VehicleCard as unknown as RemotionComponent}
         durationInFrames={150}
         fps={30}
         width={1080}
