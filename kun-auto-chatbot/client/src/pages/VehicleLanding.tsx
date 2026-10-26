@@ -18,7 +18,6 @@ import {
   Cog,
 } from "lucide-react";
 import StickyBookingBar from "@/components/StickyBookingBar";
-import { ViewingNow } from "@/components/SocialProof";
 import ProactiveChatTrigger from "@/components/ProactiveChatTrigger";
 import WishlistButton from "@/components/WishlistButton";
 import SeoFooter from "@/components/SeoFooter";
@@ -593,7 +592,6 @@ export default function VehicleLanding() {
             <h1 className="text-white text-xl font-bold mb-1">{name}</h1>
             <div className="flex items-center gap-3 mb-2">
               <p className="text-white/40 text-xs">{year} · {vehicle.displacement || ""} · {vehicle.location || "高雄"}</p>
-              {vehicleId && <ViewingNow vehicleId={vehicleId} className="text-green-400/80" />}
             </div>
 
             {/* Price + new car price comparison */}
