@@ -100,7 +100,7 @@ export default function VehicleVideoPlayer({ vehicle }: VehicleVideoPlayerProps)
         </button>
       ) : (
         <Player
-          component={VehicleShowcase}
+          component={VehicleShowcase as unknown as React.ComponentType<Record<string, unknown>>}
           inputProps={inputProps}
           durationInFrames={450}
           compositionWidth={1280}
